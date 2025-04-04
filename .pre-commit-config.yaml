@@ -1,0 +1,45 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Run ruff check
+        entry: uv tool run ruff check --no-cache --exit-first --diff
+        language: system
+        types: [python]
+        stages: [pre-commit]
+        verbose: true
+
+      - id: ruff-format
+        name: Run ruff format
+        entry: uv tool run ruff format --no-cache --diff
+        language: system
+        types: [python]
+        stages: [pre-commit]
+        verbose: true
+
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1  # Use a specific version
+    hooks:
+      - id: isort
+        language: system
+        types: [python]
+        stages: [pre-commit]
+        args: [--diff]
+        verbose: true
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0  # Use a specific version
+    hooks:
+      - id: trailing-whitespace
+        stages: [pre-commit]
+        verbose: true
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+        verbose: true
+      - id: check-yaml
+        stages: [pre-commit]
+        verbose: true
+      - id: check-added-large-files
+        stages: [pre-commit]
+        verbose: true
