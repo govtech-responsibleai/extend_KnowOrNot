@@ -3,7 +3,7 @@ from typing import Type, TypeVar
 
 from pydantic import BaseModel
 
-from src.knowornot.config import LLMClientConfig
+from ..config import LLMClientConfig
 
 T = TypeVar("T", bound=BaseModel)
 

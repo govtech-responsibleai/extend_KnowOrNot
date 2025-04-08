@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from pydantic import BaseModel
 
 from src.knowornot.config import LLMClientConfig
-from src.knowornot.LLMClient import SyncLLMClient, T
+from src.knowornot.SyncLLMClient import SyncLLMClient, T
 
 
 # Define a dummy config class for testing

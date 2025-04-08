@@ -1,7 +1,10 @@
 import os
 from typing import Optional
 
-from src.knowornot.config import AzureOpenAIConfig, Config
+from .config import AzureOpenAIConfig, Config
+from .SyncLLMClient import SyncLLMClient
+
+__all__ = ["KnowOrNot", "SyncLLMClient"]
 
 
 class KnowOrNot:
