@@ -16,10 +16,10 @@ class KnowOrNot:
 
     @staticmethod
     def create_from_azure(
-        azure_endpoint: Optional[str],
-        azure_api_key: Optional[str],
-        azure_batch_endpoint: Optional[str],
-        azure_batch_api_key: Optional[str],
+        azure_endpoint: Optional[str] = None,
+        azure_api_key: Optional[str] = None,
+        azure_batch_endpoint: Optional[str] = None,
+        azure_batch_api_key: Optional[str] = None,
         separate_batch_client: bool = False,
     ) -> "KnowOrNot":
         """
