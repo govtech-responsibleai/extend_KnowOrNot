@@ -5,6 +5,13 @@ import os
 
 class KnowOrNot:
     def __init__(self, config: Config):
+        """
+        Initialize the KnowOrNot instance with the given configuration.
+
+        Note: Directly setting the configuration like this is not recommended
+        as it may lead to tightly coupled code and reduced flexibility.
+        Consider using dependency injection or a configuration manager instead.
+        """
         self.config = config
 
     @staticmethod
