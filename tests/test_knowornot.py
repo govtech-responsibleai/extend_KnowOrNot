@@ -1,9 +1,10 @@
 import os
-import pytest
 from unittest.mock import patch
 
-from src.knowornot.config import Config, AzureConfig
+import pytest
+
 from src.knowornot import KnowOrNot
+from src.knowornot.config import AzureConfig, Config
 
 
 class TestKnowOrNot:
@@ -17,8 +18,10 @@ class TestKnowOrNot:
         know_or_not = KnowOrNot(config)
 
         assert know_or_not.config == config
+        assert know_or_not.config.azure_config is not None
         assert know_or_not.config.azure_config.endpoint == "https://endpoint.com"
         assert know_or_not.config.azure_config.api_key == "api_key"
+        assert know_or_not.config.azure_batch_config is not None
         assert (
             know_or_not.config.azure_batch_config.endpoint
             == "https://batch.endpoint.com"
@@ -35,8 +38,10 @@ class TestKnowOrNot:
             separate_batch_client=True,
         )
 
+        assert know_or_not.config.azure_config is not None
         assert know_or_not.config.azure_config.endpoint == "https://endpoint.com"
         assert know_or_not.config.azure_config.api_key == "api_key"
+        assert know_or_not.config.azure_batch_config is not None
         assert (
             know_or_not.config.azure_batch_config.endpoint
             == "https://batch.endpoint.com"
@@ -51,8 +56,10 @@ class TestKnowOrNot:
             separate_batch_client=False,
         )
 
+        assert know_or_not.config.azure_config is not None
         assert know_or_not.config.azure_config.endpoint == "https://endpoint.com"
         assert know_or_not.config.azure_config.api_key == "api_key"
+        assert know_or_not.config.azure_batch_config is not None
         assert know_or_not.config.azure_batch_config.endpoint == "https://endpoint.com"
         assert know_or_not.config.azure_batch_config.api_key == "api_key"
 
@@ -69,8 +76,10 @@ class TestKnowOrNot:
             azure_endpoint=None, azure_api_key=None, separate_batch_client=False
         )
 
+        assert know_or_not.config.azure_config is not None
         assert know_or_not.config.azure_config.endpoint == "https://env.endpoint.com"
         assert know_or_not.config.azure_config.api_key == "env_api_key"
+        assert know_or_not.config.azure_batch_config is not None
         assert (
             know_or_not.config.azure_batch_config.endpoint == "https://env.endpoint.com"
         )
@@ -95,8 +104,10 @@ class TestKnowOrNot:
             separate_batch_client=True,
         )
 
+        assert know_or_not.config.azure_config is not None
         assert know_or_not.config.azure_config.endpoint == "https://env.endpoint.com"
         assert know_or_not.config.azure_config.api_key == "env_api_key"
+        assert know_or_not.config.azure_batch_config is not None
         assert (
             know_or_not.config.azure_batch_config.endpoint
             == "https://env.batch.endpoint.com"

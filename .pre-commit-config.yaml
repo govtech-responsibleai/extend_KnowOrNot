@@ -9,7 +9,6 @@ repos:
         types: [python]
         stages: [pre-commit]
         verbose: true
-
       - id: ruff-format
         name: Run ruff format
         entry: uv tool run ruff format
@@ -17,17 +16,20 @@ repos:
         types: [python]
         stages: [pre-commit]
         verbose: true
-
-  - repo: https://github.com/pycqa/isort
-    rev: 6.0.1  # Use a specific version
-    hooks:
-      - id: isort
+      - id: pyright
+        name: Run pyright
+        entry: uv run pyright
         language: system
         types: [python]
         stages: [pre-commit]
-        args: [--diff]
         verbose: true
-
+      - id: isort
+        name: Run isort
+        entry: uv run isort
+        language: system
+        types: [python]
+        stages: [pre-commit]
+        verbose: true
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0  # Use a specific version
     hooks:
