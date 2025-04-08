@@ -4,15 +4,17 @@ from unittest.mock import patch
 import pytest
 
 from src.knowornot import KnowOrNot
-from src.knowornot.config import AzureConfig, Config
+from src.knowornot.config import AzureOpenAIConfig, Config
 
 
 class TestKnowOrNot:
     def test_init(self):
         """Test basic initialization with a config object."""
         config = Config(
-            azure_config=AzureConfig("https://endpoint.com", "api_key"),
-            azure_batch_config=AzureConfig("https://batch.endpoint.com", "batch_key"),
+            azure_config=AzureOpenAIConfig("https://endpoint.com", "api_key"),
+            azure_batch_config=AzureOpenAIConfig(
+                "https://batch.endpoint.com", "batch_key"
+            ),
         )
 
         know_or_not = KnowOrNot(config)

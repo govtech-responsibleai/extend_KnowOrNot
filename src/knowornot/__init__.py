@@ -1,6 +1,7 @@
-from src.knowornot.config import Config, AzureConfig
-from typing import Optional
 import os
+from typing import Optional
+
+from src.knowornot.config import AzureOpenAIConfig, Config
 
 
 class KnowOrNot:
@@ -101,8 +102,8 @@ class KnowOrNot:
 
         return KnowOrNot(
             Config(
-                azure_config=AzureConfig(azure_endpoint, azure_api_key),
-                azure_batch_config=AzureConfig(
+                azure_config=AzureOpenAIConfig(azure_endpoint, azure_api_key),
+                azure_batch_config=AzureOpenAIConfig(
                     azure_batch_endpoint, azure_batch_api_key
                 ),
             )

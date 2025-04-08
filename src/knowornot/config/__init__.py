@@ -3,13 +3,17 @@ from typing import Optional
 
 
 @dataclass
-class AzureConfig:
-    endpoint: str
+class LLMClient:
     api_key: str
 
 
 @dataclass
+class AzureOpenAIConfig(LLMClient):
+    endpoint: str
+
+
+@dataclass
 class Config:
-    azure_config: Optional[AzureConfig] = None
-    azure_batch_config: Optional[AzureConfig] = None
+    azure_config: Optional[AzureOpenAIConfig] = None
+    azure_batch_config: Optional[AzureOpenAIConfig] = None
     arbitrary_keys: dict = field(default_factory=dict)
