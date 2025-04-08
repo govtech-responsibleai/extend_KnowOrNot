@@ -102,9 +102,11 @@ class KnowOrNot:
 
         return KnowOrNot(
             Config(
-                azure_config=AzureOpenAIConfig(azure_endpoint, azure_api_key),
+                azure_config=AzureOpenAIConfig(
+                    endpoint=azure_endpoint, api_key=azure_api_key
+                ),
                 azure_batch_config=AzureOpenAIConfig(
-                    azure_batch_endpoint, azure_batch_api_key
+                    endpoint=azure_batch_endpoint, api_key=azure_batch_api_key
                 ),
             )
         )

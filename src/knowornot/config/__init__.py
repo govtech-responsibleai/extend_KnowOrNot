@@ -1,15 +1,24 @@
+from abc import ABC
 from dataclasses import dataclass, field
 from typing import Optional
 
 
 @dataclass
-class LLMClient:
+class LLMClientConfig(ABC):
     api_key: str
+    can_use_instructor: bool = False
 
 
 @dataclass
-class AzureOpenAIConfig(LLMClient):
-    endpoint: str
+class AzureOpenAIConfig(LLMClientConfig):
+    can_use_instructor: bool = True
+    endpoint: str = ""  # Default provided to satisfy dataclasses requirement
+
+    def __post_init__(self):
+        if not self.api_key:
+            raise ValueError("api_key is required for AzureOpenAIConfig")
+        if not self.endpoint:
+            raise ValueError("endpoint is required for AzureOpenAIConfig")
 
 
 @dataclass

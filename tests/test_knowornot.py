@@ -11,9 +11,11 @@ class TestKnowOrNot:
     def test_init(self):
         """Test basic initialization with a config object."""
         config = Config(
-            azure_config=AzureOpenAIConfig("https://endpoint.com", "api_key"),
+            azure_config=AzureOpenAIConfig(
+                api_key="api_key", endpoint="https://endpoint.com"
+            ),
             azure_batch_config=AzureOpenAIConfig(
-                "https://batch.endpoint.com", "batch_key"
+                api_key="batch_key", endpoint="https://batch.endpoint.com"
             ),
         )
 
@@ -183,3 +185,18 @@ class TestKnowOrNot:
                     azure_batch_api_key=None,
                     separate_batch_client=True,
                 )
+
+    def test_api_key_and_endpoint_validation(self):
+        """Test that the api_key and endpoint are validated in AzureOpenAIConfig."""
+        with pytest.raises(
+            ValueError, match="api_key is required for AzureOpenAIConfig"
+        ):
+            AzureOpenAIConfig(api_key="", endpoint="https://example.com")
+
+        with pytest.raises(
+            ValueError, match="endpoint is required for AzureOpenAIConfig"
+        ):
+            AzureOpenAIConfig(api_key="api_key", endpoint="")
+
+        # Should not raise an error with valid values
+        AzureOpenAIConfig(api_key="api_key", endpoint="https://example.com")
