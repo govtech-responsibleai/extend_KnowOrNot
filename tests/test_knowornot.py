@@ -12,10 +12,14 @@ class TestKnowOrNot:
         """Test basic initialization with a config object."""
         config = Config(
             azure_config=AzureOpenAIConfig(
-                api_key="api_key", endpoint="https://endpoint.com"
+                api_key="api_key",
+                endpoint="https://endpoint.com",
+                api_version="2023-05-15",
             ),
             azure_batch_config=AzureOpenAIConfig(
-                api_key="batch_key", endpoint="https://batch.endpoint.com"
+                api_key="batch_key",
+                endpoint="https://batch.endpoint.com",
+                api_version="2023-05-15",
             ),
         )
 
@@ -37,65 +41,80 @@ class TestKnowOrNot:
         know_or_not = KnowOrNot.create_from_azure(
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
+            azure_api_version="2023-05-15",
             azure_batch_endpoint="https://batch.endpoint.com",
             azure_batch_api_key="batch_key",
+            azure_batch_api_version="2023-05-15",
             separate_batch_client=True,
         )
 
         assert know_or_not.config.azure_config is not None
         assert know_or_not.config.azure_config.endpoint == "https://endpoint.com"
         assert know_or_not.config.azure_config.api_key == "api_key"
+        assert know_or_not.config.azure_config.api_version == "2023-05-15"
         assert know_or_not.config.azure_batch_config is not None
         assert (
             know_or_not.config.azure_batch_config.endpoint
             == "https://batch.endpoint.com"
         )
         assert know_or_not.config.azure_batch_config.api_key == "batch_key"
+        assert know_or_not.config.azure_batch_config.api_version == "2023-05-15"
 
     def test_create_from_azure_without_separate_batch(self):
         """Test factory method without separate batch client."""
         know_or_not = KnowOrNot.create_from_azure(
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
+            azure_api_version="2023-05-15",
             separate_batch_client=False,
         )
 
         assert know_or_not.config.azure_config is not None
         assert know_or_not.config.azure_config.endpoint == "https://endpoint.com"
         assert know_or_not.config.azure_config.api_key == "api_key"
+        assert know_or_not.config.azure_config.api_version == "2023-05-15"
         assert know_or_not.config.azure_batch_config is not None
         assert know_or_not.config.azure_batch_config.endpoint == "https://endpoint.com"
         assert know_or_not.config.azure_batch_config.api_key == "api_key"
+        assert know_or_not.config.azure_batch_config.api_version == "2023-05-15"
 
     @patch.dict(
         os.environ,
         {
             "AZURE_OPENAI_ENDPOINT": "https://env.endpoint.com",
             "AZURE_OPENAI_API_KEY": "env_api_key",
+            "AZURE_OPENAI_API_VERSION": "2023-05-15",
         },
     )
     def test_create_from_azure_with_env_vars(self):
         """Test factory method using environment variables."""
         know_or_not = KnowOrNot.create_from_azure(
-            azure_endpoint=None, azure_api_key=None, separate_batch_client=False
+            azure_endpoint=None,
+            azure_api_key=None,
+            azure_api_version=None,
+            separate_batch_client=False,
         )
 
         assert know_or_not.config.azure_config is not None
         assert know_or_not.config.azure_config.endpoint == "https://env.endpoint.com"
         assert know_or_not.config.azure_config.api_key == "env_api_key"
+        assert know_or_not.config.azure_config.api_version == "2023-05-15"
         assert know_or_not.config.azure_batch_config is not None
         assert (
             know_or_not.config.azure_batch_config.endpoint == "https://env.endpoint.com"
         )
         assert know_or_not.config.azure_batch_config.api_key == "env_api_key"
+        assert know_or_not.config.azure_batch_config.api_version == "2023-05-15"
 
     @patch.dict(
         os.environ,
         {
             "AZURE_OPENAI_ENDPOINT": "https://env.endpoint.com",
             "AZURE_OPENAI_API_KEY": "env_api_key",
+            "AZURE_OPENAI_API_VERSION": "2023-05-15",
             "AZURE_OPENAI_BATCH_ENDPOINT": "https://env.batch.endpoint.com",
             "AZURE_OPENAI_BATCH_API_KEY": "env_batch_key",
+            "AZURE_OPENAI_BATCH_API_VERSION": "2023-05-15",
         },
     )
     def test_create_from_azure_with_separate_batch_env_vars(self):
@@ -103,20 +122,24 @@ class TestKnowOrNot:
         know_or_not = KnowOrNot.create_from_azure(
             azure_endpoint=None,
             azure_api_key=None,
+            azure_api_version=None,
             azure_batch_endpoint=None,
             azure_batch_api_key=None,
+            azure_batch_api_version=None,
             separate_batch_client=True,
         )
 
         assert know_or_not.config.azure_config is not None
         assert know_or_not.config.azure_config.endpoint == "https://env.endpoint.com"
         assert know_or_not.config.azure_config.api_key == "env_api_key"
+        assert know_or_not.config.azure_config.api_version == "2023-05-15"
         assert know_or_not.config.azure_batch_config is not None
         assert (
             know_or_not.config.azure_batch_config.endpoint
             == "https://env.batch.endpoint.com"
         )
         assert know_or_not.config.azure_batch_config.api_key == "env_batch_key"
+        assert know_or_not.config.azure_batch_config.api_version == "2023-05-15"
 
     def test_create_from_azure_error_when_separate_false_but_batch_params_provided(
         self,
@@ -126,6 +149,7 @@ class TestKnowOrNot:
             KnowOrNot.create_from_azure(
                 azure_endpoint="https://endpoint.com",
                 azure_api_key="api_key",
+                azure_api_version="2023-05-15",
                 azure_batch_endpoint="https://batch.endpoint.com",
                 separate_batch_client=False,
             )
@@ -137,7 +161,9 @@ class TestKnowOrNot:
                 EnvironmentError, match="AZURE_OPENAI_ENDPOINT is not set"
             ):
                 KnowOrNot.create_from_azure(
-                    azure_endpoint=None, azure_api_key="api_key"
+                    azure_endpoint=None,
+                    azure_api_key="api_key",
+                    azure_api_version="2023-05-15",
                 )
 
     def test_missing_api_key_error(self):
@@ -151,7 +177,9 @@ class TestKnowOrNot:
                 EnvironmentError, match="AZURE_OPENAI_API_KEY is not set"
             ):
                 KnowOrNot.create_from_azure(
-                    azure_endpoint="https://endpoint.com", azure_api_key=None
+                    azure_endpoint="https://endpoint.com",
+                    azure_api_key=None,
+                    azure_api_version="2023-05-15",
                 )
 
     def test_missing_batch_endpoint_error(self):
@@ -163,8 +191,10 @@ class TestKnowOrNot:
                 KnowOrNot.create_from_azure(
                     azure_endpoint="https://endpoint.com",
                     azure_api_key="api_key",
+                    azure_api_version="2023-05-15",
                     azure_batch_endpoint=None,
                     azure_batch_api_key="batch_key",
+                    azure_batch_api_version="2023-05-15",
                     separate_batch_client=True,
                 )
 
@@ -181,8 +211,10 @@ class TestKnowOrNot:
                 KnowOrNot.create_from_azure(
                     azure_endpoint="https://endpoint.com",
                     azure_api_key="api_key",
+                    azure_api_version="2023-05-15",
                     azure_batch_endpoint="https://batch.endpoint.com",
                     azure_batch_api_key=None,
+                    azure_batch_api_version="2023-05-15",
                     separate_batch_client=True,
                 )
 
@@ -191,12 +223,16 @@ class TestKnowOrNot:
         with pytest.raises(
             ValueError, match="api_key is required for AzureOpenAIConfig"
         ):
-            AzureOpenAIConfig(api_key="", endpoint="https://example.com")
+            AzureOpenAIConfig(
+                api_key="", endpoint="https://example.com", api_version="2023-05-15"
+            )
 
         with pytest.raises(
             ValueError, match="endpoint is required for AzureOpenAIConfig"
         ):
-            AzureOpenAIConfig(api_key="api_key", endpoint="")
+            AzureOpenAIConfig(api_key="api_key", endpoint="", api_version="2023-05-15")
 
         # Should not raise an error with valid values
-        AzureOpenAIConfig(api_key="api_key", endpoint="https://example.com")
+        AzureOpenAIConfig(
+            api_key="api_key", endpoint="https://example.com", api_version="2023-05-15"
+        )

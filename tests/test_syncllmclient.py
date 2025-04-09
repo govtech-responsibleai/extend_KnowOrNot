@@ -91,7 +91,7 @@ class TestSyncLLMClient(unittest.TestCase):
         self.assertEqual(response.condition, "Cloudy")
 
     @patch(
-        "src.knowornot.LLMClient.SyncLLMClient._generate_structured_response"
+        "src.knowornot.SyncLLMClient.SyncLLMClient._generate_structured_response"
     )  # Patching the method
     def test_get_structured_response_handles_exceptions_from_generate_structured_response(
         self, mock_generate
