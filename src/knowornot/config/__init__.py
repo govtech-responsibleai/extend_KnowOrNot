@@ -13,12 +13,15 @@ class LLMClientConfig(ABC):
 class AzureOpenAIConfig(LLMClientConfig):
     can_use_instructor: bool = True
     endpoint: str = ""  # Default provided to satisfy dataclasses requirement
+    api_version: str = ""
 
     def __post_init__(self):
         if not self.api_key:
             raise ValueError("api_key is required for AzureOpenAIConfig")
         if not self.endpoint:
             raise ValueError("endpoint is required for AzureOpenAIConfig")
+        if not self.api_version:
+            raise ValueError("api_version is required for AzureOpenAIConfig")
 
 
 @dataclass

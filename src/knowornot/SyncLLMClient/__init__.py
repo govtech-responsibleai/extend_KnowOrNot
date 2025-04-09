@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Type, TypeVar
 
 from pydantic import BaseModel
@@ -6,6 +7,10 @@ from pydantic import BaseModel
 from ..config import LLMClientConfig
 
 T = TypeVar("T", bound=BaseModel)
+
+
+class SyncLLMClientEnum(Enum):
+    AZURE_OPENAI = "AZURE_OPENAI"
 
 
 class SyncLLMClient(ABC):
@@ -34,3 +39,8 @@ class SyncLLMClient(ABC):
         return self._generate_structured_response(
             prompt=prompt, response_model=response_model
         )
+
+    @property
+    @abstractmethod
+    def enum_name(self) -> SyncLLMClientEnum:
+        raise NotImplementedError()
