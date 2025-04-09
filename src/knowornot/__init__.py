@@ -4,6 +4,8 @@ from typing import Dict, List, Optional
 from .config import AzureOpenAIConfig, Config
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
+from .DataManager import DataManager
+from .PromptManager import PromptManager
 
 __all__ = ["KnowOrNot", "SyncLLMClient"]
 
@@ -20,6 +22,7 @@ class KnowOrNot:
         self.config = config
         self.client_registry: Dict[SyncLLMClientEnum, SyncLLMClient] = {}
         self.default_sync_client: Optional[SyncLLMClient] = None
+        self.data_manager: Optional[DataManager] = None
 
     def register_client(
         self, client: SyncLLMClient, make_default: bool = False
@@ -108,6 +111,22 @@ class KnowOrNot:
             )
 
         del self.client_registry[client_enum]
+
+    def _get_data_manager(self) -> DataManager:
+        if self.data_manager is not None:
+            return self.data_manager
+
+        if not self.default_sync_client:
+            raise ValueError(
+                "You must set a LLM Client before performing any data related operations"
+            )
+
+        self.data_manager = DataManager(
+            sync_llm_client=self.default_sync_client,
+            default_fact_creation_prompt=PromptManager.default_fact_extraction_prompt,
+        )
+
+        return self.data_manager
 
     @staticmethod
     def create_from_azure(

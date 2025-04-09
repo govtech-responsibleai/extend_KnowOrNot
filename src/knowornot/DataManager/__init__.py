@@ -20,6 +20,15 @@ class DataManager:
         output = [Sentence(text=t) for t in sentence_list]
         return output
 
+    def update_llm_client(self, new_client: SyncLLMClient) -> None:
+        """
+        Update the synchronous client used by this DataManager.
+
+        Args:
+        - new_client (SyncLLMClient): The new client to use.
+        """
+        self.sync_llm_client = new_client
+
     def _convert_source_document_to_facts(
         self,
         document: SplitSourceDocument,
