@@ -1,0 +1,2 @@
+class PromptManager:
+    default_fact_extraction_prompt: str = """Your job is to extract text-only facts from this. You will have some text given to you, and your job is to make a list of modular facts from it. If any of the facts require reference to signs, photos, tables or any other material that is not text-only, do NOT make them into facts. Cite the facts with the integer source of the sentence you got. Every fact must be from a sentence with an index"""
