@@ -1,11 +1,11 @@
 import unittest
-from typing import Any, Dict, Type
+from typing import Any, Dict, List, Type, Union
 from unittest.mock import MagicMock, patch
 
 from pydantic import BaseModel
 
 from src.knowornot.config import LLMClientConfig
-from src.knowornot.SyncLLMClient import SyncLLMClient, SyncLLMClientEnum, T
+from src.knowornot.SyncLLMClient import SyncLLMClient, SyncLLMClientEnum, T, Message
 
 
 # Define a dummy config class for testing
@@ -25,11 +25,14 @@ class TestSyncLLMClient(unittest.TestCase):
     def test_get_structured_response_raises_value_error_when_instructor_disabled(self):
         # Define a concrete class for testing (using Mock)
         class MockSyncLLMClient(SyncLLMClient):
-            def prompt(self, prompt: str) -> str:
+            def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
                 return "Mock prompt response"
 
             def _generate_structured_response(
-                self, prompt: str, response_model: Type[T]
+                self,
+                prompt: Union[str, List[Message]],
+                response_model: Type[T],
+                model_used: str,
             ) -> T:
                 # Mock implementation - shouldn't be called in this test
                 raise NotImplementedError(
@@ -48,18 +51,21 @@ class TestSyncLLMClient(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "This LLM client cannot generate structured responses"
         ):
-            client.get_structured_response("dummy prompt", WeatherResponse)
+            client.get_structured_response("dummy prompt", WeatherResponse, "gpt-4")
 
     def test_get_structured_response_calls_generate_structured_response_when_instructor_enabled(
         self,
     ):
         # Define a concrete class for testing (using Mock)
         class MockSyncLLMClient(SyncLLMClient):
-            def prompt(self, prompt: str) -> str:
+            def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
                 return "Mock prompt response"
 
             def _generate_structured_response(
-                self, prompt: str, response_model: Type[T]
+                self,
+                prompt: Union[str, List[Message]],
+                response_model: Type[T],
+                model_used: str,
             ) -> T:
                 data: Dict[str, Any] = {"temperature": 20.0, "condition": "Cloudy"}
                 instance = response_model(**data)
@@ -74,8 +80,10 @@ class TestSyncLLMClient(unittest.TestCase):
         )  # Instructor enabled
         client = MockSyncLLMClient(config=config)
 
-        # Call the method
-        response = client.get_structured_response("dummy prompt", WeatherResponse)
+        # Call the method with the additional ai_model parameter
+        response = client.get_structured_response(
+            "dummy prompt", WeatherResponse, "gpt-4"
+        )
 
         # Assert that the response is an instance of WeatherResponse
         self.assertIsInstance(response, WeatherResponse)
@@ -90,11 +98,14 @@ class TestSyncLLMClient(unittest.TestCase):
     ):
         # Define a concrete class for testing (using Mock)
         class MockSyncLLMClient(SyncLLMClient):
-            def prompt(self, prompt: str) -> str:
+            def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
                 return "Mock prompt response"
 
             def _generate_structured_response(
-                self, prompt: str, response_model: Type[T]
+                self,
+                prompt: Union[str, List[Message]],
+                response_model: Type[T],
+                model_used: str,
             ) -> T:
                 # Mock implementation - raise an exception
                 raise ValueError("Simulated error in _generate_structured_response")
@@ -111,18 +122,25 @@ class TestSyncLLMClient(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "Simulated error in _generate_structured_response"
         ):  # Expect ValueError
-            client.get_structured_response("dummy prompt", WeatherResponse)
+            client.get_structured_response("dummy prompt", WeatherResponse, "gpt-4")
 
     def test_prompt_abstract(self):
         # Test that inheriting classes MUST implement prompt method
         class BadClient(SyncLLMClient):
             # Does not implement the prompt method!
             def _generate_structured_response(
-                self, prompt: str, response_model: Type[T]
+                self,
+                prompt: Union[str, List[Message]],
+                response_model: Type[T],
+                model_used: str,
             ) -> T:
                 return MagicMock(
                     spec=BaseModel
                 )  # Dummy for demonstration.  Important for testing!
+
+            @property
+            def enum_name(self) -> SyncLLMClientEnum:
+                raise NotImplementedError()
 
         config = DummyLLMClientConfig(can_use_instructor=True, api_key="dummy_api_key")
         with self.assertRaises(TypeError):
@@ -132,10 +150,14 @@ class TestSyncLLMClient(unittest.TestCase):
         # Test that inheriting classes MUST implement _generate_structured_response method
 
         class BadClient(SyncLLMClient):
-            def prompt(self, prompt: str) -> str:
+            def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
                 return "Test"  # Dummy implementation. Important for testing!
 
             # Does not implement the _generate_structured_response!
+
+            @property
+            def enum_name(self) -> SyncLLMClientEnum:
+                raise NotImplementedError()
 
         config = DummyLLMClientConfig(can_use_instructor=True, api_key="dummy_api_key")
         with self.assertRaises(TypeError) as context:
