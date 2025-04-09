@@ -15,11 +15,13 @@ class TestKnowOrNot:
                 api_key="api_key",
                 endpoint="https://endpoint.com",
                 api_version="2023-05-15",
+                default_model="gpt-4",
             ),
             azure_batch_config=AzureOpenAIConfig(
                 api_key="batch_key",
                 endpoint="https://batch.endpoint.com",
                 api_version="2023-05-15",
+                default_model="gpt-4",
             ),
         )
 
@@ -224,15 +226,26 @@ class TestKnowOrNot:
             ValueError, match="api_key is required for AzureOpenAIConfig"
         ):
             AzureOpenAIConfig(
-                api_key="", endpoint="https://example.com", api_version="2023-05-15"
+                api_key="",
+                endpoint="https://example.com",
+                api_version="2023-05-15",
+                default_model="gpt-4",
             )
 
         with pytest.raises(
             ValueError, match="endpoint is required for AzureOpenAIConfig"
         ):
-            AzureOpenAIConfig(api_key="api_key", endpoint="", api_version="2023-05-15")
+            AzureOpenAIConfig(
+                api_key="api_key",
+                endpoint="",
+                api_version="2023-05-15",
+                default_model="gpt-4",
+            )
 
         # Should not raise an error with valid values
         AzureOpenAIConfig(
-            api_key="api_key", endpoint="https://example.com", api_version="2023-05-15"
+            api_key="api_key",
+            endpoint="https://example.com",
+            api_version="2023-05-15",
+            default_model="gpt-4",
         )

@@ -12,6 +12,7 @@ from src.knowornot.SyncLLMClient import SyncLLMClient, SyncLLMClientEnum, T, Mes
 class DummyLLMClientConfig(LLMClientConfig):
     can_use_instructor: bool = False
     api_key: str = "dummy_api_key"  # Required for LLMClientConfig
+    default_model: str = "gpt-4"
 
 
 class WeatherResponse(BaseModel):
@@ -44,7 +45,7 @@ class TestSyncLLMClient(unittest.TestCase):
                 raise NotImplementedError()
 
         config = DummyLLMClientConfig(
-            can_use_instructor=False, api_key="dummy_api_key"
+            can_use_instructor=False, api_key="dummy_api_key", default_model="gpt-4"
         )  # Instructor disabled
         client = MockSyncLLMClient(config=config)
 
@@ -76,7 +77,7 @@ class TestSyncLLMClient(unittest.TestCase):
                 raise NotImplementedError()
 
         config = DummyLLMClientConfig(
-            can_use_instructor=True, api_key="dummy_api_key"
+            can_use_instructor=True, api_key="dummy_api_key", default_model="gpt-4"
         )  # Instructor enabled
         client = MockSyncLLMClient(config=config)
 
@@ -115,7 +116,7 @@ class TestSyncLLMClient(unittest.TestCase):
                 raise NotImplementedError()
 
         config = DummyLLMClientConfig(
-            can_use_instructor=True, api_key="dummy_api_key"
+            can_use_instructor=True, api_key="dummy_api_key", default_model="gpt-4"
         )  # Instructor enabled
         client = MockSyncLLMClient(config=config)
 
@@ -142,7 +143,9 @@ class TestSyncLLMClient(unittest.TestCase):
             def enum_name(self) -> SyncLLMClientEnum:
                 raise NotImplementedError()
 
-        config = DummyLLMClientConfig(can_use_instructor=True, api_key="dummy_api_key")
+        config = DummyLLMClientConfig(
+            can_use_instructor=True, api_key="dummy_api_key", default_model="gpt-4"
+        )
         with self.assertRaises(TypeError):
             BadClient(config=config)  # type: ignore
 
@@ -159,7 +162,9 @@ class TestSyncLLMClient(unittest.TestCase):
             def enum_name(self) -> SyncLLMClientEnum:
                 raise NotImplementedError()
 
-        config = DummyLLMClientConfig(can_use_instructor=True, api_key="dummy_api_key")
+        config = DummyLLMClientConfig(
+            can_use_instructor=True, api_key="dummy_api_key", default_model="gpt-4"
+        )
         with self.assertRaises(TypeError) as context:
             BadClient(config=config)  # type: ignore
             # ignore type by type checker as we are deliberately instantiating with the wrong type

@@ -117,13 +117,14 @@ class KnowOrNot:
         azure_batch_endpoint: Optional[str] = None,
         azure_batch_api_key: Optional[str] = None,
         azure_batch_api_version: Optional[str] = None,
+        default_synchronous_model: Optional[str] = None,
+        default_batch_model: Optional[str] = None,
         separate_batch_client: bool = False,
     ) -> "KnowOrNot":
         """
         Create a `KnowOrNot` instance using Azure configuration details.
 
         This is the recommended way to instantiate a KnowOrNot instance.
-
 
         Parameters:
         - azure_endpoint (Optional[str]): The Azure endpoint. If not provided,
@@ -138,11 +139,17 @@ class KnowOrNot:
         provided, the environment variable `AZURE_OPENAI_BATCH_API_KEY` will be used.
         - azure_batch_api_version (Optional[str]): The Azure batch API version. If not
         provided, the environment variable `AZURE_OPENAI_BATCH_API_VERSION` will be used.
+        - default_synchronous_model (Optional[str]): The default model for synchronous operations.
+        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_MODEL` will be used,
+        with a fallback to "gpt-4o".
+        - default_batch_model (Optional[str]): The default model for batch operations.
+        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_BATCH_MODEL` will be used,
+        with a fallback to "gpt-4o".
         - separate_batch_client (bool): Determines whether to use a separate batch
-        client. If `False`, `azure_batch_endpoint`, `azure_batch_api_key`, and
-        `azure_batch_api_version` should not be provided, and will default to the
-        values of `azure_endpoint`, `azure_api_key`, and `azure_api_version` respectively.
-        Is False by default.
+        client. If `False`, `azure_batch_endpoint`, `azure_batch_api_key`,
+        `azure_batch_api_version`, and `default_batch_model` should not be provided, and will
+        default to the values of `azure_endpoint`, `azure_api_key`, `azure_api_version`,
+        and `default_synchronous_model` respectively. Is False by default.
 
         Returns:
         - KnowOrNot: An instance of the `KnowOrNot` class configured with the specified
@@ -151,20 +158,23 @@ class KnowOrNot:
         Example:
         1. Using environment variables: KnowOrNot.create_from_azure()
 
-        2. Providing all parameters: KnowOrNot.create_from_azure(
+        2. Providing all parameters with separate batch client: KnowOrNot.create_from_azure(
                 azure_endpoint="https://example.com",
                 azure_api_key="example_key",
                 azure_api_version="2023-05-15",
                 azure_batch_endpoint="https://batch.example.com",
                 azure_batch_api_key="batch_key",
                 azure_batch_api_version="2023-05-15",
+                default_synchronous_model="gpt-4o",
+                default_batch_model="gpt-4o-batch",
                 separate_batch_client=True
             )
 
         3. Using default batch client: KnowOrNot.create_from_azure(
                 azure_endpoint="https://example.com",
                 azure_api_key="example_key",
-                azure_api_version="2023-05-15"
+                azure_api_version="2023-05-15",
+                default_synchronous_model="gpt-4o"
             )
         """
 
@@ -186,16 +196,26 @@ class KnowOrNot:
                 raise EnvironmentError(
                     "AZURE_OPENAI_API_VERSION is not set and azure_api_version is not provided"
                 )
+        if not default_synchronous_model:
+            default_synchronous_model = os.environ.get(
+                "AZURE_OPENAI_DEFAULT_MODEL", "gpt-4o"
+            )
 
         if not separate_batch_client:
-            if azure_batch_endpoint or azure_batch_api_key or azure_batch_api_version:
+            if (
+                azure_batch_endpoint
+                or azure_batch_api_key
+                or azure_batch_api_version
+                or default_batch_model
+            ):
                 raise ValueError(
-                    "If separate_batch_client is false, azure_batch_endpoint, azure_batch_api_key, and azure_batch_api_version should not be provided"
+                    "If separate_batch_client is false, azure_batch_endpoint, azure_batch_api_key, azure_batch_api_version, and default_batch_model should not be provided"
                 )
 
             azure_batch_endpoint = azure_endpoint
             azure_batch_api_key = azure_api_key
             azure_batch_api_version = azure_api_version
+            default_batch_model = default_synchronous_model
 
         else:
             if not azure_batch_endpoint:
@@ -218,24 +238,27 @@ class KnowOrNot:
                     raise EnvironmentError(
                         "AZURE_OPENAI_BATCH_API_VERSION is not set and azure_batch_api_version is not provided"
                     )
+            if not default_batch_model:
+                default_batch_model = os.environ.get(
+                    "AZURE_OPENAI_DEFAULT_BATCH_MODEL", "gpt-4o"
+                )
 
         azure_config = AzureOpenAIConfig(
             endpoint=azure_endpoint,
             api_key=azure_api_key,
             api_version=azure_api_version,
+            default_model=default_synchronous_model,
         )
 
         azure_batch_config = AzureOpenAIConfig(
             endpoint=azure_batch_endpoint,
             api_key=azure_batch_api_key,
             api_version=azure_batch_api_version,
+            default_model=default_batch_model,
         )
 
         output = KnowOrNot(
-            Config(
-                azure_config=azure_config,
-                azure_batch_config=azure_batch_config,
-            )
+            Config(azure_config=azure_config, azure_batch_config=azure_batch_config)
         )
 
         azure_sync_client = SyncAzureOpenAIClient(config=azure_config)

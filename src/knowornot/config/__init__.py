@@ -6,6 +6,7 @@ from typing import Optional
 @dataclass
 class LLMClientConfig(ABC):
     api_key: str
+    default_model: str
     can_use_instructor: bool = False
 
 
