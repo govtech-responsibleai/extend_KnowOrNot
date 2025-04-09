@@ -7,7 +7,7 @@ import nltk
 from nltk.tokenize import sent_tokenize
 
 
-class DataManager:
+class FactManager:
     def __init__(
         self, sync_llm_client: SyncLLMClient, default_fact_creation_prompt: str
     ):
@@ -22,7 +22,7 @@ class DataManager:
 
     def update_llm_client(self, new_client: SyncLLMClient) -> None:
         """
-        Update the synchronous client used by this DataManager.
+        Update the synchronous client used by this FactManager.
 
         Args:
         - new_client (SyncLLMClient): The new client to use.

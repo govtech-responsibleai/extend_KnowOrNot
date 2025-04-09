@@ -2,11 +2,11 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .DataManager.models import AtomicFactDocument
+from .FactManager.models import AtomicFactDocument
 from .config import AzureOpenAIConfig, Config
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
-from .DataManager import DataManager
+from .FactManager import FactManager
 from .PromptManager import PromptManager
 
 __all__ = ["KnowOrNot", "SyncLLMClient"]
@@ -24,7 +24,7 @@ class KnowOrNot:
         self.config = config
         self.client_registry: Dict[SyncLLMClientEnum, SyncLLMClient] = {}
         self.default_sync_client: Optional[SyncLLMClient] = None
-        self.data_manager: Optional[DataManager] = None
+        self.fact_manager: Optional[FactManager] = None
 
     def register_client(
         self, client: SyncLLMClient, make_default: bool = False
@@ -114,21 +114,21 @@ class KnowOrNot:
 
         del self.client_registry[client_enum]
 
-    def _get_data_manager(self) -> DataManager:
-        if self.data_manager is not None:
-            return self.data_manager
+    def _get_fact_manager(self) -> FactManager:
+        if self.fact_manager is not None:
+            return self.fact_manager
 
         if not self.default_sync_client:
             raise ValueError(
-                "You must set a LLM Client before performing any data related operations"
+                "You must set a LLM Client before performing any fact related operations"
             )
 
-        self.data_manager = DataManager(
+        self.fact_manager = FactManager(
             sync_llm_client=self.default_sync_client,
             default_fact_creation_prompt=PromptManager.default_fact_extraction_prompt,
         )
 
-        return self.data_manager
+        return self.fact_manager
 
     @staticmethod
     def create_from_azure(
@@ -298,11 +298,11 @@ class KnowOrNot:
         """
         Parse a list of source files and convert them to atomic facts.
 
-        This is a wrapper around DataManager._parse_source_to_atomic_facts.
+        This is a wrapper around FactManager._parse_source_to_atomic_facts.
         """
 
-        data_manager = self._get_data_manager()
-        return data_manager._parse_source_to_atomic_facts(
+        fact_manager = self._get_fact_manager()
+        return fact_manager._parse_source_to_atomic_facts(
             source_list=source_list,
             destination_dir=destination_dir,
             alternative_prompt=alternative_prompt,

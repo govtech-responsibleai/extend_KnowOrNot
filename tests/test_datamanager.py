@@ -3,8 +3,8 @@ from unittest.mock import patch, MagicMock, mock_open
 from pathlib import Path
 
 
-from src.knowornot.DataManager import DataManager
-from src.knowornot.DataManager.models import (
+from src.knowornot.FactManager import FactManager
+from src.knowornot.FactManager.models import (
     SplitSourceDocument,
     Sentence,
     AtomicFactDocument,
@@ -14,47 +14,47 @@ from src.knowornot.SyncLLMClient import SyncLLMClient
 from src.knowornot import KnowOrNot
 
 
-class TestDataManager(unittest.TestCase):
+class TestFactManager(unittest.TestCase):
     def setUp(self):
         self.mock_llm_client = MagicMock(spec=SyncLLMClient)
         self.mock_llm_client.can_use_instructor = True
         self.default_prompt = "Test prompt"
 
-        self.data_manager = DataManager(
+        self.fact_manager = FactManager(
             sync_llm_client=self.mock_llm_client,
             default_fact_creation_prompt=self.default_prompt,
         )
 
-    @patch("src.knowornot.DataManager.nltk.download")
+    @patch("src.knowornot.FactManager.nltk.download")
     def test_init(self, mock_download):
         # Test initialization downloads NLTK data
-        data_manager = DataManager(
+        fact_manager = FactManager(
             sync_llm_client=self.mock_llm_client,
             default_fact_creation_prompt=self.default_prompt,
         )
 
         mock_download.assert_called_once_with("punkt", quiet=True)
-        self.assertEqual(data_manager.sync_llm_client, self.mock_llm_client)
-        self.assertEqual(data_manager.fact_creation_prompt, self.default_prompt)
+        self.assertEqual(fact_manager.sync_llm_client, self.mock_llm_client)
+        self.assertEqual(fact_manager.fact_creation_prompt, self.default_prompt)
 
-    @patch("src.knowornot.DataManager.sent_tokenize")
+    @patch("src.knowornot.FactManager.sent_tokenize")
     def test_split_sentences_normal(self, mock_sent_tokenize):
         # Test normal text splitting
         mock_sent_tokenize.return_value = ["Sentence one.", "Sentence two."]
 
-        result = self.data_manager._split_sentences("Sentence one. Sentence two.")
+        result = self.fact_manager._split_sentences("Sentence one. Sentence two.")
 
         mock_sent_tokenize.assert_called_once_with("Sentence one. Sentence two.")
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0].text, "Sentence one.")
         self.assertEqual(result[1].text, "Sentence two.")
 
-    @patch("src.knowornot.DataManager.sent_tokenize")
+    @patch("src.knowornot.FactManager.sent_tokenize")
     def test_split_sentences_empty(self, mock_sent_tokenize):
         # Test empty text
         mock_sent_tokenize.return_value = []
 
-        result = self.data_manager._split_sentences("")
+        result = self.fact_manager._split_sentences("")
 
         mock_sent_tokenize.assert_called_once_with("")
         self.assertEqual(len(result), 0)
@@ -62,9 +62,9 @@ class TestDataManager(unittest.TestCase):
     def test_update_llm_client(self):
         new_client = MagicMock(spec=SyncLLMClient)
 
-        self.data_manager.update_llm_client(new_client)
+        self.fact_manager.update_llm_client(new_client)
 
-        self.assertEqual(self.data_manager.sync_llm_client, new_client)
+        self.assertEqual(self.fact_manager.sync_llm_client, new_client)
 
     def test_convert_source_document_to_facts_default_prompt(self):
         document = SplitSourceDocument(
@@ -77,7 +77,7 @@ class TestDataManager(unittest.TestCase):
 
         self.mock_llm_client.get_structured_response.return_value = expected_facts
 
-        result = self.data_manager._convert_source_document_to_facts(
+        result = self.fact_manager._convert_source_document_to_facts(
             document=document, llm_client=self.mock_llm_client
         )
 
@@ -97,7 +97,7 @@ class TestDataManager(unittest.TestCase):
 
         self.mock_llm_client.get_structured_response.return_value = expected_facts
 
-        result = self.data_manager._convert_source_document_to_facts(
+        result = self.fact_manager._convert_source_document_to_facts(
             document=document,
             llm_client=self.mock_llm_client,
             alternative_prompt=alt_prompt,
@@ -113,7 +113,7 @@ class TestDataManager(unittest.TestCase):
     def test_load_text_file_valid(self, mock_file):
         file_path = Path("test.txt")
 
-        result = self.data_manager._load_text_file(file_path)
+        result = self.fact_manager._load_text_file(file_path)
 
         mock_file.assert_called_once_with(file_path, "r", encoding="utf-8")
         self.assertEqual(result, "Test content")
@@ -122,13 +122,13 @@ class TestDataManager(unittest.TestCase):
         file_path = Path("test.pdf")
 
         with self.assertRaises(ValueError) as context:
-            self.data_manager._load_text_file(file_path)
+            self.fact_manager._load_text_file(file_path)
 
         self.assertIn("File must be a .txt file", str(context.exception))
 
-    @patch.object(DataManager, "_load_text_file")
-    @patch.object(DataManager, "_split_sentences")
-    @patch.object(DataManager, "_convert_source_document_to_facts")
+    @patch.object(FactManager, "_load_text_file")
+    @patch.object(FactManager, "_split_sentences")
+    @patch.object(FactManager, "_convert_source_document_to_facts")
     def test_parse_source_to_atomic_facts_normal(
         self, mock_convert, mock_split, mock_load
     ):
@@ -143,7 +143,7 @@ class TestDataManager(unittest.TestCase):
         # Test with single source
         source_list = [Path("test.txt")]
 
-        result = self.data_manager._parse_source_to_atomic_facts(source_list)
+        result = self.fact_manager._parse_source_to_atomic_facts(source_list)
 
         mock_load.assert_called_once_with(Path("test.txt"))
         mock_split.assert_called_once()
@@ -151,9 +151,9 @@ class TestDataManager(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0], expected_facts)
 
-    @patch.object(DataManager, "_load_text_file")
-    @patch.object(DataManager, "_split_sentences")
-    @patch.object(DataManager, "_convert_source_document_to_facts")
+    @patch.object(FactManager, "_load_text_file")
+    @patch.object(FactManager, "_split_sentences")
+    @patch.object(FactManager, "_convert_source_document_to_facts")
     @patch.object(AtomicFactDocument, "save_to_json")
     def test_parse_source_to_atomic_facts_with_destination(
         self, mock_save, mock_convert, mock_split, mock_load
@@ -172,7 +172,7 @@ class TestDataManager(unittest.TestCase):
             source_list = [Path("test.txt")]
             destination_dir = Path("/output")
 
-            result = self.data_manager._parse_source_to_atomic_facts(
+            result = self.fact_manager._parse_source_to_atomic_facts(
                 source_list=source_list, destination_dir=destination_dir
             )
 
@@ -187,7 +187,7 @@ class TestDataManager(unittest.TestCase):
             destination_dir = Path("/output")
 
             with self.assertRaises(ValueError) as context:
-                self.data_manager._parse_source_to_atomic_facts(
+                self.fact_manager._parse_source_to_atomic_facts(
                     source_list=source_list, destination_dir=destination_dir
                 )
 
@@ -200,55 +200,55 @@ class TestDataManager(unittest.TestCase):
         source_list = [Path("test.txt")]
 
         with self.assertRaises(ValueError) as context:
-            self.data_manager._parse_source_to_atomic_facts(source_list=source_list)
+            self.fact_manager._parse_source_to_atomic_facts(source_list=source_list)
 
         self.assertIn("cannot use instructor", str(context.exception))
 
 
-class TestKnowOrNotDataManager(unittest.TestCase):
+class TestKnowOrNotFactManager(unittest.TestCase):
     def setUp(self):
         self.config = MagicMock()
         self.mock_llm_client = MagicMock(spec=SyncLLMClient)
         self.know_or_not = KnowOrNot(self.config)
         self.know_or_not.default_sync_client = self.mock_llm_client
 
-    @patch("src.knowornot.DataManager")
-    def test_get_data_manager_creates_new(self, mock_data_manager_class):
+    @patch("src.knowornot.FactManager")
+    def test_get_fact_manager_creates_new(self, mock_fact_manager_class):
         mock_instance = MagicMock()
-        mock_data_manager_class.return_value = mock_instance
+        mock_fact_manager_class.return_value = mock_instance
 
-        # Test when data_manager is None
-        result = self.know_or_not._get_data_manager()
+        # Test when fact_manager is None
+        result = self.know_or_not._get_fact_manager()
 
-        mock_data_manager_class.assert_called_once()
+        mock_fact_manager_class.assert_called_once()
         self.assertEqual(result, mock_instance)
-        self.assertEqual(self.know_or_not.data_manager, mock_instance)
+        self.assertEqual(self.know_or_not.fact_manager, mock_instance)
 
-    def test_get_data_manager_returns_existing(self):
-        # Set an existing data manager
-        mock_data_manager = MagicMock()
-        self.know_or_not.data_manager = mock_data_manager
+    def test_get_fact_manager_returns_existing(self):
+        # Set an existing fact manager
+        mock_fact_manager = MagicMock()
+        self.know_or_not.fact_manager = mock_fact_manager
 
-        result = self.know_or_not._get_data_manager()
+        result = self.know_or_not._get_fact_manager()
 
-        self.assertEqual(result, mock_data_manager)
+        self.assertEqual(result, mock_fact_manager)
 
-    def test_get_data_manager_no_default_client(self):
+    def test_get_fact_manager_no_default_client(self):
         # Remove default client
         self.know_or_not.default_sync_client = None
 
         with self.assertRaises(ValueError) as context:
-            self.know_or_not._get_data_manager()
+            self.know_or_not._get_fact_manager()
 
         self.assertIn("You must set a LLM Client", str(context.exception))
 
-    @patch.object(KnowOrNot, "_get_data_manager")
-    def test_create_facts(self, mock_get_data_manager):
-        mock_data_manager = MagicMock()
-        mock_get_data_manager.return_value = mock_data_manager
+    @patch.object(KnowOrNot, "_get_fact_manager")
+    def test_create_facts(self, mock_get_fact_manager):
+        mock_fact_manager = MagicMock()
+        mock_get_fact_manager.return_value = mock_fact_manager
 
         expected_result = [MagicMock(spec=AtomicFactDocument)]
-        mock_data_manager._parse_source_to_atomic_facts.return_value = expected_result
+        mock_fact_manager._parse_source_to_atomic_facts.return_value = expected_result
 
         source_list = [Path("test.txt")]
         destination_dir = Path("/output")
@@ -262,8 +262,8 @@ class TestKnowOrNotDataManager(unittest.TestCase):
             alt_llm_client=alt_client,
         )
 
-        mock_get_data_manager.assert_called_once()
-        mock_data_manager._parse_source_to_atomic_facts.assert_called_once_with(
+        mock_get_fact_manager.assert_called_once()
+        mock_fact_manager._parse_source_to_atomic_facts.assert_called_once_with(
             source_list=source_list,
             destination_dir=destination_dir,
             alternative_prompt=alt_prompt,
