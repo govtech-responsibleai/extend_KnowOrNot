@@ -37,8 +37,26 @@ class SyncAzureOpenAIClient(SyncLLMClient):
             )
             self.instructor_client = instructor.from_openai(self.client)
 
-    def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
-        # Handle different prompt types
+    def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
+        """
+        Constructs and sends a prompt to the Azure OpenAI chat model and returns the generated response.
+
+        This method handles the conversion of the input `prompt`, which can be a string or a list of `Message` objects,
+        into a list of `ChatCompletionMessageParam` suitable for the Azure OpenAI chat model. It then sends the
+        constructed messages to the model specified by `ai_model` and returns the model's textual response.
+
+        Args:
+            prompt: The input prompt(s) to send to the chat model. It can be a single string or a list of
+                    `Message` objects, where each message has a role (user, system, or assistant) and content.
+            ai_model: The identifier of the AI model to use for generating the chat response.
+
+        Returns:
+            The text content of the first message choice returned by the AI model.
+
+        Raises:
+            ValueError: If the response from the model does not contain any content.
+        """
+
         messages: List[ChatCompletionMessageParam] = []
 
         if isinstance(prompt, str):
@@ -87,7 +105,26 @@ class SyncAzureOpenAIClient(SyncLLMClient):
         response_model: Type[T],
         model_used: str,
     ) -> T:
-        # Handle different prompt types
+        """
+        Constructs and sends a prompt to the Azure OpenAI chat model and returns the generated structured response.
+
+        This method handles the conversion of the input `prompt`, which can be a string or a list of `Message` objects,
+        into a list of `ChatCompletionMessageParam` suitable for the Azure OpenAI chat model. It then sends the
+        constructed messages to the model specified by `model_used` and returns the model's response parsed into an
+        instance of `response_model`.
+
+        Args:
+            prompt: The input prompt(s) to send to the chat model. It can be a single string or a list of
+                    `Message` objects, where each message has a role (user, system, or assistant) and content.
+            response_model: The type of the response model to parse the output into.
+            model_used: The identifier of the AI model to use for generating the chat response.
+
+        Returns:
+            An instance of `response_model` containing the structured response from the AI model.
+
+        Raises:
+            ValueError: If the response from the model does not contain any content.
+        """
         messages: List[ChatCompletionMessageParam] = []
 
         if isinstance(prompt, str):

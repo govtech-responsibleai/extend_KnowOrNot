@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Type, TypeVar, Union
+from typing import List, Optional, Type, TypeVar, Union
 
 from pydantic import BaseModel
 
@@ -24,12 +24,28 @@ class SyncLLMClient(ABC):
         self.config = config
 
     @abstractmethod
-    def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
-        """
-        Send a prompt to the LLM and get a text response.
-        Accepts either a string or a list of messages.
-        """
+    def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
         pass
+
+    def prompt(
+        self, prompt: Union[str, List[Message]], ai_model: Optional[str] = None
+    ) -> str:
+        """Sends a prompt to the LLM and gets a text response.
+
+        Args:
+            prompt: The input prompt to send to the LLM. It can be either a single
+                string or a list of Message objects.
+            ai_model: The name of the AI model to use for generating text. If not
+                specified, uses the default model configured in the LLMClientConfig.
+
+        Returns:
+            The text response from the LLM.
+        """
+        model_to_use: str = self.config.default_model
+        if ai_model is not None:
+            model_to_use = ai_model
+
+        return self._prompt(prompt=prompt, ai_model=model_to_use)
 
     @property
     def can_use_instructor(self) -> bool:
@@ -45,7 +61,10 @@ class SyncLLMClient(ABC):
         pass
 
     def get_structured_response(
-        self, prompt: Union[str, List[Message]], response_model: Type[T], ai_model: str
+        self,
+        prompt: Union[str, List[Message]],
+        response_model: Type[T],
+        ai_model: Optional[str] = None,
     ) -> T:
         """
         Generate a structured response from a given prompt using the LLM.
@@ -70,8 +89,13 @@ class SyncLLMClient(ABC):
                 "Enable instructor mode in the configuration to use this feature."
             )
 
+        model_to_use: str = self.config.default_model
+
+        if ai_model is not None:
+            model_to_use = ai_model
+
         return self._generate_structured_response(
-            prompt=prompt, response_model=response_model, model_used=ai_model
+            prompt=prompt, response_model=response_model, model_used=model_to_use
         )
 
     @property

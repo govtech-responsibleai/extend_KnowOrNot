@@ -26,7 +26,7 @@ class TestSyncLLMClient(unittest.TestCase):
     def test_get_structured_response_raises_value_error_when_instructor_disabled(self):
         # Define a concrete class for testing (using Mock)
         class MockSyncLLMClient(SyncLLMClient):
-            def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
+            def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
                 return "Mock prompt response"
 
             def _generate_structured_response(
@@ -59,7 +59,7 @@ class TestSyncLLMClient(unittest.TestCase):
     ):
         # Define a concrete class for testing (using Mock)
         class MockSyncLLMClient(SyncLLMClient):
-            def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
+            def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
                 return "Mock prompt response"
 
             def _generate_structured_response(
@@ -99,7 +99,7 @@ class TestSyncLLMClient(unittest.TestCase):
     ):
         # Define a concrete class for testing (using Mock)
         class MockSyncLLMClient(SyncLLMClient):
-            def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
+            def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
                 return "Mock prompt response"
 
             def _generate_structured_response(
@@ -153,7 +153,7 @@ class TestSyncLLMClient(unittest.TestCase):
         # Test that inheriting classes MUST implement _generate_structured_response method
 
         class BadClient(SyncLLMClient):
-            def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
+            def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
                 return "Test"  # Dummy implementation. Important for testing!
 
             # Does not implement the _generate_structured_response!
