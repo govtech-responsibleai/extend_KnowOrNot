@@ -1,6 +1,8 @@
 import os
+from pathlib import Path
 from typing import Dict, List, Optional
 
+from .DataManager.models import AtomicFactDocument
 from .config import AzureOpenAIConfig, Config
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
@@ -285,3 +287,24 @@ class KnowOrNot:
         output.register_client(client=azure_sync_client, make_default=True)
 
         return output
+
+    def create_facts(
+        self,
+        source_list: List[Path],
+        destination_dir: Optional[Path] = None,
+        alternative_prompt: Optional[str] = None,
+        alt_llm_client: Optional[SyncLLMClient] = None,
+    ) -> List[AtomicFactDocument]:
+        """
+        Parse a list of source files and convert them to atomic facts.
+
+        This is a wrapper around DataManager._parse_source_to_atomic_facts.
+        """
+
+        data_manager = self._get_data_manager()
+        return data_manager._parse_source_to_atomic_facts(
+            source_list=source_list,
+            destination_dir=destination_dir,
+            alternative_prompt=alternative_prompt,
+            alt_llm_client=alt_llm_client,
+        )
