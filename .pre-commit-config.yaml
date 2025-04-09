@@ -25,10 +25,11 @@ repos:
         verbose: true
       - id: pytest
         name: Run pytest
-        entry: uv run pytest
+        entry: bash -c 'uv run pytest || [ $? -eq 5 ]'  # Exit code 5 means no tests collected
         language: system
         types: [python]
         stages: [pre-commit]
+        pass_filenames: false
         verbose: true
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0  # Use a specific version
