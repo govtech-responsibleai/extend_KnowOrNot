@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 
 from .config import AzureOpenAIConfig, Config
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
+from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
 
 __all__ = ["KnowOrNot", "SyncLLMClient"]
 
@@ -218,17 +219,27 @@ class KnowOrNot:
                         "AZURE_OPENAI_BATCH_API_VERSION is not set and azure_batch_api_version is not provided"
                     )
 
-        return KnowOrNot(
+        azure_config = AzureOpenAIConfig(
+            endpoint=azure_endpoint,
+            api_key=azure_api_key,
+            api_version=azure_api_version,
+        )
+
+        azure_batch_config = AzureOpenAIConfig(
+            endpoint=azure_batch_endpoint,
+            api_key=azure_batch_api_key,
+            api_version=azure_batch_api_version,
+        )
+
+        output = KnowOrNot(
             Config(
-                azure_config=AzureOpenAIConfig(
-                    endpoint=azure_endpoint,
-                    api_key=azure_api_key,
-                    api_version=azure_api_version,
-                ),
-                azure_batch_config=AzureOpenAIConfig(
-                    endpoint=azure_batch_endpoint,
-                    api_key=azure_batch_api_key,
-                    api_version=azure_batch_api_version,
-                ),
+                azure_config=azure_config,
+                azure_batch_config=azure_batch_config,
             )
         )
+
+        azure_sync_client = SyncAzureOpenAIClient(config=azure_config)
+
+        output.register_client(client=azure_sync_client, make_default=True)
+
+        return output
