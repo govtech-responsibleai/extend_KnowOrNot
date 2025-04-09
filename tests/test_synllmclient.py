@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from pydantic import BaseModel
 
 from src.knowornot.config import LLMClientConfig
-from src.knowornot.SyncLLMClient import SyncLLMClient, T
+from src.knowornot.SyncLLMClient import SyncLLMClient, SyncLLMClientEnum, T
 
 
 # Define a dummy config class for testing
@@ -36,6 +36,10 @@ class TestSyncLLMClient(unittest.TestCase):
                     "_generate_structured_response should not be called"
                 )
 
+            @property
+            def enum_name(self) -> SyncLLMClientEnum:
+                raise NotImplementedError()
+
         config = DummyLLMClientConfig(
             can_use_instructor=False, api_key="dummy_api_key"
         )  # Instructor disabled
@@ -60,6 +64,10 @@ class TestSyncLLMClient(unittest.TestCase):
                 data: Dict[str, Any] = {"temperature": 20.0, "condition": "Cloudy"}
                 instance = response_model(**data)
                 return instance
+
+            @property
+            def enum_name(self) -> SyncLLMClientEnum:
+                raise NotImplementedError()
 
         config = DummyLLMClientConfig(
             can_use_instructor=True, api_key="dummy_api_key"
@@ -90,6 +98,10 @@ class TestSyncLLMClient(unittest.TestCase):
             ) -> T:
                 # Mock implementation - raise an exception
                 raise ValueError("Simulated error in _generate_structured_response")
+
+            @property
+            def enum_name(self) -> SyncLLMClientEnum:
+                raise NotImplementedError()
 
         config = DummyLLMClientConfig(
             can_use_instructor=True, api_key="dummy_api_key"
