@@ -1,3 +1,4 @@
+from pathlib import Path
 from pydantic import BaseModel
 from typing import List
 
@@ -29,3 +30,10 @@ class AtomicFactDocument(BaseModel):
         for i, fact in enumerate(self.fact_list):
             result += f"{i}: {fact.fact_text}\n"
         return result.strip()
+
+    def save_to_json(self, path: Path) -> None:
+        if not path.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {path}")
+
+        with open(path, "w") as f:
+            f.write(self.model_dump_json(indent=2))
