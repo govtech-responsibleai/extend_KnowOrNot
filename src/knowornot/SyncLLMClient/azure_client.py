@@ -13,6 +13,7 @@ from openai.types.chat.chat_completion_user_message_param import (
     ChatCompletionUserMessageParam,
 )
 from pydantic import BaseModel
+import warnings
 
 from ..config import AzureOpenAIConfig
 from ..SyncLLMClient import Message, SyncLLMClient, SyncLLMClientEnum
@@ -23,13 +24,18 @@ T = TypeVar("T", bound=BaseModel)
 class SyncAzureOpenAIClient(SyncLLMClient):
     def __init__(self, config: AzureOpenAIConfig):
         super().__init__(config)
-        self.config = config
+        self.config: AzureOpenAIConfig = config
         self.client = AzureOpenAI(
             api_key=config.api_key,
             azure_endpoint=config.endpoint,
             api_version=config.api_version,
         )
-        self.instructor_client = instructor.from_openai(self.client)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Client should be an instance of openai.OpenAI or openai.AsyncOpenAI.*",
+            )
+            self.instructor_client = instructor.from_openai(self.client)
 
     def prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
         # Handle different prompt types
