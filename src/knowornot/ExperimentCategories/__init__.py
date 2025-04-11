@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import SingleExperimentInput, QAPair
+import numpy as np
 
 
 class ExperimentTypeEnum(Enum):
@@ -18,40 +19,56 @@ class BaseExperiment(ABC):
 
     @abstractmethod
     def _create_single_removal_experiment(
-        self, question_to_ask: QAPair, remaining_qa: List[QAPair]
+        self, question_to_ask: QAPair, removed_index: int, remaining_qa: List[QAPair]
     ) -> SingleExperimentInput:
         """
         An abstract method that creates a single experiment input where the question_to_ask
-        is removed from the remaining_qa context.
+        is removed from the context.
 
         This method should be implemented by the concrete subclass of BaseExperiment.
 
         Args:
             question_to_ask (QAPair): The question-answer pair to be removed and
             used for the experiment.
-            remaining_qa (List[QAPair]): The list of remaining question-answer pairs
-            after removing the question_to_ask.
+            removed_index (int): The index of the question_to_ask in the original list
+            of question-answer pairs.
+            remaining_qa (List[QAPair]): The list of question-answer pairs that are
+            not removed.
 
         Returns:
             SingleExperimentInput: An experiment input object that represents the
-            removal of question_to_ask from the remaining_qa context.
+            removal of question_to_ask from the original list of question-answer pairs.
         """
 
-        pass
+    def _embed_qa_pair_list(self, qa_pair_list: List[QAPair]) -> np.ndarray:
+        """
+        An abstract method that embeds the question list and returns a numpy 2D array.
+        It should call sync client llm's get embedding method.
+
+        Args:
+            qa_pair_list (List[QAPair]): The question-answer pairs to be embedded.
+
+        Returns:
+            np.ndarray: A 2D numpy array of float embeddings.
+        """
+        embeddings = self.default_client.get_embedding(
+            [str(qa_pair) for qa_pair in qa_pair_list]
+        )
+        return np.array(embeddings)
 
     @abstractmethod
     def _create_single_synthetic_experiment(
-        self, question_to_ask: QAPair, remaining_qa: List[QAPair]
+        self, question_to_ask: QAPair, question_list: List[QAPair]
     ) -> SingleExperimentInput:
         """
-        An abstract method that creates a single experiment input where the question_to_ask is synthetically generated from the remaining_qa context.
+        An abstract method that creates a single experiment input where the question_to_ask is synthetically generated from the question_list context.
 
         This method should be implemented by the concrete subclass of BaseExperiment.
         The user should refer to the specific concrete implementation for the details of how the synthetic experiment is created.
 
         Args:
             question_to_ask (QAPair): The question to ask in the experiment.
-            remaining_qa (List[QAPair]): The remaining question-answer pairs that are used to generate the synthetic input.
+            question_list (List[QAPair]): The question-answer pairs that are to be passed as in context
 
         Returns:
             SingleExperimentInput: A single experiment input.
@@ -60,12 +77,12 @@ class BaseExperiment(ABC):
 
     def _split_question_list(
         self, question_list: List[QAPair]
-    ) -> List[Tuple[QAPair, List[QAPair]]]:
-        output: List[Tuple[QAPair, List[QAPair]]] = []
+    ) -> List[Tuple[QAPair, List[QAPair], int]]:
+        output: List[Tuple[QAPair, List[QAPair], int]] = []
         for i in range(len(question_list)):
             question_to_add = question_list[i]
             rest = question_list[0:i] + question_list[i + 1 :]
-            output.append((question_to_add, rest))
+            output.append((question_to_add, rest, i))
 
         return output
 
@@ -90,14 +107,33 @@ class BaseExperiment(ABC):
 
         experiment_list: List[SingleExperimentInput] = []
         split_questions = self._split_question_list(question_list)
-        for question, remaining in split_questions:
+        for question, remaining, index in split_questions:
             experiment_list.append(
                 self._create_single_removal_experiment(
-                    question_to_ask=question, remaining_qa=remaining
+                    question_to_ask=question,
+                    removed_index=index,
+                    remaining_qa=remaining,
                 )
             )
 
         return experiment_list
+
+    @abstractmethod
+    def _generate_synthetic_questions(
+        self, question_list: List[QAPair]
+    ) -> List[QAPair]:
+        """
+        An abstract method that takes in a list of questions and returns a list of single experiment inputs.
+        The method should be implemented by the concrete subclass of BaseExperiment.
+        The user should refer to the specific concrete implementation for the details of how the synthetic experiment is created.
+
+        Args:
+            question_list (List[QAPair]): A list of question-answer pairs to process.
+
+        Returns:
+            List[SingleExperimentInput]: A list of single experiment inputs.
+        """
+        pass
 
     def create_synthetic_experiment(
         self, question_list: List[QAPair]
@@ -105,11 +141,11 @@ class BaseExperiment(ABC):
         """
         Creates a list of synthetic experiments from a list of questions.
 
-        This method splits a list of questions into individual questions and their
-        respective remaining questions. For each split, it generates a `SingleExperimentInput`
-        using the `_create_single_synthetic_experiment` method, which represents an
-        experiment based on synthetically generating the selected question based on the
-        context.
+        This method takes the list of questions and splits them into individual questions
+        and their respective remaining questions. For each split, it generates a
+        `SingleExperimentInput` using the `_create_single_synthetic_experiment` method,
+        which represents an experiment based on synthetically generating the selected
+        question based on the context.
 
         Args:
             question_list (List[QAPair]): A list of question-answer pairs to process.
@@ -120,11 +156,11 @@ class BaseExperiment(ABC):
         """
 
         experiment_list: List[SingleExperimentInput] = []
-        split_questions = self._split_question_list(question_list)
-        for question, remaining in split_questions:
+        synthetic_questions = self._generate_synthetic_questions(question_list)
+        for question in synthetic_questions:
             experiment_list.append(
                 self._create_single_synthetic_experiment(
-                    question_to_ask=question, remaining_qa=remaining
+                    question_to_ask=question, question_list=question_list
                 )
             )
 
