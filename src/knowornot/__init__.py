@@ -296,9 +296,15 @@ class KnowOrNot:
         alt_llm_client: Optional[SyncLLMClient] = None,
     ) -> List[AtomicFactDocument]:
         """
-        Parse a list of source files and convert them to atomic facts.
+        Parses a list of source files and converts them to atomic facts using a given LLM client.
 
-        This is a wrapper around FactManager._parse_source_to_atomic_facts.
+        This function is part of the main client's Facade interface, providing a simplified
+        entry point for fact extraction.  It abstracts away the need to directly interact
+        with the underlying `FactManager`, allowing users to call this method directly
+        from the client object.
+
+        For detailed information on the parsing process, parameters, return values, and
+        potential exceptions, see `FactManager._parse_source_to_atomic_facts`.
         """
 
         fact_manager = self._get_fact_manager()
