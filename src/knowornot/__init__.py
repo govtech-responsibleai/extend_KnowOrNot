@@ -2,11 +2,13 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from .QuestionExtractor import QuestionExtractor
 from .FactManager.models import AtomicFactDocument
 from .config import AzureOpenAIConfig, Config
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
 from .FactManager import FactManager
+from .QuestionExtractor.models import QAPair
 from .PromptManager import PromptManager
 
 __all__ = ["KnowOrNot", "SyncLLMClient"]
@@ -129,6 +131,22 @@ class KnowOrNot:
         )
 
         return self.fact_manager
+
+    def _get_question_manager(self) -> QuestionExtractor:
+        if self.question_manager is not None:
+            return self.question_manager
+
+        if not self.default_sync_client:
+            raise ValueError(
+                "You must set a LLM Client before performing any question related operations"
+            )
+
+        self.question_manager = QuestionExtractor(
+            question_prompt_default=PromptManager.default_question_extraction_prompt,
+            default_client=self.default_sync_client,
+        )
+
+        return self.question_manager
 
     @staticmethod
     def create_from_azure(
@@ -313,4 +331,33 @@ class KnowOrNot:
             destination_dir=destination_dir,
             alternative_prompt=alternative_prompt,
             alt_llm_client=alt_llm_client,
+        )
+
+    def create_questions(
+        self,
+        llm_client: SyncLLMClient,
+        context_prompt: str,
+        document: AtomicFactDocument,
+        alternative_prompt: Optional[str] = None,
+        ai_model: Optional[str] = None,
+    ) -> List[QAPair]:
+        """
+        Generates questions from an atomic fact document using a given LLM client.
+
+        This function is part of the main client's Facade interface, providing a simplified
+        entry point for question generation. It abstracts away the need to directly interact
+        with the underlying `QuestionExtractor`, allowing users to call this method directly
+        from the client object.
+
+        For detailed information on the parsing process, parameters, return values, and
+        potential exceptions, see `QuestionExtractor.generate_question_from_document`.
+        """
+
+        question_extractor = self._get_question_manager()
+        return question_extractor.generate_question_from_document(
+            llm_client=llm_client,
+            document=document,
+            context_prompt=context_prompt,
+            alternative_question_prompt=alternative_prompt,
+            ai_model=ai_model,
         )
