@@ -1,7 +1,6 @@
 from typing import Optional, List
 from ..SyncLLMClient import SyncLLMClient
-from ..FactManager.models import AtomicFact, AtomicFactDocument
-from .models import QAPair, QAPairLLM
+from ..common.models import QAPair, QAPairLLM, AtomicFact, AtomicFactDocument
 import asyncio
 import concurrent.futures
 

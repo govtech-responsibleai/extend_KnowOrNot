@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from src.knowornot.QuestionExtractor import QuestionExtractor
-from src.knowornot.QuestionExtractor.models import QAPair, QAPairLLM
-from src.knowornot.FactManager.models import AtomicFactDocument, AtomicFact
+from src.knowornot.common.models import QAPair, QAPairLLM
+from src.knowornot.common.models import AtomicFactDocument, AtomicFact
 from src.knowornot.SyncLLMClient import SyncLLMClient
 
 

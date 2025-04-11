@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 from src.knowornot.FactManager import FactManager
-from src.knowornot.FactManager.models import (
+from src.knowornot.common.models import (
     SplitSourceDocument,
     Sentence,
     AtomicFactDocument,

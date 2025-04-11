@@ -1,7 +1,7 @@
 from ..SyncLLMClient import SyncLLMClient
 from pathlib import Path
 from typing import Optional, List
-from .models import AtomicFactDocument, Sentence, SplitSourceDocument
+from ..common.models import AtomicFactDocument, Sentence, SplitSourceDocument
 
 import nltk
 from nltk.tokenize import sent_tokenize

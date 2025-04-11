@@ -3,12 +3,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .QuestionExtractor import QuestionExtractor
-from .FactManager.models import AtomicFactDocument
+from .common.models import AtomicFactDocument, QAPair
 from .config import AzureOpenAIConfig, Config
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
 from .FactManager import FactManager
-from .QuestionExtractor.models import QAPair
 from .PromptManager import PromptManager
 
 __all__ = ["KnowOrNot", "SyncLLMClient"]
