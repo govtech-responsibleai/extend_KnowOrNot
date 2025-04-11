@@ -11,18 +11,26 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
     @pytest.fixture(autouse=True)  # Run before each test
     def setup(self):
         self.mock_llm_client = MagicMock(spec=SyncLLMClient)
-        self.question_generation_prompt = "Generate a question about this fact:"
+        self.question_prompt_default = "Generate a question about this fact:"
+        self.context_prompt = "Some context."  # Added context prompt
         self.question_extractor = QuestionExtractor(
-            question_generation_prompt=self.question_generation_prompt,
+            question_prompt_default=self.question_prompt_default,
             default_client=self.mock_llm_client,
         )
 
     def test_construct_text_to_llm(self):
         fact = AtomicFact(fact_text="Test fact", source_citation=0)
-        expected_text = self.question_generation_prompt + "The fact is " + str(fact)
+        expected_text = (
+            self.context_prompt
+            + self.question_prompt_default
+            + "The fact is "
+            + str(fact)
+        )
 
         actual_text = self.question_extractor._construct_text_to_llm(
-            prompt=self.question_generation_prompt, fact=fact
+            context_prompt=self.context_prompt,
+            question_prompt=self.question_prompt_default,
+            fact=fact,
         )
 
         assert actual_text == expected_text  # Use assert instead of self.assertEqual
@@ -37,7 +45,9 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
         )
 
         actual_qa_pair = self.question_extractor._generate_question_from_single_fact(
-            llm_client=self.mock_llm_client, fact=fact
+            llm_client=self.mock_llm_client,
+            fact=fact,
+            context_prompt=self.context_prompt,
         )
 
         self.mock_llm_client.get_structured_response.assert_called_once()
@@ -62,7 +72,9 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
         ]
 
         actual_qa_pairs = self.question_extractor.generate_question_from_document(
-            llm_client=self.mock_llm_client, document=document
+            llm_client=self.mock_llm_client,
+            document=document,
+            context_prompt=self.context_prompt,
         )
 
         assert len(actual_qa_pairs) == 2
@@ -99,7 +111,9 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
             # Act
             actual_qa_pairs = (
                 await self.question_extractor.generate_question_from_document_async(
-                    llm_client=self.mock_llm_client, document=document
+                    llm_client=self.mock_llm_client,
+                    document=document,
+                    context_prompt=self.context_prompt,
                 )
             )
 
@@ -117,7 +131,7 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
         fact = AtomicFact(fact_text="Test fact", source_citation=0)
         qa_pair_llm = QAPairLLM(question="Test question?", answer="Test answer.")
         self.mock_llm_client.get_structured_response.return_value = qa_pair_llm
-        alternative_prompt = "Alternative prompt"
+        alternative_question_prompt = "Alternative prompt"
 
         expected_qa_pair = QAPair(
             question="Test question?", answer="Test answer.", source=fact
@@ -126,11 +140,14 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
         actual_qa_pair = self.question_extractor._generate_question_from_single_fact(
             llm_client=self.mock_llm_client,
             fact=fact,
-            alternative_prompt=alternative_prompt,
+            context_prompt=self.context_prompt,
+            alternative_question_prompt=alternative_question_prompt,
         )
 
         self.mock_llm_client.get_structured_response.assert_called_once()
         # Check that alternative prompt was used
         args, kwargs = self.mock_llm_client.get_structured_response.call_args
-        assert alternative_prompt in kwargs.get("prompt", "")
+        assert self.context_prompt + alternative_question_prompt in kwargs.get(
+            "prompt", ""
+        )
         assert actual_qa_pair == expected_qa_pair
