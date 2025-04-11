@@ -1,4 +1,4 @@
-from typing import List, Type, TypeVar, Union
+from typing import List, Optional, Type, TypeVar, Union
 
 import instructor
 from openai import AzureOpenAI
@@ -161,6 +161,14 @@ class SyncAzureOpenAIClient(SyncLLMClient):
             messages=messages,
         )
         return response
+
+    def get_embedding(
+        self, prompt_list: List[str], model: Optional[str] = None
+    ) -> List[List[float]]:
+        embedding_response = self.client.embeddings.create(
+            input=prompt_list, model="text-embedding-3-large"
+        )
+        return list(map(lambda x: x.embedding, embedding_response.data))
 
     @property
     def enum_name(self) -> SyncLLMClientEnum:

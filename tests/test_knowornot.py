@@ -16,12 +16,14 @@ class TestKnowOrNot:
                 endpoint="https://endpoint.com",
                 api_version="2023-05-15",
                 default_model="gpt-4",
+                default_embedding_model="text-embedding-3-large",
             ),
             azure_batch_config=AzureOpenAIConfig(
                 api_key="batch_key",
                 endpoint="https://batch.endpoint.com",
                 api_version="2023-05-15",
                 default_model="gpt-4",
+                default_embedding_model="text-embedding-3-large",
             ),
         )
 
@@ -37,6 +39,10 @@ class TestKnowOrNot:
             == "https://batch.endpoint.com"
         )
         assert know_or_not.config.azure_batch_config.api_key == "batch_key"
+        assert (
+            know_or_not.config.azure_batch_config.default_embedding_model
+            == "text-embedding-3-large"
+        )
 
     def test_create_from_azure_with_params(self):
         """Test factory method with all parameters provided."""
@@ -47,7 +53,9 @@ class TestKnowOrNot:
             azure_batch_endpoint="https://batch.endpoint.com",
             azure_batch_api_key="batch_key",
             azure_batch_api_version="2023-05-15",
+            default_embedding_model="text-embedding-3-large",
             separate_batch_client=True,
+            default_batch_embedding_model="text-embedding-3-large",
         )
 
         assert know_or_not.config.azure_config is not None
@@ -60,7 +68,10 @@ class TestKnowOrNot:
             == "https://batch.endpoint.com"
         )
         assert know_or_not.config.azure_batch_config.api_key == "batch_key"
-        assert know_or_not.config.azure_batch_config.api_version == "2023-05-15"
+        assert (
+            know_or_not.config.azure_batch_config.default_embedding_model
+            == "text-embedding-3-large"
+        )
 
     def test_create_from_azure_without_separate_batch(self):
         """Test factory method without separate batch client."""
@@ -68,6 +79,7 @@ class TestKnowOrNot:
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
             azure_api_version="2023-05-15",
+            default_embedding_model="text-embedding-3-large",
             separate_batch_client=False,
         )
 
@@ -79,6 +91,10 @@ class TestKnowOrNot:
         assert know_or_not.config.azure_batch_config.endpoint == "https://endpoint.com"
         assert know_or_not.config.azure_batch_config.api_key == "api_key"
         assert know_or_not.config.azure_batch_config.api_version == "2023-05-15"
+        assert (
+            know_or_not.config.azure_batch_config.default_embedding_model
+            == "text-embedding-3-large"
+        )
 
     @patch.dict(
         os.environ,
@@ -86,6 +102,7 @@ class TestKnowOrNot:
             "AZURE_OPENAI_ENDPOINT": "https://env.endpoint.com",
             "AZURE_OPENAI_API_KEY": "env_api_key",
             "AZURE_OPENAI_API_VERSION": "2023-05-15",
+            "AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL": "text-embedding-3-large",
         },
     )
     def test_create_from_azure_with_env_vars(self):
@@ -107,6 +124,10 @@ class TestKnowOrNot:
         )
         assert know_or_not.config.azure_batch_config.api_key == "env_api_key"
         assert know_or_not.config.azure_batch_config.api_version == "2023-05-15"
+        assert (
+            know_or_not.config.azure_batch_config.default_embedding_model
+            == "text-embedding-3-large"
+        )
 
     @patch.dict(
         os.environ,
@@ -117,6 +138,8 @@ class TestKnowOrNot:
             "AZURE_OPENAI_BATCH_ENDPOINT": "https://env.batch.endpoint.com",
             "AZURE_OPENAI_BATCH_API_KEY": "env_batch_key",
             "AZURE_OPENAI_BATCH_API_VERSION": "2023-05-15",
+            "AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL": "text-embedding-3-large",
+            "AZURE_OPENAI_DEFAULT_BATCH_EMBEDDING_MODEL": "text-embedding-3-large",
         },
     )
     def test_create_from_azure_with_separate_batch_env_vars(self):
@@ -135,6 +158,10 @@ class TestKnowOrNot:
         assert know_or_not.config.azure_config.endpoint == "https://env.endpoint.com"
         assert know_or_not.config.azure_config.api_key == "env_api_key"
         assert know_or_not.config.azure_config.api_version == "2023-05-15"
+        assert (
+            know_or_not.config.azure_config.default_embedding_model
+            == "text-embedding-3-large"
+        )
         assert know_or_not.config.azure_batch_config is not None
         assert (
             know_or_not.config.azure_batch_config.endpoint
@@ -142,6 +169,10 @@ class TestKnowOrNot:
         )
         assert know_or_not.config.azure_batch_config.api_key == "env_batch_key"
         assert know_or_not.config.azure_batch_config.api_version == "2023-05-15"
+        assert (
+            know_or_not.config.azure_batch_config.default_embedding_model
+            == "text-embedding-3-large"
+        )
 
     def test_create_from_azure_error_when_separate_false_but_batch_params_provided(
         self,
@@ -153,6 +184,8 @@ class TestKnowOrNot:
                 azure_api_key="api_key",
                 azure_api_version="2023-05-15",
                 azure_batch_endpoint="https://batch.endpoint.com",
+                default_embedding_model="text-embedding-3-large",
+                default_batch_embedding_model="text-embedding-3-large",
                 separate_batch_client=False,
             )
 
@@ -230,6 +263,7 @@ class TestKnowOrNot:
                 endpoint="https://example.com",
                 api_version="2023-05-15",
                 default_model="gpt-4",
+                default_embedding_model="text-embedding-3-large",
             )
 
         with pytest.raises(
@@ -240,6 +274,7 @@ class TestKnowOrNot:
                 endpoint="",
                 api_version="2023-05-15",
                 default_model="gpt-4",
+                default_embedding_model="text-embedding-3-large",
             )
 
         # Should not raise an error with valid values
@@ -248,4 +283,5 @@ class TestKnowOrNot:
             endpoint="https://example.com",
             api_version="2023-05-15",
             default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )

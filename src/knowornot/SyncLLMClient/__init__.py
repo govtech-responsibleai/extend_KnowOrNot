@@ -98,6 +98,12 @@ class SyncLLMClient(ABC):
             prompt=prompt, response_model=response_model, model_used=model_to_use
         )
 
+    @abstractmethod
+    def get_embedding(
+        self, prompt_list: List[str], model: Optional[str] = None
+    ) -> List[List[float]]:
+        pass
+
     @property
     @abstractmethod
     def enum_name(self) -> SyncLLMClientEnum:

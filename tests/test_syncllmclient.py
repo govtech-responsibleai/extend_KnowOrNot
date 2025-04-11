@@ -1,5 +1,5 @@
 import unittest
-from typing import Any, Dict, List, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 from unittest.mock import MagicMock, patch
 
 from pydantic import BaseModel
@@ -44,8 +44,18 @@ class TestSyncLLMClient(unittest.TestCase):
             def enum_name(self) -> SyncLLMClientEnum:
                 raise NotImplementedError()
 
+            def get_embedding(
+                self, prompt_list: List[str], model: Optional[str] = None
+            ) -> List[List[float]]:
+                raise NotImplementedError(
+                    "get_embedding method must be implemented in the child class"
+                )
+
         config = DummyLLMClientConfig(
-            can_use_instructor=False, api_key="dummy_api_key", default_model="gpt-4"
+            can_use_instructor=False,
+            api_key="dummy_api_key",
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )  # Instructor disabled
         client = MockSyncLLMClient(config=config)
 
@@ -76,8 +86,18 @@ class TestSyncLLMClient(unittest.TestCase):
             def enum_name(self) -> SyncLLMClientEnum:
                 raise NotImplementedError()
 
+            def get_embedding(
+                self, prompt_list: List[str], model: Optional[str] = None
+            ) -> List[List[float]]:
+                raise NotImplementedError(
+                    "get_embedding method must be implemented in the child class"
+                )
+
         config = DummyLLMClientConfig(
-            can_use_instructor=True, api_key="dummy_api_key", default_model="gpt-4"
+            can_use_instructor=True,
+            api_key="dummy_api_key",
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )  # Instructor enabled
         client = MockSyncLLMClient(config=config)
 
@@ -115,8 +135,19 @@ class TestSyncLLMClient(unittest.TestCase):
             def enum_name(self) -> SyncLLMClientEnum:
                 raise NotImplementedError()
 
+            def get_embedding(
+                self, prompt_list: List[str], model: Optional[str] = None
+            ) -> List[List[float]]:
+                # Default implementation - raises NotImplementedError
+                raise NotImplementedError(
+                    "get_embedding method must be implemented in the child class"
+                )
+
         config = DummyLLMClientConfig(
-            can_use_instructor=True, api_key="dummy_api_key", default_model="gpt-4"
+            can_use_instructor=True,
+            api_key="dummy_api_key",
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )  # Instructor enabled
         client = MockSyncLLMClient(config=config)
 
@@ -144,7 +175,10 @@ class TestSyncLLMClient(unittest.TestCase):
                 raise NotImplementedError()
 
         config = DummyLLMClientConfig(
-            can_use_instructor=True, api_key="dummy_api_key", default_model="gpt-4"
+            can_use_instructor=True,
+            api_key="dummy_api_key",
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )
         with self.assertRaises(TypeError):
             BadClient(config=config)  # type: ignore
@@ -162,8 +196,17 @@ class TestSyncLLMClient(unittest.TestCase):
             def enum_name(self) -> SyncLLMClientEnum:
                 raise NotImplementedError()
 
+            def get_embedding(
+                self, prompt_list: List[str], model: Optional[str] = None
+            ) -> List[List[float]]:
+                # Dummy implementation for testing
+                return [[0.0] * 768 for _ in prompt_list]
+
         config = DummyLLMClientConfig(
-            can_use_instructor=True, api_key="dummy_api_key", default_model="gpt-4"
+            can_use_instructor=True,
+            api_key="dummy_api_key",
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )
         with self.assertRaises(TypeError) as context:
             BadClient(config=config)  # type: ignore
@@ -171,5 +214,43 @@ class TestSyncLLMClient(unittest.TestCase):
 
         self.assertIn(
             "Can't instantiate abstract class BadClient without an implementation for abstract method '_generate_structured_response'",
+            str(context.exception),
+        )
+
+    def test_abstract_get_embedding(self):
+        # Test that inheriting classes MUST implement get_embedding method
+
+        class BadClient(SyncLLMClient):
+            def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
+                return "Test"  # Dummy implementation. Important for testing!
+
+            def _generate_structured_response(
+                self,
+                prompt: Union[str, List[Message]],
+                response_model: Type[T],
+                model_used: str,
+            ) -> T:
+                return MagicMock(
+                    spec=BaseModel
+                )  # Dummy for demonstration.  Important for testing!
+
+            # Does not implement the get_embedding method!
+
+            @property
+            def enum_name(self) -> SyncLLMClientEnum:
+                raise NotImplementedError()
+
+        config = DummyLLMClientConfig(
+            can_use_instructor=True,
+            api_key="dummy_api_key",
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
+        )
+        with self.assertRaises(TypeError) as context:
+            BadClient(config=config)  # type: ignore
+            # ignore type by type checker as we are deliberately instantiating with the wrong type
+
+        self.assertIn(
+            "Can't instantiate abstract class BadClient without an implementation for abstract method 'get_embedding'",
             str(context.exception),
         )

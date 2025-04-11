@@ -7,13 +7,14 @@ from typing import Optional
 class LLMClientConfig(ABC):
     api_key: str
     default_model: str
+    default_embedding_model: str
     can_use_instructor: bool = False
 
 
 @dataclass
 class AzureOpenAIConfig(LLMClientConfig):
     can_use_instructor: bool = True
-    endpoint: str = ""  # Default provided to satisfy dataclasses requirement
+    endpoint: str = ""
     api_version: str = ""
 
     def __post_init__(self):

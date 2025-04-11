@@ -157,6 +157,8 @@ class KnowOrNot:
         azure_batch_api_version: Optional[str] = None,
         default_synchronous_model: Optional[str] = None,
         default_batch_model: Optional[str] = None,
+        default_embedding_model: Optional[str] = None,
+        default_batch_embedding_model: Optional[str] = None,
         separate_batch_client: bool = False,
     ) -> "KnowOrNot":
         """
@@ -183,6 +185,12 @@ class KnowOrNot:
         - default_batch_model (Optional[str]): The default model for batch operations.
         If not provided, the environment variable `AZURE_OPENAI_DEFAULT_BATCH_MODEL` will be used,
         with a fallback to "gpt-4o".
+        - default_embedding_model (Optional[str]): The default embedding model.
+        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL` will be used,
+        with a fallback to "text-embedding-3-large".
+        - default_batch_embedding_model (Optional[str]): The default embedding model for batch operations.
+        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_BATCH_EMBEDDING_MODEL` will be used,
+        with a fallback to "text-embedding-3-large".
         - separate_batch_client (bool): Determines whether to use a separate batch
         client. If `False`, `azure_batch_endpoint`, `azure_batch_api_key`,
         `azure_batch_api_version`, and `default_batch_model` should not be provided, and will
@@ -205,6 +213,8 @@ class KnowOrNot:
                 azure_batch_api_version="2023-05-15",
                 default_synchronous_model="gpt-4o",
                 default_batch_model="gpt-4o-batch",
+                default_embedding_model="text-embedding-3-large",
+                default_batch_embedding_model="text-embedding-3-large",
                 separate_batch_client=True
             )
 
@@ -238,6 +248,10 @@ class KnowOrNot:
             default_synchronous_model = os.environ.get(
                 "AZURE_OPENAI_DEFAULT_MODEL", "gpt-4o"
             )
+        if not default_embedding_model:
+            default_embedding_model = os.environ.get(
+                "AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL", "text-embedding-3-large"
+            )
 
         if not separate_batch_client:
             if (
@@ -245,15 +259,17 @@ class KnowOrNot:
                 or azure_batch_api_key
                 or azure_batch_api_version
                 or default_batch_model
+                or default_batch_embedding_model
             ):
                 raise ValueError(
-                    "If separate_batch_client is false, azure_batch_endpoint, azure_batch_api_key, azure_batch_api_version, and default_batch_model should not be provided"
+                    "If separate_batch_client is false, azure_batch_endpoint, azure_batch_api_key, azure_batch_api_version, default_batch_model, and default_batch_embedding_model should not be provided"
                 )
 
             azure_batch_endpoint = azure_endpoint
             azure_batch_api_key = azure_api_key
             azure_batch_api_version = azure_api_version
             default_batch_model = default_synchronous_model
+            default_batch_embedding_model = default_embedding_model
 
         else:
             if not azure_batch_endpoint:
@@ -280,12 +296,18 @@ class KnowOrNot:
                 default_batch_model = os.environ.get(
                     "AZURE_OPENAI_DEFAULT_BATCH_MODEL", "gpt-4o"
                 )
+            if not default_batch_embedding_model:
+                default_batch_embedding_model = os.environ.get(
+                    "AZURE_OPENAI_DEFAULT_BATCH_EMBEDDING_MODEL",
+                    "text-embedding-3-large",
+                )
 
         azure_config = AzureOpenAIConfig(
             endpoint=azure_endpoint,
             api_key=azure_api_key,
             api_version=azure_api_version,
             default_model=default_synchronous_model,
+            default_embedding_model=default_embedding_model,
         )
 
         azure_batch_config = AzureOpenAIConfig(
@@ -293,6 +315,7 @@ class KnowOrNot:
             api_key=azure_batch_api_key,
             api_version=azure_batch_api_version,
             default_model=default_batch_model,
+            default_embedding_model=default_batch_embedding_model,
         )
 
         output = KnowOrNot(
