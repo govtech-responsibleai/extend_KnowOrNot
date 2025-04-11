@@ -204,6 +204,56 @@ class TestFactManager(unittest.TestCase):
 
         self.assertIn("cannot use instructor", str(context.exception))
 
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data='{"fact_list": [{"fact_text": "Test fact.", "source_citation": 0}]}',
+    )
+    @patch.object(Path, "is_dir", return_value=True)
+    @patch.object(AtomicFactDocument, "save_to_json")
+    def test_parse_and_read_saved_facts(self, mock_save, mock_is_dir, mock_file):
+        # Setup mocks
+        expected_facts = AtomicFactDocument(
+            fact_list=[AtomicFact(fact_text="Test fact.", source_citation=0)]
+        )
+
+        # Mock the parsing process
+        with (
+            patch.object(
+                self.fact_manager, "_load_text_file", return_value="Test content"
+            ),
+            patch.object(
+                self.fact_manager,
+                "_split_sentences",
+                return_value=[Sentence(text="Test sentence.")],
+            ),
+            patch.object(
+                self.fact_manager,
+                "_convert_source_document_to_facts",
+                return_value=expected_facts,
+            ),
+        ):
+            # Test with destination directory
+            source_list = [Path("test.txt")]
+            destination_dir = Path("/output")
+
+            # Run parse_source_to_atomic_facts
+            self.fact_manager._parse_source_to_atomic_facts(
+                source_list=source_list, destination_dir=destination_dir
+            )
+
+            # Verify save was called
+            mock_save.assert_called_once_with(Path("/output/test.json"))
+
+            # Parse the JSON content back to an AtomicFactDocument
+            loaded_facts = AtomicFactDocument.load_from_json(Path("/output/test.json"))
+
+            # Verify the loaded facts match the original
+            self.assertEqual(len(loaded_facts.fact_list), 1)
+            self.assertEqual(loaded_facts.fact_list[0].fact_text, "Test fact.")
+            self.assertEqual(loaded_facts.fact_list[0].source_citation, 0)
+            self.assertEqual(loaded_facts, expected_facts)
+
 
 class TestKnowOrNotFactManager(unittest.TestCase):
     def setUp(self):

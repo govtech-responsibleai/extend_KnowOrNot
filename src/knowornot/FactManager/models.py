@@ -37,3 +37,26 @@ class AtomicFactDocument(BaseModel):
 
         with open(path, "w") as f:
             f.write(self.model_dump_json(indent=2))
+
+    @staticmethod
+    def load_from_json(path: Path) -> "AtomicFactDocument":
+        """
+        Read an AtomicFactDocument from a JSON file at the specified path.
+
+        Args:
+            path (Path): Path to the JSON file
+
+        Returns:
+            AtomicFactDocument: The loaded document
+
+        Raises:
+            ValueError: If the path doesn't end with .json
+            FileNotFoundError: If the file doesn't exist
+        """
+        if not path.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {path}")
+
+        with open(path, "r") as f:
+            text = f.read()
+
+        return AtomicFactDocument.model_validate_json(text)
