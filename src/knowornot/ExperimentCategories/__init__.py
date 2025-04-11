@@ -86,7 +86,7 @@ class BaseExperiment(ABC):
 
         return output
 
-    def create_removal_experiment(
+    def create_removal_experiments(
         self, question_list: List[QAPair]
     ) -> List[SingleExperimentInput]:
         """
@@ -135,7 +135,7 @@ class BaseExperiment(ABC):
         """
         pass
 
-    def create_synthetic_experiment(
+    def create_synthetic_experiments(
         self, question_list: List[QAPair]
     ) -> List[SingleExperimentInput]:
         """
