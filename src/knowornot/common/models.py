@@ -70,11 +70,16 @@ class QAPairLLM(BaseModel):
         return f"Question: {self.question} \n Answer: {self.answer}"
 
 
-class QAPair(QAPairLLM):
+class QAPair(BaseModel):
+    question: str
+    answer: Optional[str]
     source: AtomicFact
+
+    def __str__(self):
+        return f"Question: {self.question} \n Answer: {self.answer}"
 
 
 class SingleExperimentInput(BaseModel):
     question: str
     expected_answer: Optional[str]
-    context_questions: List[QAPair]
+    context_questions: Optional[List[QAPair]]
