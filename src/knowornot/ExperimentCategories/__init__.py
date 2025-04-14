@@ -98,29 +98,6 @@ class BaseExperiment(ABC):
         embedding = self.default_client.get_embedding([str(qa_pair)])
         return np.array(embedding[0])
 
-    @abstractmethod
-    def _create_single_synthetic_experiment(
-        self,
-        question_to_ask: QAPair,
-        question_list: List[QAPair],
-        embeddings: np.ndarray,
-    ) -> SingleExperimentInput:
-        """
-        An abstract method that creates a single experiment input where the question_to_ask is synthetically generated from the question_list context.
-
-        This method should be implemented by the concrete subclass of BaseExperiment.
-        The user should refer to the specific concrete implementation for the details of how the synthetic experiment is created.
-
-        Args:
-            question_to_ask (QAPair): The question to ask in the experiment.
-            question_list (List[QAPair]): The question-answer pairs that are to be passed as in context
-            embeddings (np.ndarray): A 2D numpy array of float embeddings
-
-        Returns:
-            SingleExperimentInput: A single experiment input.
-        """
-        pass
-
     def _split_question_list(
         self, question_list: List[QAPair]
     ) -> List[Tuple[QAPair, List[QAPair], int]]:
@@ -181,40 +158,6 @@ class BaseExperiment(ABC):
             List[SingleExperimentInput]: A list of single experiment inputs.
         """
         pass
-
-    def create_synthetic_experiments(
-        self, question_list: List[QAPair]
-    ) -> List[SingleExperimentInput]:
-        """
-        Creates a list of synthetic experiments from a list of questions.
-
-        This method takes the list of questions and splits them into individual questions
-        and their respective remaining questions. For each split, it generates a
-        `SingleExperimentInput` using the `_create_single_synthetic_experiment` method,
-        which represents an experiment based on synthetically generating the selected
-        question based on the context.
-
-        Args:
-            question_list (List[QAPair]): A list of question-answer pairs to process.
-
-        Returns:
-            List[SingleExperimentInput]: A list of experiments where each experiment
-            is based on one question synthetically generated from the context.
-        """
-
-        experiment_list: List[SingleExperimentInput] = []
-        embeddings = self._embed_qa_pair_list(question_list)
-        synthetic_questions = self._generate_synthetic_questions(question_list)
-        for question in synthetic_questions:
-            experiment_list.append(
-                self._create_single_synthetic_experiment(
-                    question_to_ask=question,
-                    question_list=question_list,
-                    embeddings=embeddings,
-                )
-            )
-
-        return experiment_list
 
     @property
     @abstractmethod
