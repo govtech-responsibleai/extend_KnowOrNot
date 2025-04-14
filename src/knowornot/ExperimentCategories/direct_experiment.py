@@ -1,4 +1,5 @@
 import numpy as np
+
 from . import BaseExperiment, ExperimentTypeEnum
 from ..SyncLLMClient import SyncLLMClient
 from typing import List
@@ -37,8 +38,3 @@ class DirectExperiment(BaseExperiment):
             expected_answer=None,
             context_questions=None,
         )
-
-    def _generate_synthetic_questions(
-        self, question_list: List[QAPair]
-    ) -> List[QAPair]:
-        raise NotImplementedError("")

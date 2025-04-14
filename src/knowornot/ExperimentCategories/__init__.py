@@ -143,21 +143,29 @@ class BaseExperiment(ABC):
         return experiment_list
 
     @abstractmethod
-    def _generate_synthetic_questions(
-        self, question_list: List[QAPair]
-    ) -> List[QAPair]:
-        """
-        An abstract method that takes in a list of questions and returns a list of single experiment inputs.
-        The method should be implemented by the concrete subclass of BaseExperiment.
-        The user should refer to the specific concrete implementation for the details of how the synthetic experiment is created.
-
-        Args:
-            question_list (List[QAPair]): A list of question-answer pairs to process.
-
-        Returns:
-            List[SingleExperimentInput]: A list of single experiment inputs.
-        """
+    def _create_single_synthetic_experiment(
+        self,
+        question_to_ask: QAPair,
+        question_list: List[QAPair],
+        embeddings: np.ndarray,
+    ) -> SingleExperimentInput:
         pass
+
+    def create_synthetic_experiments(
+        self, synthetic_questions: List[QAPair], context_questions: List[QAPair]
+    ) -> List[SingleExperimentInput]:
+        embeddings = self._embed_qa_pair_list(context_questions)
+        experiment_list: List[SingleExperimentInput] = []
+        for question in synthetic_questions:
+            experiment_list.append(
+                self._create_single_synthetic_experiment(
+                    question_to_ask=question,
+                    question_list=context_questions,
+                    embeddings=embeddings,
+                )
+            )
+
+        return experiment_list
 
     @property
     @abstractmethod
