@@ -7,8 +7,8 @@ from ..common.models import QAPair, SingleExperimentInput
 
 
 class DirectExperiment(BaseExperiment):
-    def __init__(self, default_client: SyncLLMClient):
-        super().__init__(default_client)
+    def __init__(self, default_client: SyncLLMClient, closest_k: int = 5):
+        super().__init__(default_client=default_client, closest_k=closest_k)
 
     @property
     def experiment_type(self):

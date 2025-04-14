@@ -15,6 +15,8 @@ class ExperimentTypeEnum(Enum):
 
 class BaseExperiment(ABC):
     def __init__(self, default_client: SyncLLMClient, closest_k: int = 5):
+        if not default_client.can_use_instructor:
+            raise ValueError("Default client must be able to use instructor")
         self.closest_k = closest_k
         self.default_client = default_client
 

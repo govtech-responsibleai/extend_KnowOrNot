@@ -6,8 +6,8 @@ import numpy as np
 
 
 class BasicRAG(BaseExperiment):
-    def __init__(self, default_client: SyncLLMClient):
-        super().__init__(default_client)
+    def __init__(self, default_client: SyncLLMClient, closest_k: int = 5):
+        super().__init__(default_client=default_client, closest_k=closest_k)
 
     def _create_single_removal_experiment(
         self,
