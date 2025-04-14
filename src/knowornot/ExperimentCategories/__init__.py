@@ -1,6 +1,6 @@
 from enum import Enum
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import List, Tuple, cast
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import SingleExperimentInput, QAPair
 import numpy as np
@@ -14,12 +14,17 @@ class ExperimentTypeEnum(Enum):
 
 
 class BaseExperiment(ABC):
-    def __init__(self, default_client: SyncLLMClient):
+    def __init__(self, default_client: SyncLLMClient, closest_k: int = 5):
+        self.closest_k = closest_k
         self.default_client = default_client
 
     @abstractmethod
     def _create_single_removal_experiment(
-        self, question_to_ask: QAPair, removed_index: int, remaining_qa: List[QAPair]
+        self,
+        question_to_ask: QAPair,
+        removed_index: int,
+        remaining_qa: List[QAPair],
+        embeddings: np.ndarray,
     ) -> SingleExperimentInput:
         """
         An abstract method that creates a single experiment input where the question_to_ask
@@ -34,6 +39,8 @@ class BaseExperiment(ABC):
             of question-answer pairs.
             remaining_qa (List[QAPair]): The list of question-answer pairs that are
             not removed.
+            embeddings (np.ndarray): A 2D numpy array of embeddings that is
+            len(question_to_ask) + len(remaining_qa) long.
 
         Returns:
             SingleExperimentInput: An experiment input object that represents the
@@ -56,9 +63,47 @@ class BaseExperiment(ABC):
         )
         return np.array(embeddings)
 
+    def _get_n_closest_by_cosine_similarity(
+        self, single_embedding: np.ndarray, embeddings: np.ndarray
+    ) -> List[int]:
+        """
+        Returns the indices of the n closest embeddings to a single embedding vector.
+
+        Computes the cosine similarity between the single embedding vector and the 2D embeddings array.
+        Then it returns the indices of the n closest embeddings by sorting the cosine similarities.
+
+        Args:
+            single_embedding (np.ndarray): A 1D numpy array of float embeddings.
+            embeddings (np.ndarray): A 2D numpy array of float embeddings.
+
+        Returns:
+            List[int]: A list of indices of the closest embeddings to the single embedding vector.
+        """
+        similarities = np.dot(embeddings, single_embedding) / (
+            np.linalg.norm(embeddings, axis=1) * np.linalg.norm(single_embedding)
+        )
+        sorted_indices = np.argsort(-similarities)
+        return cast(List[int], sorted_indices[: self.closest_k].tolist())
+
+    def _embed_single_qa_pair(self, qa_pair: QAPair) -> np.ndarray:
+        """
+        Embeds a single question-answer pair and returns a 1D numpy array.
+
+        Args:
+            qa_pair (QAPair): The question-answer pair to be embedded.
+
+        Returns:
+            np.ndarray: A 1D numpy array of float embeddings.
+        """
+        embedding = self.default_client.get_embedding([str(qa_pair)])
+        return np.array(embedding[0])
+
     @abstractmethod
     def _create_single_synthetic_experiment(
-        self, question_to_ask: QAPair, question_list: List[QAPair]
+        self,
+        question_to_ask: QAPair,
+        question_list: List[QAPair],
+        embeddings: np.ndarray,
     ) -> SingleExperimentInput:
         """
         An abstract method that creates a single experiment input where the question_to_ask is synthetically generated from the question_list context.
@@ -69,6 +114,7 @@ class BaseExperiment(ABC):
         Args:
             question_to_ask (QAPair): The question to ask in the experiment.
             question_list (List[QAPair]): The question-answer pairs that are to be passed as in context
+            embeddings (np.ndarray): A 2D numpy array of float embeddings
 
         Returns:
             SingleExperimentInput: A single experiment input.
@@ -104,7 +150,7 @@ class BaseExperiment(ABC):
             List[SingleExperimentInput]: A list of experiments where each experiment
             is based on one question removed from the context.
         """
-
+        embeddings = self._embed_qa_pair_list(question_list)
         experiment_list: List[SingleExperimentInput] = []
         split_questions = self._split_question_list(question_list)
         for question, remaining, index in split_questions:
@@ -113,6 +159,7 @@ class BaseExperiment(ABC):
                     question_to_ask=question,
                     removed_index=index,
                     remaining_qa=remaining,
+                    embeddings=embeddings,
                 )
             )
 
@@ -156,11 +203,14 @@ class BaseExperiment(ABC):
         """
 
         experiment_list: List[SingleExperimentInput] = []
+        embeddings = self._embed_qa_pair_list(question_list)
         synthetic_questions = self._generate_synthetic_questions(question_list)
         for question in synthetic_questions:
             experiment_list.append(
                 self._create_single_synthetic_experiment(
-                    question_to_ask=question, question_list=question_list
+                    question_to_ask=question,
+                    question_list=question_list,
+                    embeddings=embeddings,
                 )
             )
 
