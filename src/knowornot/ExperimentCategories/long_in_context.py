@@ -1,4 +1,4 @@
-from . import BaseExperiment, RetrievalType
+from . import BaseRetrievalExperiment, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import QAPair, SingleExperimentInput
 from typing import List, Optional
@@ -6,7 +6,7 @@ import numpy as np
 import logging
 
 
-class LongInContext(BaseExperiment):
+class LongInContext(BaseRetrievalExperiment):
     def __init__(
         self, default_client: SyncLLMClient, logger: logging.Logger, closest_k: int = 5
     ):

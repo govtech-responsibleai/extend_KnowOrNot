@@ -1,13 +1,13 @@
 import numpy as np
 
-from . import BaseExperiment, RetrievalType
+from . import BaseRetrievalExperiment, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from typing import List, Optional
 from ..common.models import QAPair, SingleExperimentInput
 import logging
 
 
-class DirectExperiment(BaseExperiment):
+class DirectExperiment(BaseRetrievalExperiment):
     def __init__(
         self, default_client: SyncLLMClient, logger: logging.Logger, closest_k: int = 5
     ):

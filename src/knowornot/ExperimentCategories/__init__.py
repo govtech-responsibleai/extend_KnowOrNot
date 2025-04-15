@@ -14,7 +14,7 @@ class RetrievalType(Enum):
     HYDE_RAG = "HYDE_RAG"
 
 
-class BaseExperiment(ABC):
+class BaseRetrievalExperiment(ABC):
     def __init__(
         self, default_client: SyncLLMClient, logger: logging.Logger, closest_k: int = 5
     ):
@@ -41,7 +41,7 @@ class BaseExperiment(ABC):
         An abstract method that creates a single experiment input where the question_to_ask
         is removed from the context.
 
-        This method should be implemented by the concrete subclass of BaseExperiment.
+        This method should be implemented by the concrete subclass of BaseRetrievalExperiment.
 
         Args:
             question_to_ask (QAPair): The question-answer pair to be removed and
