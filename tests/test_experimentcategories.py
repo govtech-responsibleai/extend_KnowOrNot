@@ -9,7 +9,9 @@ from src.knowornot.ExperimentCategories.direct_experiment import (
     DirectRetrievalExperiment,
 )
 from src.knowornot.ExperimentCategories.basic_rag import BasicRAG
-from src.knowornot.ExperimentCategories.long_in_context import LongInContext
+from src.knowornot.ExperimentCategories.long_in_context import (
+    LongInContextRetrievalExperiment,
+)
 from src.knowornot.ExperimentCategories.hyde_rag import HydeRAG
 from src.knowornot.common.models import QAPair, AtomicFact, SingleExperimentInput
 from src.knowornot.SyncLLMClient import SyncLLMClient
@@ -29,7 +31,7 @@ class TestExperimentCategories:
         self.basic_rag = BasicRAG(
             default_client=self.mock_llm_client, closest_k=3, logger=MagicMock()
         )
-        self.long_ctx = LongInContext(
+        self.long_ctx = LongInContextRetrievalExperiment(
             default_client=self.mock_llm_client, closest_k=3, logger=MagicMock()
         )
 
@@ -84,7 +86,9 @@ class TestExperimentCategories:
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
-            LongInContext(default_client=invalid_client, logger=MagicMock())
+            LongInContextRetrievalExperiment(
+                default_client=invalid_client, logger=MagicMock()
+            )
 
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
@@ -247,7 +251,7 @@ class TestExperimentCategories:
         assert self.sample_qa_pairs[3] in result.context_questions  # Q4
         assert self.sample_qa_pairs[4] in result.context_questions  # Q5
 
-    # LongInContext tests
+    # LongInContextRetrievalExperiment tests
     def test_long_in_context_removal(self):
         question = self.sample_qa_pairs[0]
         removed_index = 0
@@ -264,12 +268,12 @@ class TestExperimentCategories:
         assert result.question == question.question
         assert result.expected_answer == question.answer
         assert result.context_questions is not None, (
-            "Context questions should not be None for LongInContext experiment"
+            "Context questions should not be None for LongInContextRetrievalExperiment experiment"
         )
         assert len(result.context_questions) == len(remaining_qa)
         assert (
             result.context_questions == remaining_qa
-        )  # LongInContext includes all remaining questions
+        )  # LongInContextRetrievalExperiment includes all remaining questions
 
     def test_long_in_context_synthetic(self):
         synthetic_question = QAPair(
@@ -287,12 +291,12 @@ class TestExperimentCategories:
         assert isinstance(result, SingleExperimentInput)
         assert result.question == synthetic_question.question
         assert result.context_questions is not None, (
-            "Context questions should not be None for LongInContext experiment"
+            "Context questions should not be None for LongInContextRetrievalExperiment experiment"
         )
         assert result.expected_answer is None
         assert (
             result.context_questions == self.sample_qa_pairs
-        )  # LongInContext includes all context questions
+        )  # LongInContextRetrievalExperiment includes all context questions
 
     # HydeRAG tests
     def test_hyde_rag_get_hypothetical_answer(self):
