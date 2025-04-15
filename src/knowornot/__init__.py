@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 import logging
 
 from .QuestionExtractor import QuestionExtractor
-from .common.models import AtomicFactDocument, QAPair
+from .common.models import AtomicFactDocument, QAPairIntermediate
 from .config import AzureOpenAIConfig, Config
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
@@ -373,7 +373,7 @@ class KnowOrNot:
         alternative_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
         llm_client: Optional[SyncLLMClient] = None,
-    ) -> List[QAPair]:
+    ) -> List[QAPairIntermediate]:
         """
         Generates questions from an atomic fact document using a given LLM client.
 

@@ -1,6 +1,11 @@
 from typing import Optional, List
 from ..SyncLLMClient import SyncLLMClient
-from ..common.models import QAPair, QAPairLLM, AtomicFact, AtomicFactDocument
+from ..common.models import (
+    QAPairIntermediate,
+    QAPairLLM,
+    AtomicFact,
+    AtomicFactDocument,
+)
 from .models import FilterMethod
 import asyncio
 import concurrent.futures
@@ -44,14 +49,14 @@ class QuestionExtractor:
         context_prompt: str,
         alternative_question_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
-    ) -> QAPair:
+    ) -> QAPairIntermediate:
         """
         Generates a question-answer pair from a single atomic fact using an LLM client.
 
         This method constructs a prompt by combining the context prompt with either an
         alternative question prompt or the default question generation question prompt. It then sends the
         constructed prompt to the LLM client to generate a structured response, which is
-        converted into a QAPair.
+        converted into a QAPairIntermediate.
 
         Args:
             llm_client (SyncLLMClient): The LLM client used to generate the question-answer pair.
@@ -61,7 +66,7 @@ class QuestionExtractor:
             ai_model (Optional[str]): The AI model to use for generating the structured response.
 
         Returns:
-            QAPair: A question-answer pair generated from the atomic fact.
+            QAPairIntermediate: A question-answer pair generated from the atomic fact.
         """
         question_prompt_to_use = (
             alternative_question_prompt or self.question_prompt_default
@@ -77,7 +82,9 @@ class QuestionExtractor:
             prompt=text_to_llm, response_model=QAPairLLM, ai_model=ai_model
         )
 
-        output = QAPair(question=qa_pair.question, answer=qa_pair.answer, source=fact)
+        output = QAPairIntermediate(
+            question=qa_pair.question, answer=qa_pair.answer, source=fact
+        )
 
         return output
 
@@ -88,7 +95,7 @@ class QuestionExtractor:
         context_prompt: str,
         alternative_question_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
-    ) -> List[QAPair]:
+    ) -> List[QAPairIntermediate]:
         """
         Generates a list of question-answer pairs from an atomic fact document using an LLM client.
 
@@ -104,9 +111,9 @@ class QuestionExtractor:
             ai_model (Optional[str]): The AI model to use for generating the structured response.
 
         Returns:
-            List[QAPair]: A list of question-answer pairs generated from the atomic fact document.
+            List[QAPairIntermediate]: A list of question-answer pairs generated from the atomic fact document.
         """
-        output: List[QAPair] = []
+        output: List[QAPairIntermediate] = []
 
         for idx, fact in enumerate(document.fact_list):
             self.logger.info(f"generating question from {idx} fact: {fact}")
@@ -128,14 +135,14 @@ class QuestionExtractor:
         context_prompt: str,
         alternative_question_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
-    ) -> List[QAPair]:
+    ) -> List[QAPairIntermediate]:
         """
         Generates a list of question-answer pairs from an atomic fact document using an LLM client.
 
         This method constructs a prompt by combining the context prompt with either an
         alternative question prompt or the default question generation question prompt. It then sends the
         constructed prompt to the LLM client to generate a structured response, which is
-        converted into a QAPair. The calls to the LLM client are run in parallel using
+        converted into a QAPairIntermediate. The calls to the LLM client are run in parallel using
         asyncio.
 
         Args:
@@ -146,9 +153,9 @@ class QuestionExtractor:
             ai_model (Optional[str]): The AI model to use for generating the structured response.
 
         Returns:
-            List[QAPair]: A list of question-answer pairs generated from the atomic fact document.
+            List[QAPairIntermediate]: A list of question-answer pairs generated from the atomic fact document.
         """
-        output: List[QAPair] = []
+        output: List[QAPairIntermediate] = []
         loop = asyncio.get_running_loop()
         futures = []
 
@@ -194,17 +201,17 @@ class QuestionExtractor:
         return " ".join(words)
 
     def _filter_keyword_duplicates(
-        self, questions: List[QAPair], diversity_threshold: float = 0.3
-    ) -> List[QAPair]:
+        self, questions: List[QAPairIntermediate], diversity_threshold: float = 0.3
+    ) -> List[QAPairIntermediate]:
         """
         Filter questions based on keyword diversity using TF-IDF.
 
         Args:
-            questions: List of QAPair objects to filter
+            questions: List of QAPairIntermediate objects to filter
             diversity_threshold: Minimum TF-IDF uniqueness score required (higher = stricter filtering)
 
         Returns:
-            List of filtered QAPair objects with unique keyword content
+            List of filtered QAPairIntermediate objects with unique keyword content
         """
         if not questions:
             return []
@@ -246,17 +253,17 @@ class QuestionExtractor:
         return [questions[idx] for idx in selected_indices]
 
     def _filter_semantic_duplicates(
-        self, questions: List[QAPair], min_distance: float = 0.3
-    ) -> List[QAPair]:
+        self, questions: List[QAPairIntermediate], min_distance: float = 0.3
+    ) -> List[QAPairIntermediate]:
         """
         Filter questions based on semantic diversity using embeddings.
 
         Args:
-            questions: List of QAPair objects to filter
+            questions: List of QAPairIntermediate objects to filter
             min_distance: Minimum cosine distance required between questions (higher = more diverse)
 
         Returns:
-            List of filtered QAPair objects with diverse semantic meaning
+            List of filtered QAPairIntermediate objects with diverse semantic meaning
         """
         if not questions:
             return []
@@ -317,10 +324,10 @@ class QuestionExtractor:
 
     def get_diverse_questions(
         self,
-        question_list: List[QAPair],
+        question_list: List[QAPairIntermediate],
         method: FilterMethod = FilterMethod.SEMANTIC,
         diversity_threshold: float = 0.3,
-    ) -> List[QAPair]:
+    ) -> List[QAPairIntermediate]:
         """
         Generate diverse questions from a list of questions.
 

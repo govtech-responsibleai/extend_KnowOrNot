@@ -3,7 +3,7 @@ import numpy as np
 from . import BaseRetrievalStrategy, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from typing import List, Optional
-from ..common.models import QAPair, SingleExperimentInput
+from ..common.models import QAPairIntermediate, SingleExperimentInput
 import logging
 
 
@@ -21,9 +21,9 @@ class DirectRetrievalStrategy(BaseRetrievalStrategy):
 
     def _create_single_removal_experiment(
         self,
-        question_to_ask: QAPair,
+        question_to_ask: QAPairIntermediate,
         removed_index: int,
-        remaining_qa: List[QAPair],
+        remaining_qa: List[QAPairIntermediate],
         embeddings: np.ndarray,
         alterative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
@@ -37,8 +37,8 @@ class DirectRetrievalStrategy(BaseRetrievalStrategy):
 
     def _create_single_synthetic_experiment(
         self,
-        question_to_ask: QAPair,
-        question_list: List[QAPair],
+        question_to_ask: QAPairIntermediate,
+        question_list: List[QAPairIntermediate],
         embeddings: np.ndarray,
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,

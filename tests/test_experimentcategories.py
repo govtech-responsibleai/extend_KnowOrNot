@@ -13,7 +13,11 @@ from src.knowornot.RetrievalStrategy.long_in_context import (
     LongInContextStrategy,
 )
 from src.knowornot.RetrievalStrategy.hyde_rag import HydeRAGStrategy
-from src.knowornot.common.models import QAPair, AtomicFact, SingleExperimentInput
+from src.knowornot.common.models import (
+    QAPairIntermediate,
+    AtomicFact,
+    SingleExperimentInput,
+)
 from src.knowornot.SyncLLMClient import SyncLLMClient
 
 
@@ -46,7 +50,7 @@ class TestExperimentCategories:
 
         # Create sample QA pairs for testing
         self.sample_qa_pairs = [
-            QAPair(
+            QAPairIntermediate(
                 question=f"Question {i}?",
                 answer=f"Answer {i}",
                 source=AtomicFact(fact_text=f"Fact {i}", source_citation=i),
@@ -165,7 +169,7 @@ class TestExperimentCategories:
         assert result.context_questions is None  # Direct experiment uses no context
 
     def test_direct_experiment_synthetic(self):
-        question = QAPair(
+        question = QAPairIntermediate(
             question="Synthetic question?",
             answer="Synthetic answer",
             source=AtomicFact(fact_text="Synthetic fact", source_citation=99),
@@ -219,7 +223,7 @@ class TestExperimentCategories:
         assert self.sample_qa_pairs[4] in result.context_questions  # Q5
 
     def test_basic_rag_synthetic(self):
-        synthetic_question = QAPair(
+        synthetic_question = QAPairIntermediate(
             question="Synthetic question?",
             answer="Synthetic answer",
             source=AtomicFact(fact_text="Synthetic fact", source_citation=99),
@@ -274,7 +278,7 @@ class TestExperimentCategories:
         )  # LongInContextStrategy includes all remaining questions
 
     def test_long_in_context_synthetic(self):
-        synthetic_question = QAPair(
+        synthetic_question = QAPairIntermediate(
             question="Synthetic question?",
             answer="Synthetic answer",
             source=AtomicFact(fact_text="Synthetic fact", source_citation=99),
@@ -299,7 +303,7 @@ class TestExperimentCategories:
     # HydeRAGStrategy tests
     def test_hyde_rag_get_hypothetical_answer(self):
         question = self.sample_qa_pairs[0]
-        hypothetical_answer = QAPair(
+        hypothetical_answer = QAPairIntermediate(
             question="Hypothetical question?",
             answer="Hypothetical answer",
             source=AtomicFact(fact_text="Hypothetical fact", source_citation=100),
@@ -314,7 +318,7 @@ class TestExperimentCategories:
         assert result == hypothetical_answer
         self.mock_llm_client.get_structured_response.assert_called_once_with(
             prompt=self.hyde_prompt + str(question),
-            response_model=QAPair,
+            response_model=QAPairIntermediate,
             ai_model=None,
         )
 
@@ -324,7 +328,7 @@ class TestExperimentCategories:
         remaining_qa = self.sample_qa_pairs[1:]
 
         # Mock the hypothetical answer generation
-        hypothetical_answer = QAPair(
+        hypothetical_answer = QAPairIntermediate(
             question="Hypothetical Q1?",
             answer="Hypothetical A1",
             source=AtomicFact(fact_text="Hypo fact 1", source_citation=100),
@@ -357,14 +361,14 @@ class TestExperimentCategories:
         assert self.sample_qa_pairs[4] in result.context_questions  # Q5
 
     def test_hyde_rag_synthetic(self):
-        synthetic_question = QAPair(
+        synthetic_question = QAPairIntermediate(
             question="Synthetic question?",
             answer="Synthetic answer",
             source=AtomicFact(fact_text="Synthetic fact", source_citation=99),
         )
 
         # Mock the hypothetical answer generation
-        hypothetical_answer = QAPair(
+        hypothetical_answer = QAPairIntermediate(
             question="Hypothetical synthetic Q?",
             answer="Hypothetical synthetic A",
             source=AtomicFact(fact_text="Hypo synth fact", source_citation=101),
@@ -401,7 +405,7 @@ class TestExperimentCategories:
         question = self.sample_qa_pairs[0]
         alternative_client = MagicMock(spec=SyncLLMClient)
         alternative_client.can_use_instructor = True
-        alternative_client.get_structured_response.return_value = QAPair(
+        alternative_client.get_structured_response.return_value = QAPairIntermediate(
             question="Alt hypothetical Q?",
             answer="Alt hypothetical A",
             source=AtomicFact(fact_text="Alt hypo fact", source_citation=102),
@@ -411,7 +415,7 @@ class TestExperimentCategories:
             question_to_ask=question, alternative_llm_client=alternative_client
         )
 
-        assert isinstance(result, QAPair)
+        assert isinstance(result, QAPairIntermediate)
         alternative_client.get_structured_response.assert_called_once()
         self.mock_llm_client.get_structured_response.assert_not_called()
 
@@ -451,7 +455,7 @@ class TestExperimentCategories:
     def test_create_synthetic_experiments(self):
         # Create some synthetic questions
         synthetic_questions = [
-            QAPair(
+            QAPairIntermediate(
                 question=f"Synthetic Q{i}?",
                 answer=f"Synthetic A{i}",
                 source=AtomicFact(

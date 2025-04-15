@@ -71,7 +71,7 @@ class QAPairLLM(BaseModel):
         return f"Question: {self.question} \n Answer: {self.answer}"
 
 
-class QAPair(BaseModel):
+class QAPairIntermediate(BaseModel):
     question: str
     answer: Optional[str]
     source: AtomicFact
@@ -83,7 +83,7 @@ class QAPair(BaseModel):
 class SingleExperimentInput(BaseModel):
     question: str
     expected_answer: Optional[str]
-    context_questions: Optional[List[QAPair]]
+    context_questions: Optional[List[QAPairIntermediate]]
 
 
 class ExperimentType(Enum):

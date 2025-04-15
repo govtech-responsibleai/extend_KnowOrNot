@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from src.knowornot.QuestionExtractor import QuestionExtractor
-from src.knowornot.common.models import QAPair, QAPairLLM
+from src.knowornot.common.models import QAPairIntermediate, QAPairLLM
 from src.knowornot.common.models import AtomicFactDocument, AtomicFact
 from src.knowornot.SyncLLMClient import SyncLLMClient
 
@@ -41,7 +41,7 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
         qa_pair_llm = QAPairLLM(question="Test question?", answer="Test answer.")
         self.mock_llm_client.get_structured_response.return_value = qa_pair_llm
 
-        expected_qa_pair = QAPair(
+        expected_qa_pair = QAPairIntermediate(
             question="Test question?", answer="Test answer.", source=fact
         )
 
@@ -68,8 +68,12 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
         ]
 
         expected_qa_pairs = [
-            QAPair(question="Question 1?", answer="Answer 1.", source=fact1),
-            QAPair(question="Question 2?", answer="Answer 2.", source=fact2),
+            QAPairIntermediate(
+                question="Question 1?", answer="Answer 1.", source=fact1
+            ),
+            QAPairIntermediate(
+                question="Question 2?", answer="Answer 2.", source=fact2
+            ),
         ]
 
         actual_qa_pairs = self.question_extractor.generate_question_from_document(
@@ -105,8 +109,12 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
             self.question_extractor,
             "_generate_question_from_single_fact",
             side_effect=[
-                QAPair(question="Question 1?", answer="Answer 1.", source=fact1),
-                QAPair(question="Question 2?", answer="Answer 2.", source=fact2),
+                QAPairIntermediate(
+                    question="Question 1?", answer="Answer 1.", source=fact1
+                ),
+                QAPairIntermediate(
+                    question="Question 2?", answer="Answer 2.", source=fact2
+                ),
             ],
         ) as mock_single_fact:
             # Act
@@ -120,8 +128,12 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
 
         # Assert
         expected_qa_pairs = [
-            QAPair(question="Question 1?", answer="Answer 1.", source=fact1),
-            QAPair(question="Question 2?", answer="Answer 2.", source=fact2),
+            QAPairIntermediate(
+                question="Question 1?", answer="Answer 1.", source=fact1
+            ),
+            QAPairIntermediate(
+                question="Question 2?", answer="Answer 2.", source=fact2
+            ),
         ]
 
         assert len(actual_qa_pairs) == 2
@@ -134,7 +146,7 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
         self.mock_llm_client.get_structured_response.return_value = qa_pair_llm
         alternative_question_prompt = "Alternative prompt"
 
-        expected_qa_pair = QAPair(
+        expected_qa_pair = QAPairIntermediate(
             question="Test question?", answer="Test answer.", source=fact
         )
 

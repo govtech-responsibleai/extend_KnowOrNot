@@ -5,7 +5,7 @@ import logging
 
 from src.knowornot.SyntheticExperimentCreator.models import CanBeAnswered
 from src.knowornot.SyntheticExperimentCreator import SyntheticExperimentCreator
-from src.knowornot.common.models import QAPair, AtomicFact
+from src.knowornot.common.models import QAPairIntermediate, AtomicFact
 from src.knowornot.SyncLLMClient import SyncLLMClient
 
 
@@ -24,22 +24,22 @@ class TestSyntheticExperimentCreator:
         )
 
         self.sample_qa_pairs = [
-            QAPair(
+            QAPairIntermediate(
                 question="Q1?",
                 answer="A1",
                 source=AtomicFact(fact_text="Fact 1", source_citation=0),
             ),
-            QAPair(
+            QAPairIntermediate(
                 question="Q2?",
                 answer="A2",
                 source=AtomicFact(fact_text="Fact 2", source_citation=1),
             ),
-            QAPair(
+            QAPairIntermediate(
                 question="Q3?",
                 answer="A3",
                 source=AtomicFact(fact_text="Fact 3", source_citation=2),
             ),
-            QAPair(
+            QAPairIntermediate(
                 question="Q4?",
                 answer="A4",
                 source=AtomicFact(fact_text="Fact 4", source_citation=3),
@@ -208,7 +208,7 @@ class TestSyntheticExperimentCreator:
     # --- Test _generate_synthetic_questions_for_cluster ---
     def test_generate_synthetic_questions_for_cluster(self):
         cluster = self.sample_qa_pairs[:2]
-        synthetic_qa = QAPair(
+        synthetic_qa = QAPairIntermediate(
             question="New Q?",
             answer="New A",
             source=AtomicFact(fact_text="New Fact", source_citation=5),
@@ -242,7 +242,11 @@ class TestSyntheticExperimentCreator:
         )
         self.mock_llm_client.get_structured_response.assert_has_calls(
             [
-                call(prompt=gen_prompt_expected, response_model=QAPair, ai_model=None),
+                call(
+                    prompt=gen_prompt_expected,
+                    response_model=QAPairIntermediate,
+                    ai_model=None,
+                ),
                 call(
                     prompt=check_prompt_expected,
                     response_model=CanBeAnswered,
@@ -255,12 +259,12 @@ class TestSyntheticExperimentCreator:
         self, caplog
     ):
         cluster = self.sample_qa_pairs[:2]
-        synthetic_qa_good = QAPair(
+        synthetic_qa_good = QAPairIntermediate(
             question="Good Q?",
             answer="Good A",
             source=AtomicFact(fact_text="G Fact", source_citation=6),
         )
-        synthetic_qa_bad = QAPair(
+        synthetic_qa_bad = QAPairIntermediate(
             question="Bad Q?",
             answer="Bad A",
             source=AtomicFact(fact_text="B Fact", source_citation=7),
@@ -289,7 +293,7 @@ class TestSyntheticExperimentCreator:
 
     def test_retries_on_generation_failure(self, caplog):
         cluster = self.sample_qa_pairs[:2]
-        synthetic_qa = QAPair(
+        synthetic_qa = QAPairIntermediate(
             question="Retry Q?",
             answer="Retry A",
             source=AtomicFact(fact_text="R Fact", source_citation=8),
@@ -334,14 +338,14 @@ class TestSyntheticExperimentCreator:
         mock_cluster.return_value = mock_clusters_data
 
         mock_synth_q1 = [
-            QAPair(
+            QAPairIntermediate(
                 question="Synth Q1",
                 answer="Synth A1",
                 source=AtomicFact(fact_text="S1", source_citation=10),
             )
         ]
         mock_synth_q2 = [
-            QAPair(
+            QAPairIntermediate(
                 question="Synth Q2",
                 answer="Synth A2",
                 source=AtomicFact(fact_text="S2", source_citation=11),
