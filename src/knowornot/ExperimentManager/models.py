@@ -16,11 +16,6 @@ class ExperimentInput:
     experiment_type: ExperimentType
 
 
-class QAPairToLLM(QAPairIntermediate):
-    identifier: str
-    index: int
-
-
 class ExperimentMetadata(BaseModel):
     experiment_type: ExperimentType
     retrieval_type: RetrievalType
