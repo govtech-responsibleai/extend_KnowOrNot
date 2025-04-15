@@ -16,6 +16,7 @@ class TestQuestionExtractor:  # No longer inheriting from unittest.TestCase
         self.question_extractor = QuestionExtractor(
             question_prompt_default=self.question_prompt_default,
             default_client=self.mock_llm_client,
+            logger=MagicMock(),
         )
 
     def test_construct_text_to_llm(self):

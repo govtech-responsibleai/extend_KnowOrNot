@@ -145,6 +145,7 @@ class KnowOrNot:
         self.question_manager = QuestionExtractor(
             question_prompt_default=PromptManager.default_question_extraction_prompt,
             default_client=self.default_sync_client,
+            logger=self.config.logger,
         )
 
         return self.question_manager

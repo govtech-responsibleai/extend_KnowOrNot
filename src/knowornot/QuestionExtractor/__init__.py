@@ -3,12 +3,19 @@ from ..SyncLLMClient import SyncLLMClient
 from ..common.models import QAPair, QAPairLLM, AtomicFact, AtomicFactDocument
 import asyncio
 import concurrent.futures
+import logging
 
 
 class QuestionExtractor:
-    def __init__(self, question_prompt_default: str, default_client: SyncLLMClient):
+    def __init__(
+        self,
+        question_prompt_default: str,
+        default_client: SyncLLMClient,
+        logger: logging.Logger,
+    ):
         self.question_prompt_default = question_prompt_default
         self.default_client = default_client
+        self.logger = logger
 
     def _construct_text_to_llm(
         self, context_prompt: str, question_prompt: str, fact: AtomicFact
@@ -50,6 +57,8 @@ class QuestionExtractor:
             question_prompt=question_prompt_to_use,
             fact=fact,
         )
+        self.logger.debug(f"prompt to llm: {text_to_llm}")
+        self.logger.info(f"generating question from fact: {fact}")
         qa_pair = llm_client.get_structured_response(
             prompt=text_to_llm, response_model=QAPairLLM, ai_model=ai_model
         )
@@ -85,7 +94,8 @@ class QuestionExtractor:
         """
         output: List[QAPair] = []
 
-        for fact in document.fact_list:
+        for idx, fact in enumerate(document.fact_list):
+            self.logger.info(f"generating question from {idx} fact: {fact}")
             qa_pair = self._generate_question_from_single_fact(
                 llm_client=llm_client,
                 fact=fact,
@@ -129,7 +139,8 @@ class QuestionExtractor:
         futures = []
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            for fact in document.fact_list:
+            for idx, fact in enumerate(document.fact_list):
+                self.logger.info(f"generating question from {idx} fact: {fact}")
                 future = loop.run_in_executor(
                     executor,
                     self._generate_question_from_single_fact,
