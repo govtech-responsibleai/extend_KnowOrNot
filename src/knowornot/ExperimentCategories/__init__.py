@@ -7,7 +7,7 @@ import numpy as np
 import logging
 
 
-class ExperimentTypeEnum(Enum):
+class RetrievalType(Enum):
     DIRECT = "DIRECT"
     LONG_IN_CONTEXT = "LONG_IN_CONTEXT"
     BASIC_RAG = "BASIC_RAG"
@@ -208,5 +208,5 @@ class BaseExperiment(ABC):
 
     @property
     @abstractmethod
-    def experiment_type(self) -> ExperimentTypeEnum:
+    def experiment_type(self) -> RetrievalType:
         pass

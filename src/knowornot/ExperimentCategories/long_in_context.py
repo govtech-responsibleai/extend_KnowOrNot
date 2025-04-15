@@ -1,4 +1,4 @@
-from . import BaseExperiment, ExperimentTypeEnum
+from . import BaseExperiment, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import QAPair, SingleExperimentInput
 from typing import List, Optional
@@ -47,4 +47,4 @@ class LongInContext(BaseExperiment):
 
     @property
     def experiment_type(self):
-        return ExperimentTypeEnum.LONG_IN_CONTEXT
+        return RetrievalType.LONG_IN_CONTEXT

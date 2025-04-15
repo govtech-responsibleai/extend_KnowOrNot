@@ -1,6 +1,6 @@
 import numpy as np
 
-from . import BaseExperiment, ExperimentTypeEnum
+from . import BaseExperiment, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from typing import List, Optional
 from ..common.models import QAPair, SingleExperimentInput
@@ -17,7 +17,7 @@ class DirectExperiment(BaseExperiment):
 
     @property
     def experiment_type(self):
-        return ExperimentTypeEnum.DIRECT
+        return RetrievalType.DIRECT
 
     def _create_single_removal_experiment(
         self,

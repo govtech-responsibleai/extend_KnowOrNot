@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from unittest.mock import MagicMock
 
-from src.knowornot.ExperimentCategories import ExperimentTypeEnum
+from src.knowornot.ExperimentCategories import RetrievalType
 
 
 from src.knowornot.ExperimentCategories.direct_experiment import DirectExperiment
@@ -95,10 +95,10 @@ class TestExperimentCategories:
 
     # Test experiment type properties
     def test_experiment_types(self):
-        assert self.direct_exp.experiment_type == ExperimentTypeEnum.DIRECT
-        assert self.basic_rag.experiment_type == ExperimentTypeEnum.BASIC_RAG
-        assert self.long_ctx.experiment_type == ExperimentTypeEnum.LONG_IN_CONTEXT
-        assert self.hyde_rag.experiment_type == ExperimentTypeEnum.HYDE_RAG
+        assert self.direct_exp.experiment_type == RetrievalType.DIRECT
+        assert self.basic_rag.experiment_type == RetrievalType.BASIC_RAG
+        assert self.long_ctx.experiment_type == RetrievalType.LONG_IN_CONTEXT
+        assert self.hyde_rag.experiment_type == RetrievalType.HYDE_RAG
 
     # Test embedding functions
     def test_embed_qa_pair_list(self):

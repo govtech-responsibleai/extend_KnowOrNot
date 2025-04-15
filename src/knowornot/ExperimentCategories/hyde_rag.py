@@ -1,4 +1,4 @@
-from . import BaseExperiment, ExperimentTypeEnum
+from . import BaseExperiment, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from typing import Optional, List
 from ..common.models import QAPair, SingleExperimentInput
@@ -21,7 +21,7 @@ class HydeRAG(BaseExperiment):
 
     @property
     def experiment_type(self):
-        return ExperimentTypeEnum.HYDE_RAG
+        return RetrievalType.HYDE_RAG
 
     def _get_hypothetical_question_answer(
         self,

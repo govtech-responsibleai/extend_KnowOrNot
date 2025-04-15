@@ -1,4 +1,4 @@
-from . import BaseExperiment, ExperimentTypeEnum
+from . import BaseExperiment, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import QAPair, SingleExperimentInput
 from typing import List, Optional
@@ -64,4 +64,4 @@ class BasicRAG(BaseExperiment):
 
     @property
     def experiment_type(self):
-        return ExperimentTypeEnum.BASIC_RAG
+        return RetrievalType.BASIC_RAG
