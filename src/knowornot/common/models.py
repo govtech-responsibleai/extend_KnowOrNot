@@ -1,3 +1,4 @@
+from enum import Enum
 from pydantic import BaseModel
 from pathlib import Path
 from typing import List, Optional
@@ -83,3 +84,12 @@ class SingleExperimentInput(BaseModel):
     question: str
     expected_answer: Optional[str]
     context_questions: Optional[List[QAPair]]
+
+
+class ExperimentType(Enum):
+    REMOVAL = "removal"
+    SYNTHETIC = "synthetic"
+
+
+class QuestionDocument(BaseModel):
+    pass
