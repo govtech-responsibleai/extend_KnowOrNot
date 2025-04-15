@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple, cast
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import SingleExperimentInput, QAPair
 import numpy as np
+import logging
 
 
 class ExperimentTypeEnum(Enum):
@@ -14,11 +15,16 @@ class ExperimentTypeEnum(Enum):
 
 
 class BaseExperiment(ABC):
-    def __init__(self, default_client: SyncLLMClient, closest_k: int = 5):
+    def __init__(
+        self, default_client: SyncLLMClient, logger: logging.Logger, closest_k: int = 5
+    ):
         if not default_client.can_use_instructor:
             raise ValueError("Default client must be able to use instructor")
         self.closest_k = closest_k
         self.default_client = default_client
+        self.logger = logger
+
+        self.logger.info(f"Initializing {self.experiment_type} experiment")
 
     @abstractmethod
     def _create_single_removal_experiment(
@@ -148,6 +154,7 @@ class BaseExperiment(ABC):
         experiment_list: List[SingleExperimentInput] = []
         split_questions = self._split_question_list(question_list)
         for question, remaining, index in split_questions:
+            self.logger.info(f"Creating removal experiment {index} for {question}")
             experiment_list.append(
                 self._create_single_removal_experiment(
                     question_to_ask=question,
@@ -184,7 +191,8 @@ class BaseExperiment(ABC):
     ) -> List[SingleExperimentInput]:
         embeddings = self._embed_qa_pair_list(context_questions)
         experiment_list: List[SingleExperimentInput] = []
-        for question in synthetic_questions:
+        for idx, question in enumerate(synthetic_questions):
+            self.logger.info(f"Creating synthetic experiment {idx} for {question}")
             experiment_list.append(
                 self._create_single_synthetic_experiment(
                     question_to_ask=question,

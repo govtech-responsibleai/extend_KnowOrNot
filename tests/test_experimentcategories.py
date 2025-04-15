@@ -22,10 +22,14 @@ class TestExperimentCategories:
 
         # Initialize experiment classes
         self.direct_exp = DirectExperiment(
-            default_client=self.mock_llm_client, closest_k=3
+            default_client=self.mock_llm_client, closest_k=3, logger=MagicMock()
         )
-        self.basic_rag = BasicRAG(default_client=self.mock_llm_client, closest_k=3)
-        self.long_ctx = LongInContext(default_client=self.mock_llm_client, closest_k=3)
+        self.basic_rag = BasicRAG(
+            default_client=self.mock_llm_client, closest_k=3, logger=MagicMock()
+        )
+        self.long_ctx = LongInContext(
+            default_client=self.mock_llm_client, closest_k=3, logger=MagicMock()
+        )
 
         # For HydeRAG, we need a hypothetical question prompt
         self.hyde_prompt = "Generate a hypothetical answer for this question:"
@@ -33,6 +37,7 @@ class TestExperimentCategories:
             default_client=self.mock_llm_client,
             hypothetical_question_prompt=self.hyde_prompt,
             closest_k=3,
+            logger=MagicMock(),
         )
 
         # Create sample QA pairs for testing
@@ -67,23 +72,25 @@ class TestExperimentCategories:
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
-            DirectExperiment(default_client=invalid_client)
+            DirectExperiment(default_client=invalid_client, logger=MagicMock())
 
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
-            BasicRAG(default_client=invalid_client)
+            BasicRAG(default_client=invalid_client, logger=MagicMock())
 
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
-            LongInContext(default_client=invalid_client)
+            LongInContext(default_client=invalid_client, logger=MagicMock())
 
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
             HydeRAG(
-                default_client=invalid_client, hypothetical_question_prompt="prompt"
+                default_client=invalid_client,
+                hypothetical_question_prompt="prompt",
+                logger=MagicMock(),
             )
 
     # Test experiment type properties

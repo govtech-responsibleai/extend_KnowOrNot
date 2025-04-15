@@ -3,11 +3,16 @@ from ..SyncLLMClient import SyncLLMClient
 from ..common.models import QAPair, SingleExperimentInput
 from typing import List, Optional
 import numpy as np
+import logging
 
 
 class BasicRAG(BaseExperiment):
-    def __init__(self, default_client: SyncLLMClient, closest_k: int = 5):
-        super().__init__(default_client=default_client, closest_k=closest_k)
+    def __init__(
+        self, default_client: SyncLLMClient, logger: logging.Logger, closest_k: int = 5
+    ):
+        super().__init__(
+            default_client=default_client, logger=logger, closest_k=closest_k
+        )
 
     def _create_single_removal_experiment(
         self,

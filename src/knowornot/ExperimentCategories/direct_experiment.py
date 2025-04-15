@@ -4,11 +4,16 @@ from . import BaseExperiment, ExperimentTypeEnum
 from ..SyncLLMClient import SyncLLMClient
 from typing import List, Optional
 from ..common.models import QAPair, SingleExperimentInput
+import logging
 
 
 class DirectExperiment(BaseExperiment):
-    def __init__(self, default_client: SyncLLMClient, closest_k: int = 5):
-        super().__init__(default_client=default_client, closest_k=closest_k)
+    def __init__(
+        self, default_client: SyncLLMClient, logger: logging.Logger, closest_k: int = 5
+    ):
+        super().__init__(
+            default_client=default_client, logger=logger, closest_k=closest_k
+        )
 
     @property
     def experiment_type(self):

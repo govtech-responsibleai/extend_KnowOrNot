@@ -3,16 +3,20 @@ from ..SyncLLMClient import SyncLLMClient
 from typing import Optional, List
 from ..common.models import QAPair, SingleExperimentInput
 import numpy as np
+import logging
 
 
 class HydeRAG(BaseExperiment):
     def __init__(
         self,
         default_client: SyncLLMClient,
+        logger: logging.Logger,
         hypothetical_question_prompt: str,
         closest_k: int = 5,
     ):
-        super().__init__(default_client, closest_k)
+        super().__init__(
+            default_client=default_client, logger=logger, closest_k=closest_k
+        )
         self.hypothetical_question_prompt = hypothetical_question_prompt
 
     @property
