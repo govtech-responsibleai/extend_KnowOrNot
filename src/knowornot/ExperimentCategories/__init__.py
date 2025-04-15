@@ -1,6 +1,6 @@
 from enum import Enum
 from abc import ABC, abstractmethod
-from typing import List, Tuple, cast
+from typing import List, Optional, Tuple, cast
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import SingleExperimentInput, QAPair
 import numpy as np
@@ -27,6 +27,9 @@ class BaseExperiment(ABC):
         removed_index: int,
         remaining_qa: List[QAPair],
         embeddings: np.ndarray,
+        alterative_prompt: Optional[str] = None,
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        ai_model: Optional[str] = None,
     ) -> SingleExperimentInput:
         """
         An abstract method that creates a single experiment input where the question_to_ask
@@ -43,11 +46,19 @@ class BaseExperiment(ABC):
             not removed.
             embeddings (np.ndarray): A 2D numpy array of embeddings that is
             len(question_to_ask) + len(remaining_qa) long.
+            alterative_prompt (Optional[str]): An optional prompt to use for the
+            experiment only in HydeRAG. Otherwise the default prompt is used in HydeRAG.
+            alternative_llm_client (Optional[SyncLLMClient]): An optional LLM client to
+            use for the experiment only in HydeRAG. Otherwise the default client is used in HydeRAG.
+            ai_model (Optional[str]): An optional model to use for the experiment only in HydeRAG.
+            Otherwise the default model from the specified client is used in HydeRAG.
+
 
         Returns:
             SingleExperimentInput: An experiment input object that represents the
             removal of question_to_ask from the original list of question-answer pairs.
         """
+        pass
 
     def _embed_qa_pair_list(self, qa_pair_list: List[QAPair]) -> np.ndarray:
         """
@@ -112,7 +123,11 @@ class BaseExperiment(ABC):
         return output
 
     def create_removal_experiments(
-        self, question_list: List[QAPair]
+        self,
+        question_list: List[QAPair],
+        alternative_prompt: Optional[str] = None,
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        ai_model: Optional[str] = None,
     ) -> List[SingleExperimentInput]:
         """
         Creates a list of removal experiments from a list of questions.
@@ -139,6 +154,9 @@ class BaseExperiment(ABC):
                     removed_index=index,
                     remaining_qa=remaining,
                     embeddings=embeddings,
+                    alterative_prompt=alternative_prompt,
+                    alternative_llm_client=alternative_llm_client,
+                    ai_model=ai_model,
                 )
             )
 
@@ -150,11 +168,19 @@ class BaseExperiment(ABC):
         question_to_ask: QAPair,
         question_list: List[QAPair],
         embeddings: np.ndarray,
+        alternative_prompt: Optional[str] = None,
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        ai_model: Optional[str] = None,
     ) -> SingleExperimentInput:
         pass
 
     def create_synthetic_experiments(
-        self, synthetic_questions: List[QAPair], context_questions: List[QAPair]
+        self,
+        synthetic_questions: List[QAPair],
+        context_questions: List[QAPair],
+        alternative_prompt: Optional[str] = None,
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        ai_model: Optional[str] = None,
     ) -> List[SingleExperimentInput]:
         embeddings = self._embed_qa_pair_list(context_questions)
         experiment_list: List[SingleExperimentInput] = []
@@ -164,6 +190,9 @@ class BaseExperiment(ABC):
                     question_to_ask=question,
                     question_list=context_questions,
                     embeddings=embeddings,
+                    alternative_llm_client=alternative_llm_client,
+                    alternative_prompt=alternative_prompt,
+                    ai_model=ai_model,
                 )
             )
 

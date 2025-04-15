@@ -1,7 +1,7 @@
 from . import BaseExperiment, ExperimentTypeEnum
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import QAPair, SingleExperimentInput
-from typing import List
+from typing import List, Optional
 import numpy as np
 
 
@@ -15,6 +15,9 @@ class LongInContext(BaseExperiment):
         removed_index: int,
         remaining_qa: List[QAPair],
         embeddings: np.ndarray,
+        alterative_prompt: Optional[str] = None,
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        ai_model: Optional[str] = None,
     ) -> SingleExperimentInput:
         return SingleExperimentInput(
             question=question_to_ask.question,
@@ -27,6 +30,9 @@ class LongInContext(BaseExperiment):
         question_to_ask: QAPair,
         question_list: List[QAPair],
         embeddings: np.ndarray,
+        alternative_prompt: Optional[str] = None,
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        ai_model: Optional[str] = None,
     ) -> SingleExperimentInput:
         return SingleExperimentInput(
             question=question_to_ask.question,
