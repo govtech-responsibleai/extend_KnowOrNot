@@ -5,7 +5,6 @@ from ..common.models import QAPairIntermediate, ExperimentType
 from typing import List
 from pydantic import BaseModel
 from datetime import datetime
-from pathlib import Path
 
 
 @dataclass
@@ -20,19 +19,6 @@ class ExperimentInput:
 class QAPairToLLM(QAPairIntermediate):
     identifier: str
     index: int
-
-
-class Prompt(BaseModel):
-    system_prompt: str
-    identifier: str
-    creation_timestamp: datetime
-    save_location: Path
-
-    def save_to_json(self):
-        data = self.model_dump_json()
-        with open(self.save_location, "w") as f:
-            f.write(data)
-        return
 
 
 class ExperimentMetadata(BaseModel):

@@ -5,7 +5,7 @@ import logging
 
 from src.knowornot.SyntheticExperimentCreator.models import CanBeAnswered
 from src.knowornot.SyntheticExperimentCreator import SyntheticExperimentCreator
-from src.knowornot.common.models import QAPairIntermediate, AtomicFact
+from src.knowornot.common.models import QAPairIntermediate
 from src.knowornot.SyncLLMClient import SyncLLMClient
 
 
@@ -27,22 +27,18 @@ class TestSyntheticExperimentCreator:
             QAPairIntermediate(
                 question="Q1?",
                 answer="A1",
-                source=AtomicFact(fact_text="Fact 1", source_citation=0),
             ),
             QAPairIntermediate(
                 question="Q2?",
                 answer="A2",
-                source=AtomicFact(fact_text="Fact 2", source_citation=1),
             ),
             QAPairIntermediate(
                 question="Q3?",
                 answer="A3",
-                source=AtomicFact(fact_text="Fact 3", source_citation=2),
             ),
             QAPairIntermediate(
                 question="Q4?",
                 answer="A4",
-                source=AtomicFact(fact_text="Fact 4", source_citation=3),
             ),
         ]
         self.sample_embeddings = np.array(
@@ -211,7 +207,6 @@ class TestSyntheticExperimentCreator:
         synthetic_qa = QAPairIntermediate(
             question="New Q?",
             answer="New A",
-            source=AtomicFact(fact_text="New Fact", source_citation=5),
         )
         self.mock_llm_client.get_structured_response.side_effect = [
             synthetic_qa,
@@ -262,12 +257,10 @@ class TestSyntheticExperimentCreator:
         synthetic_qa_good = QAPairIntermediate(
             question="Good Q?",
             answer="Good A",
-            source=AtomicFact(fact_text="G Fact", source_citation=6),
         )
         synthetic_qa_bad = QAPairIntermediate(
             question="Bad Q?",
             answer="Bad A",
-            source=AtomicFact(fact_text="B Fact", source_citation=7),
         )
 
         self.mock_llm_client.get_structured_response.side_effect = [
@@ -296,7 +289,6 @@ class TestSyntheticExperimentCreator:
         synthetic_qa = QAPairIntermediate(
             question="Retry Q?",
             answer="Retry A",
-            source=AtomicFact(fact_text="R Fact", source_citation=8),
         )
         self.mock_llm_client.get_structured_response.side_effect = [
             Exception("LLM generation error"),
@@ -341,14 +333,12 @@ class TestSyntheticExperimentCreator:
             QAPairIntermediate(
                 question="Synth Q1",
                 answer="Synth A1",
-                source=AtomicFact(fact_text="S1", source_citation=10),
             )
         ]
         mock_synth_q2 = [
             QAPairIntermediate(
                 question="Synth Q2",
                 answer="Synth A2",
-                source=AtomicFact(fact_text="S2", source_citation=11),
             )
         ]
         mock_generate.side_effect = [mock_synth_q1, mock_synth_q2]

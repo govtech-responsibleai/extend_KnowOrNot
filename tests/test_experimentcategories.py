@@ -15,7 +15,6 @@ from src.knowornot.RetrievalStrategy.long_in_context import (
 from src.knowornot.RetrievalStrategy.hyde_rag import HydeRAGStrategy
 from src.knowornot.common.models import (
     QAPairIntermediate,
-    AtomicFact,
     SingleExperimentInput,
 )
 from src.knowornot.SyncLLMClient import SyncLLMClient
@@ -53,7 +52,6 @@ class TestExperimentCategories:
             QAPairIntermediate(
                 question=f"Question {i}?",
                 answer=f"Answer {i}",
-                source=AtomicFact(fact_text=f"Fact {i}", source_citation=i),
             )
             for i in range(1, 6)
         ]
@@ -172,7 +170,6 @@ class TestExperimentCategories:
         question = QAPairIntermediate(
             question="Synthetic question?",
             answer="Synthetic answer",
-            source=AtomicFact(fact_text="Synthetic fact", source_citation=99),
         )
 
         result = self.direct_exp._create_single_synthetic_experiment(
@@ -226,7 +223,6 @@ class TestExperimentCategories:
         synthetic_question = QAPairIntermediate(
             question="Synthetic question?",
             answer="Synthetic answer",
-            source=AtomicFact(fact_text="Synthetic fact", source_citation=99),
         )
 
         # Mock embedding for synthetic question - make it closest to Q3
@@ -281,7 +277,6 @@ class TestExperimentCategories:
         synthetic_question = QAPairIntermediate(
             question="Synthetic question?",
             answer="Synthetic answer",
-            source=AtomicFact(fact_text="Synthetic fact", source_citation=99),
         )
 
         result = self.long_ctx._create_single_synthetic_experiment(
@@ -306,7 +301,6 @@ class TestExperimentCategories:
         hypothetical_answer = QAPairIntermediate(
             question="Hypothetical question?",
             answer="Hypothetical answer",
-            source=AtomicFact(fact_text="Hypothetical fact", source_citation=100),
         )
 
         self.mock_llm_client.get_structured_response.return_value = hypothetical_answer
@@ -331,7 +325,6 @@ class TestExperimentCategories:
         hypothetical_answer = QAPairIntermediate(
             question="Hypothetical Q1?",
             answer="Hypothetical A1",
-            source=AtomicFact(fact_text="Hypo fact 1", source_citation=100),
         )
         self.hyde_rag._get_hypothetical_question_answer = MagicMock(
             return_value=hypothetical_answer
@@ -364,14 +357,12 @@ class TestExperimentCategories:
         synthetic_question = QAPairIntermediate(
             question="Synthetic question?",
             answer="Synthetic answer",
-            source=AtomicFact(fact_text="Synthetic fact", source_citation=99),
         )
 
         # Mock the hypothetical answer generation
         hypothetical_answer = QAPairIntermediate(
             question="Hypothetical synthetic Q?",
             answer="Hypothetical synthetic A",
-            source=AtomicFact(fact_text="Hypo synth fact", source_citation=101),
         )
         self.hyde_rag._get_hypothetical_question_answer = MagicMock(
             return_value=hypothetical_answer
@@ -408,7 +399,6 @@ class TestExperimentCategories:
         alternative_client.get_structured_response.return_value = QAPairIntermediate(
             question="Alt hypothetical Q?",
             answer="Alt hypothetical A",
-            source=AtomicFact(fact_text="Alt hypo fact", source_citation=102),
         )
 
         result = self.hyde_rag._get_hypothetical_question_answer(
@@ -458,9 +448,6 @@ class TestExperimentCategories:
             QAPairIntermediate(
                 question=f"Synthetic Q{i}?",
                 answer=f"Synthetic A{i}",
-                source=AtomicFact(
-                    fact_text=f"Synthetic Fact {i}", source_citation=100 + i
-                ),
             )
             for i in range(1, 4)
         ]
