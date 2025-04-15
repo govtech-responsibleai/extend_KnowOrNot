@@ -357,11 +357,11 @@ class KnowOrNot:
 
     def create_questions(
         self,
-        llm_client: SyncLLMClient,
         context_prompt: str,
         document: AtomicFactDocument,
         alternative_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
+        llm_client: Optional[SyncLLMClient] = None,
     ) -> List[QAPair]:
         """
         Generates questions from an atomic fact document using a given LLM client.
@@ -375,9 +375,16 @@ class KnowOrNot:
         potential exceptions, see `QuestionExtractor.generate_question_from_document`.
         """
 
+        client = llm_client or self.default_sync_client
+
+        if not client:
+            raise ValueError(
+                "You must set a LLM Client before performing any question related operations or provide one as an argument"
+            )
+
         question_extractor = self._get_question_manager()
         return question_extractor.generate_question_from_document(
-            llm_client=llm_client,
+            llm_client=client,
             document=document,
             context_prompt=context_prompt,
             alternative_question_prompt=alternative_prompt,
