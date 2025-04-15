@@ -5,7 +5,9 @@ from unittest.mock import MagicMock
 from src.knowornot.ExperimentCategories import RetrievalType
 
 
-from src.knowornot.ExperimentCategories.direct_experiment import DirectExperiment
+from src.knowornot.ExperimentCategories.direct_experiment import (
+    DirectRetrievalExperiment,
+)
 from src.knowornot.ExperimentCategories.basic_rag import BasicRAG
 from src.knowornot.ExperimentCategories.long_in_context import LongInContext
 from src.knowornot.ExperimentCategories.hyde_rag import HydeRAG
@@ -21,7 +23,7 @@ class TestExperimentCategories:
         self.mock_llm_client.can_use_instructor = True
 
         # Initialize experiment classes
-        self.direct_exp = DirectExperiment(
+        self.direct_exp = DirectRetrievalExperiment(
             default_client=self.mock_llm_client, closest_k=3, logger=MagicMock()
         )
         self.basic_rag = BasicRAG(
@@ -72,7 +74,7 @@ class TestExperimentCategories:
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
-            DirectExperiment(default_client=invalid_client, logger=MagicMock())
+            DirectRetrievalExperiment(default_client=invalid_client, logger=MagicMock())
 
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
@@ -142,7 +144,7 @@ class TestExperimentCategories:
         assert closest_indices[1] == 1  # Q2
         assert closest_indices[2] == 4  # Q5
 
-    # DirectExperiment tests
+    # DirectRetrievalExperiment tests
     def test_direct_experiment_removal(self):
         question = self.sample_qa_pairs[0]
         removed_index = 0

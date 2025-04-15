@@ -7,7 +7,7 @@ from ..common.models import QAPair, SingleExperimentInput
 import logging
 
 
-class DirectExperiment(BaseRetrievalExperiment):
+class DirectRetrievalExperiment(BaseRetrievalExperiment):
     def __init__(
         self, default_client: SyncLLMClient, logger: logging.Logger, closest_k: int = 5
     ):
