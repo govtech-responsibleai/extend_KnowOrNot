@@ -23,6 +23,7 @@ class TestFactManager(unittest.TestCase):
         self.fact_manager = FactManager(
             sync_llm_client=self.mock_llm_client,
             default_fact_creation_prompt=self.default_prompt,
+            logger=MagicMock(),
         )
 
     @patch("src.knowornot.FactManager.nltk.download")
@@ -31,9 +32,10 @@ class TestFactManager(unittest.TestCase):
         fact_manager = FactManager(
             sync_llm_client=self.mock_llm_client,
             default_fact_creation_prompt=self.default_prompt,
+            logger=MagicMock(),
         )
 
-        mock_download.assert_called_once_with("punkt", quiet=True)
+        mock_download.assert_called_once_with("punkt_tab")
         self.assertEqual(fact_manager.sync_llm_client, self.mock_llm_client)
         self.assertEqual(fact_manager.fact_creation_prompt, self.default_prompt)
 

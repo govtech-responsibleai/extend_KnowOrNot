@@ -5,15 +5,20 @@ from ..common.models import AtomicFactDocument, Sentence, SplitSourceDocument
 
 import nltk
 from nltk.tokenize import sent_tokenize
+import logging
 
 
 class FactManager:
     def __init__(
-        self, sync_llm_client: SyncLLMClient, default_fact_creation_prompt: str
+        self,
+        sync_llm_client: SyncLLMClient,
+        default_fact_creation_prompt: str,
+        logger: logging.Logger,
     ):
         self.sync_llm_client = sync_llm_client
         self.fact_creation_prompt: str = default_fact_creation_prompt
-        nltk.download("punkt", quiet=True)
+        self.logger = logger
+        nltk.download("punkt_tab")
 
     def _split_sentences(self, text: str) -> List[Sentence]:
         sentence_list = sent_tokenize(text)
@@ -27,6 +32,9 @@ class FactManager:
         Args:
         - new_client (SyncLLMClient): The new client to use.
         """
+        self.logger.info(
+            f"Updating LLM client from {self.sync_llm_client} to {new_client}"
+        )
         self.sync_llm_client = new_client
 
     def _convert_source_document_to_facts(
@@ -40,7 +48,7 @@ class FactManager:
             prompt_to_use = self.fact_creation_prompt
         else:
             prompt_to_use = alternative_prompt
-
+        self.logger.debug(f"Sending prompt: {prompt_to_use} with document {document}")
         return llm_client.get_structured_response(
             prompt=prompt_to_use + "The document is" + str(document),
             response_model=AtomicFactDocument,
@@ -59,6 +67,8 @@ class FactManager:
         Raises:
         - ValueError: If the provided file does not have a .txt extension.
         """
+
+        self.logger.info(f"Loading text file: {file_path}")
 
         if not file_path.suffix.lower() == ".txt":
             raise ValueError(f"File must be a .txt file. Got: {file_path}")
@@ -100,19 +110,24 @@ class FactManager:
             )
 
         for source in source_list:
+            self.logger.info(f"Parsing source file: {source}")
             source_text = self._load_text_file(source)
             split_document = SplitSourceDocument(
                 sentences=self._split_sentences(text=source_text)
             )
+            self.logger.debug(f"Split document: {split_document}")
 
             document = self._convert_source_document_to_facts(
                 document=split_document,
                 llm_client=llm_client,
                 alternative_prompt=alternative_prompt,
             )
+            self.logger.info(f"Generated atomic facts for: {source}")
+            self.logger.debug(f"Atomic facts: {document}")
             output.append(document)
             if destination_dir:
                 file_path = destination_dir / f"{source.stem}.json"
                 document.save_to_json(file_path)
+                self.logger.info(f"Saved atomic facts to: {file_path}")
 
         return output

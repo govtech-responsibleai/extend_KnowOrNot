@@ -128,6 +128,7 @@ class KnowOrNot:
         self.fact_manager = FactManager(
             sync_llm_client=self.default_sync_client,
             default_fact_creation_prompt=PromptManager.default_fact_extraction_prompt,
+            logger=self.config.logger,
         )
 
         return self.fact_manager
