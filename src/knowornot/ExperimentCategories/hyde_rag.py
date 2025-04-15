@@ -1,4 +1,4 @@
-from . import BaseRetrievalExperiment, RetrievalType
+from . import BaseRetrievalStrategy, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from typing import Optional, List
 from ..common.models import QAPair, SingleExperimentInput
@@ -6,7 +6,7 @@ import numpy as np
 import logging
 
 
-class HydeRAG(BaseRetrievalExperiment):
+class HydeRAG(BaseRetrievalStrategy):
     def __init__(
         self,
         default_client: SyncLLMClient,
