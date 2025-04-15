@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from ..RetrievalStrategy import RetrievalType
 from ..SyncLLMClient import SyncLLMClientEnum
-from ..common.models import QAPairIntermediate, ExperimentType
+from ..common.models import QAPair, ExperimentType
 from typing import List
 from pydantic import BaseModel
 from datetime import datetime
@@ -11,7 +11,7 @@ from datetime import datetime
 class ExperimentInput:
     system_prompt: str
     retrieval_type: RetrievalType
-    questions: List[QAPairIntermediate]
+    questions: List[QAPair]
     use_batch_client: bool
     experiment_type: ExperimentType
 

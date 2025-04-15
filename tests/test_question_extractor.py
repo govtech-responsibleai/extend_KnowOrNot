@@ -4,7 +4,7 @@ from pathlib import Path
 
 from src.knowornot.QuestionExtractor import QuestionExtractor
 from src.knowornot.QuestionExtractor.models import QuestionList, FilterMethod
-from src.knowornot.common.models import QAPairIntermediate, QAPairLLM
+from src.knowornot.common.models import QAPair
 from src.knowornot.common.models import AtomicFactDocument, AtomicFact
 from src.knowornot.SyncLLMClient import SyncLLMClient
 
@@ -49,15 +49,15 @@ class TestQuestionExtractor:
         )
 
         # Create question list to return
-        qa_pair_llm1 = QAPairLLM(question="Question 1?", answer="Answer 1.")
-        qa_pair_llm2 = QAPairLLM(question="Question 2?", answer="Answer 2.")
+        qa_pair_llm1 = QAPair(question="Question 1?", answer="Answer 1.")
+        qa_pair_llm2 = QAPair(question="Question 2?", answer="Answer 2.")
         question_list = QuestionList(questions=[qa_pair_llm1, qa_pair_llm2])
 
         self.mock_llm_client.get_structured_response.return_value = question_list
 
         expected_qa_pairs = [
-            QAPairIntermediate(question="Question 1?", answer="Answer 1."),
-            QAPairIntermediate(question="Question 2?", answer="Answer 2."),
+            QAPair(question="Question 1?", answer="Answer 1."),
+            QAPair(question="Question 2?", answer="Answer 2."),
         ]
 
         actual_qa_pairs = self.question_extractor._generate_questions_from_document(
@@ -72,13 +72,9 @@ class TestQuestionExtractor:
 
     def test_get_diverse_questions_keyword(self):
         qa_pairs = [
-            QAPairIntermediate(
-                question="What is machine learning?", answer="A field of AI"
-            ),
-            QAPairIntermediate(
-                question="Define machine learning", answer="A technique"
-            ),
-            QAPairIntermediate(
+            QAPair(question="What is machine learning?", answer="A field of AI"),
+            QAPair(question="Define machine learning", answer="A technique"),
+            QAPair(
                 question="What is quantum computing?",
                 answer="Computing using quantum mechanics",
             ),
@@ -98,10 +94,8 @@ class TestQuestionExtractor:
 
     def test_get_diverse_questions_semantic(self):
         qa_pairs = [
-            QAPairIntermediate(
-                question="What is machine learning?", answer="A field of AI"
-            ),
-            QAPairIntermediate(
+            QAPair(question="What is machine learning?", answer="A field of AI"),
+            QAPair(
                 question="Define artificial intelligence",
                 answer="Intelligence demonstrated by machines",
             ),
@@ -121,11 +115,9 @@ class TestQuestionExtractor:
 
     def test_get_diverse_questions_both(self):
         qa_pairs = [
-            QAPairIntermediate(
-                question="What is machine learning?", answer="A field of AI"
-            ),
-            QAPairIntermediate(question="Define ML", answer="A technique"),
-            QAPairIntermediate(
+            QAPair(question="What is machine learning?", answer="A field of AI"),
+            QAPair(question="Define ML", answer="A technique"),
+            QAPair(
                 question="What is quantum computing?",
                 answer="Computing using quantum mechanics",
             ),
@@ -163,7 +155,7 @@ class TestQuestionExtractor:
         with patch.object(
             self.question_extractor,
             "_generate_questions_from_document",
-            return_value=[QAPairIntermediate(question="Q?", answer="A")],
+            return_value=[QAPair(question="Q?", answer="A")],
         ):
             # Mock _get_diverse_questions to return an empty list
             with patch.object(

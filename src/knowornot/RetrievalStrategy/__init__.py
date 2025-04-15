@@ -2,7 +2,7 @@ from enum import Enum
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, cast
 from ..SyncLLMClient import SyncLLMClient
-from ..common.models import SingleExperimentInput, QAPairIntermediate
+from ..common.models import SingleExperimentInput, QAPair
 import numpy as np
 import logging
 
@@ -29,9 +29,9 @@ class BaseRetrievalStrategy(ABC):
     @abstractmethod
     def _create_single_removal_experiment(
         self,
-        question_to_ask: QAPairIntermediate,
+        question_to_ask: QAPair,
         removed_index: int,
-        remaining_qa: List[QAPairIntermediate],
+        remaining_qa: List[QAPair],
         embeddings: np.ndarray,
         alterative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
@@ -44,11 +44,11 @@ class BaseRetrievalStrategy(ABC):
         This method should be implemented by the concrete subclass of BaseRetrievalStrategy.
 
         Args:
-            question_to_ask (QAPairIntermediate): The question-answer pair to be removed and
+            question_to_ask (QAPair): The question-answer pair to be removed and
             used for the experiment.
             removed_index (int): The index of the question_to_ask in the original list
             of question-answer pairs.
-            remaining_qa (List[QAPairIntermediate]): The list of question-answer pairs that are
+            remaining_qa (List[QAPair]): The list of question-answer pairs that are
             not removed.
             embeddings (np.ndarray): A 2D numpy array of embeddings that is
             len(question_to_ask) + len(remaining_qa) long.
@@ -66,13 +66,13 @@ class BaseRetrievalStrategy(ABC):
         """
         pass
 
-    def _embed_qa_pair_list(self, qa_pair_list: List[QAPairIntermediate]) -> np.ndarray:
+    def _embed_qa_pair_list(self, qa_pair_list: List[QAPair]) -> np.ndarray:
         """
         An abstract method that embeds the question list and returns a numpy 2D array.
         It should call sync client llm's get embedding method.
 
         Args:
-            qa_pair_list (List[QAPairIntermediate]): The question-answer pairs to be embedded.
+            qa_pair_list (List[QAPair]): The question-answer pairs to be embedded.
 
         Returns:
             np.ndarray: A 2D numpy array of float embeddings.
@@ -104,12 +104,12 @@ class BaseRetrievalStrategy(ABC):
         sorted_indices = np.argsort(-similarities)
         return cast(List[int], sorted_indices[: self.closest_k].tolist())
 
-    def _embed_single_qa_pair(self, qa_pair: QAPairIntermediate) -> np.ndarray:
+    def _embed_single_qa_pair(self, qa_pair: QAPair) -> np.ndarray:
         """
         Embeds a single question-answer pair and returns a 1D numpy array.
 
         Args:
-            qa_pair (QAPairIntermediate): The question-answer pair to be embedded.
+            qa_pair (QAPair): The question-answer pair to be embedded.
 
         Returns:
             np.ndarray: A 1D numpy array of float embeddings.
@@ -118,9 +118,9 @@ class BaseRetrievalStrategy(ABC):
         return np.array(embedding[0])
 
     def _split_question_list(
-        self, question_list: List[QAPairIntermediate]
-    ) -> List[Tuple[QAPairIntermediate, List[QAPairIntermediate], int]]:
-        output: List[Tuple[QAPairIntermediate, List[QAPairIntermediate], int]] = []
+        self, question_list: List[QAPair]
+    ) -> List[Tuple[QAPair, List[QAPair], int]]:
+        output: List[Tuple[QAPair, List[QAPair], int]] = []
         for i in range(len(question_list)):
             question_to_add = question_list[i]
             rest = question_list[0:i] + question_list[i + 1 :]
@@ -130,7 +130,7 @@ class BaseRetrievalStrategy(ABC):
 
     def create_removal_experiments(
         self,
-        question_list: List[QAPairIntermediate],
+        question_list: List[QAPair],
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
@@ -144,7 +144,7 @@ class BaseRetrievalStrategy(ABC):
         experiment based on removing the selected question from the context.
 
         Args:
-            question_list (List[QAPairIntermediate]): A list of question-answer pairs to process.
+            question_list (List[QAPair]): A list of question-answer pairs to process.
 
         Returns:
             List[SingleExperimentInput]: A list of experiments where each experiment
@@ -172,8 +172,8 @@ class BaseRetrievalStrategy(ABC):
     @abstractmethod
     def _create_single_synthetic_experiment(
         self,
-        question_to_ask: QAPairIntermediate,
-        question_list: List[QAPairIntermediate],
+        question_to_ask: QAPair,
+        question_list: List[QAPair],
         embeddings: np.ndarray,
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
@@ -183,8 +183,8 @@ class BaseRetrievalStrategy(ABC):
 
     def create_synthetic_experiments(
         self,
-        synthetic_questions: List[QAPairIntermediate],
-        context_questions: List[QAPairIntermediate],
+        synthetic_questions: List[QAPair],
+        context_questions: List[QAPair],
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,

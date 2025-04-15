@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from ..SyncLLMClient import SyncLLMClient
-from ..common.models import QAPairIntermediate
+from ..common.models import QAPair
 from typing import List, Optional, Tuple, cast
 from sklearn.cluster import KMeans
 
@@ -47,7 +47,7 @@ class SyntheticExperimentCreator:
 
     def _embed_qa_pair_list(
         self,
-        qa_pair_list: List[QAPairIntermediate],
+        qa_pair_list: List[QAPair],
         alternative_client: Optional[SyncLLMClient] = None,
     ) -> np.ndarray:
         """
@@ -55,7 +55,7 @@ class SyntheticExperimentCreator:
         It calls sync client llm's get embedding method.
 
         Args:
-            qa_pair_list (List[QAPairIntermediate]): The question-answer pairs to be embedded.
+            qa_pair_list (List[QAPair]): The question-answer pairs to be embedded.
             alternative_client (Optional[SyncLLMClient]): An optional alternative client to use for embedding.
 
         Returns:
@@ -65,7 +65,7 @@ class SyntheticExperimentCreator:
         if not qa_pair_list:
             return np.array([])  # Handle empty list
         client = alternative_client or self.default_client
-        # Convert QAPairIntermediate to string for embedding
+        # Convert QAPair to string for embedding
         texts_to_embed = [f"Q: {qa.question} A: {qa.answer}" for qa in qa_pair_list]
         embeddings = client.get_embedding(texts_to_embed)
         return np.array(embeddings)
@@ -74,20 +74,20 @@ class SyntheticExperimentCreator:
 
     def _cluster_qa_pair_list(
         self,
-        qa_pair_list: List[QAPairIntermediate],
+        qa_pair_list: List[QAPair],
         embeddings: np.ndarray,
         num_clusters: int,  # Now takes num_clusters directly
-    ) -> List[List[QAPairIntermediate]]:
+    ) -> List[List[QAPair]]:
         """
         Clusters the question list based on the embeddings into a specified number of clusters.
 
         Args:
-            qa_pair_list (List[QAPairIntermediate]): The question-answer pairs to be clustered.
+            qa_pair_list (List[QAPair]): The question-answer pairs to be clustered.
             embeddings (np.ndarray): A 2D numpy array of float embeddings.
             num_clusters (int): The target number of clusters.
 
         Returns:
-            List[List[QAPairIntermediate]]: A list of clusters, where each cluster is a list of QA pairs.
+            List[List[QAPair]]: A list of clusters, where each cluster is a list of QA pairs.
                                 Returns empty list if input is empty.
                                 Handles cases where num_clusters is invalid relative to data size.
         """
@@ -128,7 +128,7 @@ class SyntheticExperimentCreator:
             )
             return [qa_pair_list]
 
-        clusters: List[List[QAPairIntermediate]] = [[] for _ in range(num_clusters)]
+        clusters: List[List[QAPair]] = [[] for _ in range(num_clusters)]
         labels: np.ndarray = cast(np.ndarray, kmeans.labels_)
 
         for index, cluster_index in enumerate(labels):
@@ -147,8 +147,8 @@ class SyntheticExperimentCreator:
 
     def _check_if_question_can_be_answered(
         self,
-        question: QAPairIntermediate,
-        validation_pool: List[QAPairIntermediate],
+        question: QAPair,
+        validation_pool: List[QAPair],
         check_client: Optional[SyncLLMClient] = None,
         check_prompt: Optional[str] = None,
         check_model: Optional[str] = None,
@@ -157,8 +157,8 @@ class SyntheticExperimentCreator:
         Checks if a question can be answered using the validation pool.
 
         Args:
-            question (QAPairIntermediate): The question to check.
-            validation_pool (List[QAPairIntermediate]): All questions to check against (original + accepted synthetic).
+            question (QAPair): The question to check.
+            validation_pool (List[QAPair]): All questions to check against (original + accepted synthetic).
             check_client (Optional[SyncLLMClient]): Client for checking questions.
             check_prompt (Optional[str]): Prompt for checking questions.
             check_model (Optional[str]): Model to use for checking.
@@ -196,7 +196,7 @@ class SyntheticExperimentCreator:
 
     def _generate_synthetic_questions_for_cluster(
         self,
-        cluster: List[QAPairIntermediate],
+        cluster: List[QAPair],
         gen_client: Optional[SyncLLMClient] = None,
         gen_prompt: Optional[str] = None,
         gen_model: Optional[str] = None,
@@ -204,12 +204,12 @@ class SyntheticExperimentCreator:
         check_prompt: Optional[str] = None,
         check_model: Optional[str] = None,
         percentage: Optional[float] = None,
-    ) -> List[QAPairIntermediate]:
+    ) -> List[QAPair]:
         """
         Generates synthetic questions for a cluster with validation against a growing pool.
 
         Args:
-            cluster (List[QAPairIntermediate]): The original cluster of questions.
+            cluster (List[QAPair]): The original cluster of questions.
             gen_client (Optional[SyncLLMClient]): Client for generating questions. Defaults to `self.default_client`.
             gen_prompt (Optional[str]): Prompt for generating questions. Defaults to `self.default_synthetic_prompt`.
             gen_model (Optional[str]): Model to use for generation. Defaults to `None`.
@@ -219,7 +219,7 @@ class SyntheticExperimentCreator:
             percentage (Optional[float]): Percentage of the cluster size for new questions. Defaults to `self.default_percentage`.
 
         Returns:
-            List[QAPairIntermediate]: A list of accepted synthetic questions.
+            List[QAPair]: A list of accepted synthetic questions.
         """
         if not cluster:
             return []
@@ -234,7 +234,7 @@ class SyntheticExperimentCreator:
         if target_questions <= 0:
             return []
 
-        accepted_questions: List[QAPairIntermediate] = []
+        accepted_questions: List[QAPair] = []
         validation_pool = cluster.copy()
 
         cluster_str = "Existing Questions in Cluster:\n" + "\n".join(
@@ -256,13 +256,13 @@ class SyntheticExperimentCreator:
             attempts += 1
             retries = 0
             generated_successfully = False
-            question: Optional[QAPairIntermediate] = None
+            question: Optional[QAPair] = None
 
             while retries < self.max_retries:
                 try:
                     question = client.get_structured_response(
                         prompt=generation_base_prompt,
-                        response_model=QAPairIntermediate,
+                        response_model=QAPair,
                         ai_model=gen_model,
                     )
                     if question and question.question and question.answer:
@@ -316,7 +316,7 @@ class SyntheticExperimentCreator:
 
     def generate_synthetic_dataset(
         self,
-        qa_pair_list: List[QAPairIntermediate],
+        qa_pair_list: List[QAPair],
         num_clusters: int,  # User must provide this now
         gen_client: Optional[SyncLLMClient] = None,
         gen_prompt: Optional[str] = None,
@@ -326,13 +326,13 @@ class SyntheticExperimentCreator:
         check_model: Optional[str] = None,
         # min_clusters_override is removed
         percentage: Optional[float] = None,
-    ) -> Tuple[List[QAPairIntermediate], List[List[QAPairIntermediate]]]:
+    ) -> Tuple[List[QAPair], List[List[QAPair]]]:
         """
         Generates a complete synthetic dataset by clustering into a specified
         number of clusters and generating novel questions for each.
 
         Args:
-            qa_pair_list (List[QAPairIntermediate]): The list of question-answer pairs.
+            qa_pair_list (List[QAPair]): The list of question-answer pairs.
             num_clusters (int): The exact number of clusters to create. Must be >= 1.
                                 If num_clusters > len(qa_pair_list), it will be capped.
             gen_client (Optional[SyncLLMClient]): Client for generating synthetic questions.
@@ -344,7 +344,7 @@ class SyntheticExperimentCreator:
             percentage (Optional[float]): Percentage of questions to retain.
 
         Returns:
-            Tuple[List[QAPairIntermediate], List[List[QAPairIntermediate]]]: A tuple containing:
+            Tuple[List[QAPair], List[List[QAPair]]]: A tuple containing:
             - A list of synthetic question-answer pairs.
             - A list of the actual clusters used for generation.
         """

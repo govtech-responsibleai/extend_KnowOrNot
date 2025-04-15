@@ -64,17 +64,9 @@ class AtomicFactDocument(BaseModel):
         return AtomicFactDocument.model_validate_json(text)
 
 
-class QAPairLLM(BaseModel):
+class QAPair(BaseModel):
     question: str
     answer: str
-
-    def __str__(self):
-        return f"Question: {self.question} \n Answer: {self.answer}"
-
-
-class QAPairIntermediate(BaseModel):
-    question: str
-    answer: Optional[str]
 
     def __str__(self):
         return f"Question: {self.question} \n Answer: {self.answer}"
@@ -94,7 +86,7 @@ class QAPairFinal(BaseModel):
 class SingleExperimentInput(BaseModel):
     question: str
     expected_answer: Optional[str]
-    context_questions: Optional[List[QAPairIntermediate]]
+    context_questions: Optional[List[QAPair]]
 
 
 class ExperimentType(Enum):

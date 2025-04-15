@@ -5,7 +5,7 @@ import logging
 
 from src.knowornot.SyntheticExperimentCreator.models import CanBeAnswered
 from src.knowornot.SyntheticExperimentCreator import SyntheticExperimentCreator
-from src.knowornot.common.models import QAPairIntermediate
+from src.knowornot.common.models import QAPair
 from src.knowornot.SyncLLMClient import SyncLLMClient
 
 
@@ -24,19 +24,19 @@ class TestSyntheticExperimentCreator:
         )
 
         self.sample_qa_pairs = [
-            QAPairIntermediate(
+            QAPair(
                 question="Q1?",
                 answer="A1",
             ),
-            QAPairIntermediate(
+            QAPair(
                 question="Q2?",
                 answer="A2",
             ),
-            QAPairIntermediate(
+            QAPair(
                 question="Q3?",
                 answer="A3",
             ),
-            QAPairIntermediate(
+            QAPair(
                 question="Q4?",
                 answer="A4",
             ),
@@ -204,7 +204,7 @@ class TestSyntheticExperimentCreator:
     # --- Test _generate_synthetic_questions_for_cluster ---
     def test_generate_synthetic_questions_for_cluster(self):
         cluster = self.sample_qa_pairs[:2]
-        synthetic_qa = QAPairIntermediate(
+        synthetic_qa = QAPair(
             question="New Q?",
             answer="New A",
         )
@@ -239,7 +239,7 @@ class TestSyntheticExperimentCreator:
             [
                 call(
                     prompt=gen_prompt_expected,
-                    response_model=QAPairIntermediate,
+                    response_model=QAPair,
                     ai_model=None,
                 ),
                 call(
@@ -254,11 +254,11 @@ class TestSyntheticExperimentCreator:
         self, caplog
     ):
         cluster = self.sample_qa_pairs[:2]
-        synthetic_qa_good = QAPairIntermediate(
+        synthetic_qa_good = QAPair(
             question="Good Q?",
             answer="Good A",
         )
-        synthetic_qa_bad = QAPairIntermediate(
+        synthetic_qa_bad = QAPair(
             question="Bad Q?",
             answer="Bad A",
         )
@@ -286,7 +286,7 @@ class TestSyntheticExperimentCreator:
 
     def test_retries_on_generation_failure(self, caplog):
         cluster = self.sample_qa_pairs[:2]
-        synthetic_qa = QAPairIntermediate(
+        synthetic_qa = QAPair(
             question="Retry Q?",
             answer="Retry A",
         )
@@ -330,13 +330,13 @@ class TestSyntheticExperimentCreator:
         mock_cluster.return_value = mock_clusters_data
 
         mock_synth_q1 = [
-            QAPairIntermediate(
+            QAPair(
                 question="Synth Q1",
                 answer="Synth A1",
             )
         ]
         mock_synth_q2 = [
-            QAPairIntermediate(
+            QAPair(
                 question="Synth Q2",
                 answer="Synth A2",
             )

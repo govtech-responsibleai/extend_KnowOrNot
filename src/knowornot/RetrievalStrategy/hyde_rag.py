@@ -1,7 +1,7 @@
 from . import BaseRetrievalStrategy, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from typing import Optional, List
-from ..common.models import QAPairIntermediate, SingleExperimentInput
+from ..common.models import QAPair, SingleExperimentInput
 import numpy as np
 import logging
 
@@ -25,11 +25,11 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
 
     def _get_hypothetical_question_answer(
         self,
-        question_to_ask: QAPairIntermediate,
+        question_to_ask: QAPair,
         alterative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> QAPairIntermediate:
+    ) -> QAPair:
         prompt_to_use = alterative_prompt or self.hypothetical_question_prompt
 
         if alternative_llm_client and not alternative_llm_client.can_use_instructor:
@@ -39,7 +39,7 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
 
         output = client.get_structured_response(
             prompt=prompt_to_use + str(question_to_ask),
-            response_model=QAPairIntermediate,
+            response_model=QAPair,
             ai_model=ai_model,
         )
 
@@ -47,9 +47,9 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
 
     def _create_single_removal_experiment(
         self,
-        question_to_ask: QAPairIntermediate,
+        question_to_ask: QAPair,
         removed_index: int,
-        remaining_qa: List[QAPairIntermediate],
+        remaining_qa: List[QAPair],
         embeddings: np.ndarray,
         alterative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
@@ -82,8 +82,8 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
 
     def _create_single_synthetic_experiment(
         self,
-        question_to_ask: QAPairIntermediate,
-        question_list: List[QAPairIntermediate],
+        question_to_ask: QAPair,
+        question_list: List[QAPair],
         embeddings: np.ndarray,
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,

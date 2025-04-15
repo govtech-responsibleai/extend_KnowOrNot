@@ -3,7 +3,7 @@ from typing import Optional, List
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import (
     QAPairFinal,
-    QAPairIntermediate,
+    QAPair,
     AtomicFactDocument,
     QuestionDocument,
 )
@@ -51,14 +51,14 @@ class QuestionExtractor:
         context_prompt: str,
         alternative_question_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
-    ) -> List[QAPairIntermediate]:
+    ) -> List[QAPair]:
         """
         Generates a list of question-answer pairs from an atomic fact document using an LLM client.
 
         This method constructs a prompt by combining the context prompt with either an
         alternative question prompt or the default question generation question prompt. It then sends the
         constructed prompt to the LLM client to generate a structured response, which is
-        converted into a list of QAPairIntermediate.
+        converted into a list of QAPair.
 
         Args:
             llm_client (SyncLLMClient): The LLM client used to generate the question-answer pairs.
@@ -68,7 +68,7 @@ class QuestionExtractor:
             ai_model (Optional[str]): The AI model to use for generating the structured response.
 
         Returns:
-            List[QAPairIntermediate]: A list of question-answer pairs generated from the atomic fact document.
+            List[QAPair]: A list of question-answer pairs generated from the atomic fact document.
         """
         question_prompt_to_use = (
             alternative_question_prompt or self.question_prompt_default
@@ -83,11 +83,9 @@ class QuestionExtractor:
             prompt=text_to_llm, response_model=QuestionList, ai_model=ai_model
         )
 
-        output: List[QAPairIntermediate] = []
+        output: List[QAPair] = []
         for qapair in question_document.questions:
-            output.append(
-                QAPairIntermediate(question=qapair.question, answer=qapair.answer)
-            )
+            output.append(QAPair(question=qapair.question, answer=qapair.answer))
 
         return output
 
@@ -185,17 +183,17 @@ class QuestionExtractor:
         return " ".join(words)
 
     def _filter_keyword_duplicates(
-        self, questions: List[QAPairIntermediate], diversity_threshold: float = 0.3
-    ) -> List[QAPairIntermediate]:
+        self, questions: List[QAPair], diversity_threshold: float = 0.3
+    ) -> List[QAPair]:
         """
         Filter questions based on keyword diversity using TF-IDF.
 
         Args:
-            questions: List of QAPairIntermediate objects to filter
+            questions: List of QAPair objects to filter
             diversity_threshold: Minimum TF-IDF uniqueness score required (higher = stricter filtering)
 
         Returns:
-            List of filtered QAPairIntermediate objects with unique keyword content
+            List of filtered QAPair objects with unique keyword content
         """
         if not questions:
             return []
@@ -237,17 +235,17 @@ class QuestionExtractor:
         return [questions[idx] for idx in selected_indices]
 
     def _filter_semantic_duplicates(
-        self, questions: List[QAPairIntermediate], min_distance: float = 0.3
-    ) -> List[QAPairIntermediate]:
+        self, questions: List[QAPair], min_distance: float = 0.3
+    ) -> List[QAPair]:
         """
         Filter questions based on semantic diversity using embeddings.
 
         Args:
-            questions: List of QAPairIntermediate objects to filter
+            questions: List of QAPair objects to filter
             min_distance: Minimum cosine distance required between questions (higher = more diverse)
 
         Returns:
-            List of filtered QAPairIntermediate objects with diverse semantic meaning
+            List of filtered QAPair objects with diverse semantic meaning
         """
         if not questions:
             return []
@@ -308,11 +306,11 @@ class QuestionExtractor:
 
     def _get_diverse_questions(
         self,
-        question_list: List[QAPairIntermediate],
+        question_list: List[QAPair],
         method: FilterMethod,
         diversity_threshold_keyword: float = 0.3,
         diversity_threshold_semantic: float = 0.3,
-    ) -> List[QAPairIntermediate]:
+    ) -> List[QAPair]:
         """
         Generate diverse questions from a list of questions.
 
