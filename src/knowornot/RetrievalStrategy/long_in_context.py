@@ -6,7 +6,7 @@ import numpy as np
 import logging
 
 
-class LongInContextRetrievalExperiment(BaseRetrievalStrategy):
+class LongInContextStrategy(BaseRetrievalStrategy):
     def __init__(
         self, default_client: SyncLLMClient, logger: logging.Logger, closest_k: int = 5
     ):

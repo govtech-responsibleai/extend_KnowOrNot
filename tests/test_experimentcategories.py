@@ -2,17 +2,17 @@ import pytest
 import numpy as np
 from unittest.mock import MagicMock
 
-from src.knowornot.ExperimentCategories import RetrievalType
+from src.knowornot.RetrievalStrategy import RetrievalType
 
 
-from src.knowornot.ExperimentCategories.direct_experiment import (
-    DirectRetrievalExperiment,
+from src.knowornot.RetrievalStrategy.direct_experiment import (
+    DirectRetrievalStrategy,
 )
-from src.knowornot.ExperimentCategories.basic_rag import BasicRAG
-from src.knowornot.ExperimentCategories.long_in_context import (
-    LongInContextRetrievalExperiment,
+from src.knowornot.RetrievalStrategy.basic_rag import BasicRAGStrategy
+from src.knowornot.RetrievalStrategy.long_in_context import (
+    LongInContextStrategy,
 )
-from src.knowornot.ExperimentCategories.hyde_rag import HydeRAG
+from src.knowornot.RetrievalStrategy.hyde_rag import HydeRAGStrategy
 from src.knowornot.common.models import QAPair, AtomicFact, SingleExperimentInput
 from src.knowornot.SyncLLMClient import SyncLLMClient
 
@@ -25,19 +25,19 @@ class TestExperimentCategories:
         self.mock_llm_client.can_use_instructor = True
 
         # Initialize experiment classes
-        self.direct_exp = DirectRetrievalExperiment(
+        self.direct_exp = DirectRetrievalStrategy(
             default_client=self.mock_llm_client, closest_k=3, logger=MagicMock()
         )
-        self.basic_rag = BasicRAG(
+        self.basic_rag = BasicRAGStrategy(
             default_client=self.mock_llm_client, closest_k=3, logger=MagicMock()
         )
-        self.long_ctx = LongInContextRetrievalExperiment(
+        self.long_ctx = LongInContextStrategy(
             default_client=self.mock_llm_client, closest_k=3, logger=MagicMock()
         )
 
-        # For HydeRAG, we need a hypothetical question prompt
+        # For HydeRAGStrategy, we need a hypothetical question prompt
         self.hyde_prompt = "Generate a hypothetical answer for this question:"
-        self.hyde_rag = HydeRAG(
+        self.hyde_rag = HydeRAGStrategy(
             default_client=self.mock_llm_client,
             hypothetical_question_prompt=self.hyde_prompt,
             closest_k=3,
@@ -76,24 +76,22 @@ class TestExperimentCategories:
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
-            DirectRetrievalExperiment(default_client=invalid_client, logger=MagicMock())
+            DirectRetrievalStrategy(default_client=invalid_client, logger=MagicMock())
 
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
-            BasicRAG(default_client=invalid_client, logger=MagicMock())
+            BasicRAGStrategy(default_client=invalid_client, logger=MagicMock())
 
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
-            LongInContextRetrievalExperiment(
-                default_client=invalid_client, logger=MagicMock()
-            )
+            LongInContextStrategy(default_client=invalid_client, logger=MagicMock())
 
         with pytest.raises(
             ValueError, match="Default client must be able to use instructor"
         ):
-            HydeRAG(
+            HydeRAGStrategy(
                 default_client=invalid_client,
                 hypothetical_question_prompt="prompt",
                 logger=MagicMock(),
@@ -148,7 +146,7 @@ class TestExperimentCategories:
         assert closest_indices[1] == 1  # Q2
         assert closest_indices[2] == 4  # Q5
 
-    # DirectRetrievalExperiment tests
+    # DirectRetrievalStrategy tests
     def test_direct_experiment_removal(self):
         question = self.sample_qa_pairs[0]
         removed_index = 0
@@ -186,7 +184,7 @@ class TestExperimentCategories:
         )  # For synthetic, there's no expected answer
         assert result.context_questions is None  # Direct experiment uses no context
 
-    # BasicRAG tests
+    # BasicRAGStrategy tests
     def test_basic_rag_removal(self):
         # Setup mock for embedding functions
         self.mock_llm_client.get_embedding.return_value = (
@@ -251,7 +249,7 @@ class TestExperimentCategories:
         assert self.sample_qa_pairs[3] in result.context_questions  # Q4
         assert self.sample_qa_pairs[4] in result.context_questions  # Q5
 
-    # LongInContextRetrievalExperiment tests
+    # LongInContextStrategy tests
     def test_long_in_context_removal(self):
         question = self.sample_qa_pairs[0]
         removed_index = 0
@@ -268,12 +266,12 @@ class TestExperimentCategories:
         assert result.question == question.question
         assert result.expected_answer == question.answer
         assert result.context_questions is not None, (
-            "Context questions should not be None for LongInContextRetrievalExperiment experiment"
+            "Context questions should not be None for LongInContextStrategy experiment"
         )
         assert len(result.context_questions) == len(remaining_qa)
         assert (
             result.context_questions == remaining_qa
-        )  # LongInContextRetrievalExperiment includes all remaining questions
+        )  # LongInContextStrategy includes all remaining questions
 
     def test_long_in_context_synthetic(self):
         synthetic_question = QAPair(
@@ -291,14 +289,14 @@ class TestExperimentCategories:
         assert isinstance(result, SingleExperimentInput)
         assert result.question == synthetic_question.question
         assert result.context_questions is not None, (
-            "Context questions should not be None for LongInContextRetrievalExperiment experiment"
+            "Context questions should not be None for LongInContextStrategy experiment"
         )
         assert result.expected_answer is None
         assert (
             result.context_questions == self.sample_qa_pairs
-        )  # LongInContextRetrievalExperiment includes all context questions
+        )  # LongInContextStrategy includes all context questions
 
-    # HydeRAG tests
+    # HydeRAGStrategy tests
     def test_hyde_rag_get_hypothetical_answer(self):
         question = self.sample_qa_pairs[0]
         hypothetical_answer = QAPair(
@@ -348,7 +346,7 @@ class TestExperimentCategories:
 
         assert isinstance(result, SingleExperimentInput)
         assert result.context_questions is not None, (
-            "Context questions should not be None for HydeRAG experiment"
+            "Context questions should not be None for HydeRAGStrategy experiment"
         )
         assert result.question == question.question
         assert result.expected_answer == question.answer
@@ -389,9 +387,9 @@ class TestExperimentCategories:
         assert result.question == synthetic_question.question
         assert (
             result.expected_answer == synthetic_question.answer
-        )  # For HydeRAG synthetic, it keeps the answer
+        )  # For HydeRAGStrategy synthetic, it keeps the answer
         assert result.context_questions is not None, (
-            "Context questions should not be None for HydeRAG experiment"
+            "Context questions should not be None for HydeRAGStrategy experiment"
         )
         assert len(result.context_questions) == 3
         # Based on our mocked hypo_embedding, closest should be Q1, Q2, Q5

@@ -53,11 +53,11 @@ class BaseRetrievalStrategy(ABC):
             embeddings (np.ndarray): A 2D numpy array of embeddings that is
             len(question_to_ask) + len(remaining_qa) long.
             alterative_prompt (Optional[str]): An optional prompt to use for the
-            experiment only in HydeRAG. Otherwise the default prompt is used in HydeRAG.
+            experiment only in HydeRAGStrategy. Otherwise the default prompt is used in HydeRAGStrategy.
             alternative_llm_client (Optional[SyncLLMClient]): An optional LLM client to
-            use for the experiment only in HydeRAG. Otherwise the default client is used in HydeRAG.
-            ai_model (Optional[str]): An optional model to use for the experiment only in HydeRAG.
-            Otherwise the default model from the specified client is used in HydeRAG.
+            use for the experiment only in HydeRAGStrategy. Otherwise the default client is used in HydeRAGStrategy.
+            ai_model (Optional[str]): An optional model to use for the experiment only in HydeRAGStrategy.
+            Otherwise the default model from the specified client is used in HydeRAGStrategy.
 
 
         Returns:

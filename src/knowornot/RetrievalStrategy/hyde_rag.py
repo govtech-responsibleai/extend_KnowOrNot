@@ -6,7 +6,7 @@ import numpy as np
 import logging
 
 
-class HydeRAG(BaseRetrievalStrategy):
+class HydeRAGStrategy(BaseRetrievalStrategy):
     def __init__(
         self,
         default_client: SyncLLMClient,

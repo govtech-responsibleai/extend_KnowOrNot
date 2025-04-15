@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from ..ExperimentCategories import RetrievalType
+from ..RetrievalStrategy import RetrievalType
 from ..common.models import QAPair
 from typing import List
 
