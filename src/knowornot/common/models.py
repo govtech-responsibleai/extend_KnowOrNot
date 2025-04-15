@@ -1,5 +1,6 @@
+from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pathlib import Path
 from typing import List, Optional
 
@@ -74,7 +75,17 @@ class QAPairLLM(BaseModel):
 class QAPairIntermediate(BaseModel):
     question: str
     answer: Optional[str]
-    source: AtomicFact
+
+    def __str__(self):
+        return f"Question: {self.question} \n Answer: {self.answer}"
+
+
+class QAPairFinal(BaseModel):
+    identifier: str
+    index: int
+    question: str
+    answer: Optional[str]
+    source: AtomicFactDocument
 
     def __str__(self):
         return f"Question: {self.question} \n Answer: {self.answer}"
@@ -92,4 +103,11 @@ class ExperimentType(Enum):
 
 
 class QuestionDocument(BaseModel):
-    pass
+    path_to_store: Path
+    identifier: str
+    creation_timestamp: datetime = Field(default_factory=datetime.now)
+    questions: List[QAPairFinal]
+
+    def save_to_json(self) -> None:
+        self.path_to_store.write_text(self.model_dump_json(indent=2))
+        return

@@ -4,7 +4,8 @@ from typing import Dict, List, Optional
 import logging
 
 from .QuestionExtractor import QuestionExtractor
-from .common.models import AtomicFactDocument, QAPairIntermediate
+from .QuestionExtractor.models import FilterMethod
+from .common.models import AtomicFactDocument, QuestionDocument
 from .config import AzureOpenAIConfig, Config
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
@@ -370,22 +371,41 @@ class KnowOrNot:
         self,
         context_prompt: str,
         document: AtomicFactDocument,
-        alternative_prompt: Optional[str] = None,
+        method: FilterMethod,
+        path_to_store: Path,
+        identifier: str,
+        alternative_question_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
         llm_client: Optional[SyncLLMClient] = None,
-    ) -> List[QAPairIntermediate]:
+        diversity_threshold_keyword: float = 0.3,
+        diversity_threshold_semantic: float = 0.3,
+    ) -> QuestionDocument:
         """
-        Generates questions from an atomic fact document using a given LLM client.
+        Generates a diverse list of question-answer pairs from an atomic fact document using an LLM client.
 
-        This function is part of the main client's Facade interface, providing a simplified
-        entry point for question generation. It abstracts away the need to directly interact
-        with the underlying `QuestionExtractor`, allowing users to call this method directly
-        from the client object.
+        This method iterates over each atomic fact in the document, calls
+        `_generate_question_from_single_fact` to generate a question-answer pair for each fact,
+        accumulates the generated question-answer pairs in a list and then filters out the
+        non-diverse questions based on the filter method.
 
-        For detailed information on the parsing process, parameters, return values, and
-        potential exceptions, see `QuestionExtractor.generate_question_from_document`.
+        Args:
+            llm_client (SyncLLMClient): The LLM client used to generate the question-answer pairs.
+            document (AtomicFactDocument): The atomic fact document from which to generate the question-answer pairs.
+            context_prompt (str): The context to include in the prompt sent to the LLM.
+            alternative_question_prompt (Optional[str]): An optional alternative question prompt to use instead of the default.
+            ai_model (Optional[str]): The AI model to use for generating the structured response.
+            method (FilterMethod): The method to use for filtering out non-diverse questions.
+            path_to_store (Path): The path to store the generated questions.
+            diversity_threshold_keyword (float): The threshold for filtering out non-diverse questions based on keyword similarity.
+            diversity_threshold_semantic (float): The threshold for filtering out non-diverse questions based on semantic similarity.
+            identifier (str): The identifier to assign to the generated questions.
+
+        Returns:
+            QuestionDocument: A `QuestionDocument` containing the identifier and a list of diverse question-answer pairs generated from the atomic fact document.
+
+        Raises:
+            ValueError: If you must set a LLM Client before performing any question related operations or provide one as an argument.
         """
-
         client = llm_client or self.default_sync_client
 
         if not client:
@@ -394,10 +414,15 @@ class KnowOrNot:
             )
 
         question_extractor = self._get_question_manager()
-        return question_extractor.generate_question_from_document(
+        return question_extractor.generate_questions_from_document(
             llm_client=client,
             document=document,
             context_prompt=context_prompt,
-            alternative_question_prompt=alternative_prompt,
+            path_to_save=path_to_store,
+            alternative_question_prompt=alternative_question_prompt,
             ai_model=ai_model,
+            diversity_threshold_keyword=diversity_threshold_keyword,
+            diversity_threshold_semantic=diversity_threshold_semantic,
+            method=method,
+            identifier=identifier,
         )

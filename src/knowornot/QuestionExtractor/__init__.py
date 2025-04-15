@@ -1,18 +1,18 @@
+from pathlib import Path
 from typing import Optional, List
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import (
+    QAPairFinal,
     QAPairIntermediate,
-    QAPairLLM,
-    AtomicFact,
     AtomicFactDocument,
+    QuestionDocument,
 )
 from .models import FilterMethod
-import asyncio
-import concurrent.futures
 import logging
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 import re
+from .models import QuestionList
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 import nltk
@@ -37,36 +37,38 @@ class QuestionExtractor:
         self.stop_words = set(stopwords.words("english"))
 
     def _construct_text_to_llm(
-        self, context_prompt: str, question_prompt: str, fact: AtomicFact
+        self, context_prompt: str, question_prompt: str, document: AtomicFactDocument
     ) -> str:
-        text_to_llm = context_prompt + question_prompt + "The fact is " + str(fact)
+        text_to_llm = (
+            context_prompt + question_prompt + "The document is " + str(document)
+        )
         return text_to_llm
 
-    def _generate_question_from_single_fact(
+    def _generate_questions_from_document(
         self,
         llm_client: SyncLLMClient,
-        fact: AtomicFact,
+        document: AtomicFactDocument,
         context_prompt: str,
         alternative_question_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
-    ) -> QAPairIntermediate:
+    ) -> List[QAPairIntermediate]:
         """
-        Generates a question-answer pair from a single atomic fact using an LLM client.
+        Generates a list of question-answer pairs from an atomic fact document using an LLM client.
 
         This method constructs a prompt by combining the context prompt with either an
         alternative question prompt or the default question generation question prompt. It then sends the
         constructed prompt to the LLM client to generate a structured response, which is
-        converted into a QAPairIntermediate.
+        converted into a list of QAPairIntermediate.
 
         Args:
-            llm_client (SyncLLMClient): The LLM client used to generate the question-answer pair.
-            fact (AtomicFact): The atomic fact from which to generate the question-answer pair.
+            llm_client (SyncLLMClient): The LLM client used to generate the question-answer pairs.
+            document (AtomicFactDocument): The atomic fact document from which to generate the question-answer pairs.
             context_prompt (str): The context to include in the prompt sent to the LLM.
             alternative_question_prompt (Optional[str]): An optional alternative question prompt to use instead of the default.
             ai_model (Optional[str]): The AI model to use for generating the structured response.
 
         Returns:
-            QAPairIntermediate: A question-answer pair generated from the atomic fact.
+            List[QAPairIntermediate]: A list of question-answer pairs generated from the atomic fact document.
         """
         question_prompt_to_use = (
             alternative_question_prompt or self.question_prompt_default
@@ -74,76 +76,41 @@ class QuestionExtractor:
         text_to_llm = self._construct_text_to_llm(
             context_prompt=context_prompt,
             question_prompt=question_prompt_to_use,
-            fact=fact,
+            document=document,
         )
         self.logger.debug(f"prompt to llm: {text_to_llm}")
-        self.logger.info(f"generating question from fact: {fact}")
-        qa_pair = llm_client.get_structured_response(
-            prompt=text_to_llm, response_model=QAPairLLM, ai_model=ai_model
+        question_document = llm_client.get_structured_response(
+            prompt=text_to_llm, response_model=QuestionList, ai_model=ai_model
         )
 
-        output = QAPairIntermediate(
-            question=qa_pair.question, answer=qa_pair.answer, source=fact
-        )
-
-        return output
-
-    def generate_question_from_document(
-        self,
-        llm_client: SyncLLMClient,
-        document: AtomicFactDocument,
-        context_prompt: str,
-        alternative_question_prompt: Optional[str] = None,
-        ai_model: Optional[str] = None,
-    ) -> List[QAPairIntermediate]:
-        """
-        Generates a list of question-answer pairs from an atomic fact document using an LLM client.
-
-        This method iterates over each atomic fact in the document and calls
-        `_generate_question_from_single_fact` to generate a question-answer pair for each fact.
-        It then accumulates the generated question-answer pairs in a list and returns them.
-
-        Args:
-            llm_client (SyncLLMClient): The LLM client used to generate the question-answer pairs.
-            document (AtomicFactDocument): The atomic fact document from which to generate the question-answer pairs.
-            context_prompt (str): The context to include in the prompt sent to the LLM.
-            alternative_question_prompt (Optional[str]): An optional alternative question prompt to use instead of the default.
-            ai_model (Optional[str]): The AI model to use for generating the structured response.
-
-        Returns:
-            List[QAPairIntermediate]: A list of question-answer pairs generated from the atomic fact document.
-        """
         output: List[QAPairIntermediate] = []
-
-        for idx, fact in enumerate(document.fact_list):
-            self.logger.info(f"generating question from {idx} fact: {fact}")
-            qa_pair = self._generate_question_from_single_fact(
-                llm_client=llm_client,
-                fact=fact,
-                context_prompt=context_prompt,
-                alternative_question_prompt=alternative_question_prompt,
-                ai_model=ai_model,
+        for qapair in question_document.questions:
+            output.append(
+                QAPairIntermediate(question=qapair.question, answer=qapair.answer)
             )
-            output.append(qa_pair)
 
         return output
 
-    async def generate_question_from_document_async(
+    def generate_questions_from_document(
         self,
         llm_client: SyncLLMClient,
+        identifier: str,
         document: AtomicFactDocument,
         context_prompt: str,
+        method: FilterMethod,
+        path_to_save: Path,
         alternative_question_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
-    ) -> List[QAPairIntermediate]:
+        diversity_threshold_keyword: float = 0.3,
+        diversity_threshold_semantic: float = 0.3,
+    ) -> QuestionDocument:
         """
-        Generates a list of question-answer pairs from an atomic fact document using an LLM client.
+        Generates a diverse list of question-answer pairs from an atomic fact document using an LLM client.
 
-        This method constructs a prompt by combining the context prompt with either an
-        alternative question prompt or the default question generation question prompt. It then sends the
-        constructed prompt to the LLM client to generate a structured response, which is
-        converted into a QAPairIntermediate. The calls to the LLM client are run in parallel using
-        asyncio.
+        This method iterates over each atomic fact in the document, calls
+        `_generate_question_from_single_fact` to generate a question-answer pair for each fact,
+        accumulates the generated question-answer pairs in a list and then filters out the
+        non-diverse questions based on the filter method.
 
         Args:
             llm_client (SyncLLMClient): The LLM client used to generate the question-answer pairs.
@@ -151,32 +118,49 @@ class QuestionExtractor:
             context_prompt (str): The context to include in the prompt sent to the LLM.
             alternative_question_prompt (Optional[str]): An optional alternative question prompt to use instead of the default.
             ai_model (Optional[str]): The AI model to use for generating the structured response.
+            method (FilterMethod): The method to use for filtering out non-diverse questions.
+            diversity_threshold_keyword (float): The threshold for filtering out non-diverse questions based on keyword similarity.
+            diversity_threshold_semantic (float): The threshold for filtering out non-diverse questions based on semantic similarity.
 
         Returns:
-            List[QAPairIntermediate]: A list of question-answer pairs generated from the atomic fact document.
+            QuestionDocument: A `QuestionDocument` containing the identifier and a list of diverse question-answer pairs generated from the atomic fact document.
         """
-        output: List[QAPairIntermediate] = []
-        loop = asyncio.get_running_loop()
-        futures = []
+        qa_pairs = self._generate_questions_from_document(
+            llm_client=llm_client,
+            document=document,
+            context_prompt=context_prompt,
+            alternative_question_prompt=alternative_question_prompt,
+            ai_model=ai_model,
+        )
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            for idx, fact in enumerate(document.fact_list):
-                self.logger.info(f"generating question from {idx} fact: {fact}")
-                future = loop.run_in_executor(
-                    executor,
-                    self._generate_question_from_single_fact,
-                    llm_client,
-                    fact,
-                    context_prompt,
-                    alternative_question_prompt,
-                    ai_model,
+        intermediate_pairs = self._get_diverse_questions(
+            qa_pairs,
+            method=method,
+            diversity_threshold_keyword=diversity_threshold_keyword,
+            diversity_threshold_semantic=diversity_threshold_semantic,
+        )
+
+        if not intermediate_pairs:
+            raise ValueError(
+                "No diverse questions generated. Please try again with different parameters."
+            )
+
+        final_questions: List[QAPairFinal] = []
+
+        for idx, qapair in enumerate(intermediate_pairs):
+            final_questions.append(
+                QAPairFinal(
+                    identifier=identifier,
+                    index=idx,
+                    question=qapair.question,
+                    answer=qapair.answer,
+                    source=document,
                 )
-                futures.append(future)
+            )
 
-            results = await asyncio.gather(*futures)
-            output.extend(results)
-
-        return output
+        return QuestionDocument(
+            identifier=identifier, questions=final_questions, path_to_store=path_to_save
+        )
 
     def _preprocess_text(self, text: str) -> str:
         """
@@ -322,11 +306,12 @@ class QuestionExtractor:
 
         return [questions[idx] for idx in selected_indices]
 
-    def get_diverse_questions(
+    def _get_diverse_questions(
         self,
         question_list: List[QAPairIntermediate],
-        method: FilterMethod = FilterMethod.SEMANTIC,
-        diversity_threshold: float = 0.3,
+        method: FilterMethod,
+        diversity_threshold_keyword: float = 0.3,
+        diversity_threshold_semantic: float = 0.3,
     ) -> List[QAPairIntermediate]:
         """
         Generate diverse questions from a list of questions.
@@ -334,32 +319,41 @@ class QuestionExtractor:
         Args:
             question_list: A list of questions to filter for diversity
             method: Filtering method - KEYWORD, SEMANTIC, or BOTH
-            diversity_threshold: Threshold for filtering (higher = stricter)
+            diversity_threshold_keyword: Threshold for keyword filtering (higher = stricter)
+            diversity_threshold_semantic: Threshold for semantic filtering (higher = stricter)
 
         Returns:
             List of diverse questions
+
+        The method works as follows:
+        - KEYWORD: Filter questions using TF-IDF uniqueness score. Questions with scores below the threshold are removed.
+        - SEMANTIC: Filter questions using cosine similarity of embeddings. Questions with similarity above the threshold are removed.
+        - BOTH: Apply both keyword and semantic filtering in sequence.
         """
         if not question_list:
             return []
 
         self.logger.info(
-            f"Generating diverse questions using {method.value} method with threshold {diversity_threshold}"
+            f"Generating diverse questions using {method.value} method with thresholds: {diversity_threshold_keyword}, {diversity_threshold_semantic}"
         )
 
         # Apply the selected filtering method(s)
         if method == FilterMethod.KEYWORD:
-            return self._filter_keyword_duplicates(question_list, diversity_threshold)
+            return self._filter_keyword_duplicates(
+                question_list, diversity_threshold_keyword
+            )
 
         elif method == FilterMethod.SEMANTIC:
-            return self._filter_semantic_duplicates(question_list, diversity_threshold)
+            return self._filter_semantic_duplicates(
+                question_list, diversity_threshold_semantic
+            )
 
         elif method == FilterMethod.BOTH:
-            # Apply keyword filtering first, then semantic filtering
             keyword_filtered = self._filter_keyword_duplicates(
-                question_list, diversity_threshold
+                question_list, diversity_threshold_keyword
             )
             return self._filter_semantic_duplicates(
-                keyword_filtered, diversity_threshold
+                keyword_filtered, diversity_threshold_semantic
             )
 
         else:
