@@ -9,6 +9,7 @@ from .models import CanBeAnswered
 import numpy as np
 from math import floor
 import warnings
+import logging
 
 
 class SyntheticExperimentCreator:
@@ -17,7 +18,7 @@ class SyntheticExperimentCreator:
         default_client: SyncLLMClient,
         default_synthetic_prompt: str,
         default_synthetic_check_prompt: str,
-        # minimum_num_clusters is no longer relevant here
+        logger: logging.Logger,
         random_state: Optional[int] = None,
         max_retries: int = 3,
         default_percentage: float = 0.5,
@@ -42,6 +43,7 @@ class SyntheticExperimentCreator:
         self.random_state = random_state or 42
         self.max_retries = max_retries
         self.default_percentage = default_percentage
+        self.logger = logger
 
     def _embed_qa_pair_list(
         self,
@@ -59,6 +61,7 @@ class SyntheticExperimentCreator:
         Returns:
             np.ndarray: A 2D numpy array of float embeddings. Returns empty array if input list is empty.
         """
+        self.logger.info(f"Embedding {len(qa_pair_list)} QA pairs")
         if not qa_pair_list:
             return np.array([])  # Handle empty list
         client = alternative_client or self.default_client
@@ -89,6 +92,9 @@ class SyntheticExperimentCreator:
                                 Handles cases where num_clusters is invalid relative to data size.
         """
         n_samples = len(qa_pair_list)
+        self.logger.info(
+            f"Clustering {n_samples} QA pairs into {num_clusters} clusters"
+        )
 
         if n_samples == 0:
             return []
@@ -178,6 +184,9 @@ class SyntheticExperimentCreator:
                 response_model=CanBeAnswered,
                 ai_model=check_model,
             )
+            self.logger.info(
+                f"Question {question} can be answered: {response.can_be_answered}"
+            )
             return response.can_be_answered
         except Exception as e:
             warnings.warn(
@@ -257,21 +266,22 @@ class SyntheticExperimentCreator:
                         ai_model=gen_model,
                     )
                     if question and question.question and question.answer:
+                        self.logger.info(f"Generated question: {question}")
                         generated_successfully = True
                         break
                     else:
-                        warnings.warn(
+                        self.logger.error(
                             f"Generated empty question/answer pair. Retrying ({retries + 1}/{self.max_retries})..."
                         )
                         retries += 1
                 except Exception as e:
-                    warnings.warn(
+                    self.logger.error(
                         f"Error generating question (attempt {retries + 1}/{self.max_retries}): {e}"
                     )
                     retries += 1
 
             if not generated_successfully or question is None:
-                warnings.warn(
+                self.logger.error(
                     f"Failed to generate valid question after {self.max_retries} retries. Moving on."
                 )
                 continue
@@ -288,18 +298,17 @@ class SyntheticExperimentCreator:
                     accepted_questions.append(question)
                     validation_pool.append(question)
                 else:
-                    # Add warning for clarity when a question is rejected due to novelty check
-                    warnings.warn(
+                    self.logger.warning(
                         f"Generated question (Q: {question.question}) deemed answerable by validation pool. Discarding."
                     )
 
             except Exception as e:
-                warnings.warn(
+                self.logger.error(
                     f"Error checking question novelty: {e}. Discarding generated question."
                 )
 
         if len(accepted_questions) < target_questions:
-            warnings.warn(
+            self.logger.error(
                 f"Generated {len(accepted_questions)} out of {target_questions} target synthetic questions for the cluster."
             )
 
@@ -343,17 +352,13 @@ class SyntheticExperimentCreator:
             return ([], [])
 
         if num_clusters <= 0:
-            warnings.warn(
+            raise ValueError(
                 f"Invalid num_clusters ({num_clusters}) provided. Must be >= 1. Cannot generate dataset."
             )
-            return (
-                [],
-                [],
-            )  # Or maybe return original list as one cluster? Empty seems safer.
 
         embeddings = self._embed_qa_pair_list(qa_pair_list)
         if embeddings.ndim != 2 or embeddings.shape[0] != len(qa_pair_list):
-            warnings.warn(
+            self.logger.error(
                 f"Embedding failed or produced unexpected shape ({embeddings.shape}). Cannot proceed with clustering."
             )
             return (
@@ -361,19 +366,18 @@ class SyntheticExperimentCreator:
                 [qa_pair_list] if qa_pair_list and num_clusters >= 1 else [],
             )  # Return original as 1 cluster if possible
 
-        # Directly call cluster with the specified num_clusters
         clusters = self._cluster_qa_pair_list(qa_pair_list, embeddings, num_clusters)
 
         if not clusters:
-            warnings.warn(
+            raise ValueError(
                 "Clustering resulted in no clusters (potentially due to invalid num_clusters or KMeans errors). No synthetic data generated."
             )
-            return ([], [])
 
         synthetic_questions = []
         for i, cluster in enumerate(clusters):
             if not cluster:
-                continue  # Skip empty clusters
+                self.logger.warning(f"Cluster {i} is empty. Skipping...")
+                continue
 
             cluster_questions = self._generate_synthetic_questions_for_cluster(
                 cluster,

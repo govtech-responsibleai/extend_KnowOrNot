@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 from unittest.mock import patch, MagicMock, call
+import logging
 
-# Adjust the import path based on your project structure if needed
 from src.knowornot.SyntheticExperimentCreator.models import CanBeAnswered
 from src.knowornot.SyntheticExperimentCreator import SyntheticExperimentCreator
 from src.knowornot.common.models import QAPair, AtomicFact
@@ -20,6 +20,7 @@ class TestSyntheticExperimentCreator:
             default_synthetic_prompt=self.default_synthetic_prompt,
             default_synthetic_check_prompt=self.default_synthetic_check_prompt,
             random_state=42,
+            logger=MagicMock(),
         )
 
         self.sample_qa_pairs = [
@@ -250,7 +251,9 @@ class TestSyntheticExperimentCreator:
             ]
         )
 
-    def test_generate_synthetic_questions_for_cluster_needs_retry_and_reject(self):
+    def test_generate_synthetic_questions_for_cluster_needs_retry_and_reject(
+        self, caplog
+    ):
         cluster = self.sample_qa_pairs[:2]
         synthetic_qa_good = QAPair(
             question="Good Q?",
@@ -270,20 +273,21 @@ class TestSyntheticExperimentCreator:
             CanBeAnswered(can_be_answered=False),  # Accept
         ]
 
-        # Use specific string match for the warning
-        with pytest.warns(UserWarning) as record:
+        with caplog.at_level(logging.WARNING):
             result = self.creator._generate_synthetic_questions_for_cluster(cluster)
 
         assert len(result) == 1
         assert result[0] == synthetic_qa_good
         assert self.mock_llm_client.get_structured_response.call_count == 4
-        # Check that the correct warning was issued
+        # Check that the correct log message was emitted
+        mock_calls = [call[0][0] for call in self.creator.logger.warning.call_args_list]  # type: ignore
+
         assert any(
-            "deemed answerable by validation pool. Discarding." in str(w.message)
-            for w in record
+            "deemed answerable by validation pool. Discarding." in msg
+            for msg in mock_calls
         )
 
-    def test_retries_on_generation_failure(self):
+    def test_retries_on_generation_failure(self, caplog):
         cluster = self.sample_qa_pairs[:2]
         synthetic_qa = QAPair(
             question="Retry Q?",
@@ -296,17 +300,18 @@ class TestSyntheticExperimentCreator:
             CanBeAnswered(can_be_answered=False),
         ]
         # Check warning using specific string match
-        with pytest.warns(UserWarning) as record:
+        with caplog.at_level(logging.WARNING):
             result = self.creator._generate_synthetic_questions_for_cluster(cluster)
 
         assert len(result) == 1
         assert result[0] == synthetic_qa
         assert self.mock_llm_client.get_structured_response.call_count == 3
+        # Check that the correct log message was emitted
+        mock_calls = [call[0][0] for call in self.creator.logger.error.call_args_list]  # type: ignore
         # Check that the correct warning was issued
         assert any(
-            "Error generating question" in str(w.message)
-            and "LLM generation error" in str(w.message)
-            for w in record
+            "Error generating question" in msg and "LLM generation error" in msg
+            for msg in mock_calls
         )
 
     # --- Test generate_synthetic_dataset ---
@@ -387,13 +392,11 @@ class TestSyntheticExperimentCreator:
         mock_generate.assert_not_called()
 
     def test_generate_synthetic_dataset_invalid_num_clusters(self):
-        # Use specific string match for warning
-        with pytest.warns(UserWarning, match="Invalid num_clusters"):
-            synthetic_questions, clusters = self.creator.generate_synthetic_dataset(
+        # Test that ValueError is raised with appropriate message
+        with pytest.raises(ValueError, match="Invalid num_clusters"):
+            self.creator.generate_synthetic_dataset(
                 self.sample_qa_pairs, num_clusters=0
             )
-        assert synthetic_questions == []
-        assert clusters == []
 
     # --- Test alternative client ---
     def test_alternative_client(self):
