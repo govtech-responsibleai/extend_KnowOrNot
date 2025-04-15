@@ -1,5 +1,6 @@
 import os
 from unittest.mock import patch
+import logging
 
 import pytest
 
@@ -17,6 +18,7 @@ class TestKnowOrNot:
                 api_version="2023-05-15",
                 default_model="gpt-4",
                 default_embedding_model="text-embedding-3-large",
+                logger=logging.getLogger(__name__),
             ),
             azure_batch_config=AzureOpenAIConfig(
                 api_key="batch_key",
@@ -24,6 +26,7 @@ class TestKnowOrNot:
                 api_version="2023-05-15",
                 default_model="gpt-4",
                 default_embedding_model="text-embedding-3-large",
+                logger=logging.getLogger(__name__),
             ),
         )
 
@@ -264,6 +267,7 @@ class TestKnowOrNot:
                 api_version="2023-05-15",
                 default_model="gpt-4",
                 default_embedding_model="text-embedding-3-large",
+                logger=logging.getLogger(__name__),
             )
 
         with pytest.raises(
@@ -275,6 +279,7 @@ class TestKnowOrNot:
                 api_version="2023-05-15",
                 default_model="gpt-4",
                 default_embedding_model="text-embedding-3-large",
+                logger=logging.getLogger(__name__),
             )
 
         # Should not raise an error with valid values
@@ -284,4 +289,5 @@ class TestKnowOrNot:
             api_version="2023-05-15",
             default_model="gpt-4",
             default_embedding_model="text-embedding-3-large",
+            logger=logging.getLogger(__name__),
         )

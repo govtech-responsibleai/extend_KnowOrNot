@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Dict, List, Optional
+import logging
 
 from .QuestionExtractor import QuestionExtractor
 from .common.models import AtomicFactDocument, QAPair
@@ -302,12 +303,15 @@ class KnowOrNot:
                     "text-embedding-3-large",
                 )
 
+        logger = logging.getLogger(__name__)
+
         azure_config = AzureOpenAIConfig(
             endpoint=azure_endpoint,
             api_key=azure_api_key,
             api_version=azure_api_version,
             default_model=default_synchronous_model,
             default_embedding_model=default_embedding_model,
+            logger=logger,
         )
 
         azure_batch_config = AzureOpenAIConfig(
@@ -316,10 +320,15 @@ class KnowOrNot:
             api_version=azure_batch_api_version,
             default_model=default_batch_model,
             default_embedding_model=default_batch_embedding_model,
+            logger=logger,
         )
 
         output = KnowOrNot(
-            Config(azure_config=azure_config, azure_batch_config=azure_batch_config)
+            Config(
+                azure_config=azure_config,
+                azure_batch_config=azure_batch_config,
+                logger=logger,
+            )
         )
 
         azure_sync_client = SyncAzureOpenAIClient(config=azure_config)

@@ -30,6 +30,7 @@ class SyncAzureOpenAIClient(SyncLLMClient):
             azure_endpoint=config.endpoint,
             api_version=config.api_version,
         )
+        self.logger = config.logger
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",

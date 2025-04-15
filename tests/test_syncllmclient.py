@@ -56,6 +56,7 @@ class TestSyncLLMClient(unittest.TestCase):
             api_key="dummy_api_key",
             default_model="gpt-4",
             default_embedding_model="text-embedding-3-large",
+            logger=MagicMock(),
         )  # Instructor disabled
         client = MockSyncLLMClient(config=config)
 
@@ -98,6 +99,7 @@ class TestSyncLLMClient(unittest.TestCase):
             api_key="dummy_api_key",
             default_model="gpt-4",
             default_embedding_model="text-embedding-3-large",
+            logger=MagicMock(),
         )  # Instructor enabled
         client = MockSyncLLMClient(config=config)
 
@@ -148,6 +150,7 @@ class TestSyncLLMClient(unittest.TestCase):
             api_key="dummy_api_key",
             default_model="gpt-4",
             default_embedding_model="text-embedding-3-large",
+            logger=MagicMock(),
         )  # Instructor enabled
         client = MockSyncLLMClient(config=config)
 
@@ -179,6 +182,7 @@ class TestSyncLLMClient(unittest.TestCase):
             api_key="dummy_api_key",
             default_model="gpt-4",
             default_embedding_model="text-embedding-3-large",
+            logger=MagicMock(),
         )
         with self.assertRaises(TypeError):
             BadClient(config=config)  # type: ignore
@@ -207,6 +211,7 @@ class TestSyncLLMClient(unittest.TestCase):
             api_key="dummy_api_key",
             default_model="gpt-4",
             default_embedding_model="text-embedding-3-large",
+            logger=MagicMock(),
         )
         with self.assertRaises(TypeError) as context:
             BadClient(config=config)  # type: ignore
@@ -245,6 +250,7 @@ class TestSyncLLMClient(unittest.TestCase):
             api_key="dummy_api_key",
             default_model="gpt-4",
             default_embedding_model="text-embedding-3-large",
+            logger=MagicMock(),
         )
         with self.assertRaises(TypeError) as context:
             BadClient(config=config)  # type: ignore
