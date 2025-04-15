@@ -46,7 +46,7 @@ class SyncLLMClient(ABC):
         if ai_model is not None:
             model_to_use = ai_model
 
-        self.logger.info(f"Using model: {model_to_use} and sending prompt {prompt}")
+        self.logger.debug(f"Using model: {model_to_use} and sending prompt {prompt}")
 
         return self._prompt(prompt=prompt, ai_model=model_to_use)
 
@@ -94,7 +94,7 @@ class SyncLLMClient(ABC):
 
         model_to_use: str = ai_model or self.config.default_model
 
-        self.logger.info(f"Using model: {model_to_use} and sending prompt {prompt}")
+        self.logger.debug(f"Using model: {model_to_use} and sending prompt {prompt}")
 
         return self._generate_structured_response(
             prompt=prompt, response_model=response_model, model_used=model_to_use

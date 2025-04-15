@@ -48,9 +48,8 @@ class FactManager:
             prompt_to_use = self.fact_creation_prompt
         else:
             prompt_to_use = alternative_prompt
-        self.logger.debug(f"Sending prompt: {prompt_to_use} with document {document}")
         return llm_client.get_structured_response(
-            prompt=prompt_to_use + "The document is" + str(document),
+            prompt=prompt_to_use + " The document is " + str(document),
             response_model=AtomicFactDocument,
         )
 
