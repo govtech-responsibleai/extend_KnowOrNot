@@ -116,8 +116,7 @@ class TestQuestionExtractor:
                 self.question_extractor, "_get_diverse_questions", return_value=qa_pairs
             ) as mock_diverse:
                 result = self.question_extractor.generate_questions_from_documents(
-                    llm_client=self.mock_llm_client,
-                    identifier="test-123",
+                    knowledge_base_identifier="test-123",
                     documents=documents,
                     context_prompt=self.context_prompt,
                     method=FilterMethod.KEYWORD,
@@ -228,8 +227,7 @@ class TestQuestionExtractor:
                 # Test that it raises a ValueError
                 with pytest.raises(ValueError, match="No diverse questions generated"):
                     self.question_extractor.generate_questions_from_documents(
-                        llm_client=self.mock_llm_client,
-                        identifier="test-123",
+                        knowledge_base_identifier="test-123",
                         documents=documents,
                         context_prompt=self.context_prompt,
                         method=FilterMethod.KEYWORD,

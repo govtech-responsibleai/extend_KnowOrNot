@@ -82,13 +82,12 @@ class QAPair(BaseModel):
 
 
 class QAPairFinal(BaseModel):
-    identifier: str
     index: int
     question: str
     answer: Optional[str]
 
     def __str__(self):
-        return f"Question: {self.question} \n Answer: {self.answer}"
+        return f"Index: {self.index} Question: {self.question} \n Answer: {self.answer}"
 
 
 class QAResponse(BaseModel):
@@ -133,7 +132,7 @@ class ExperimentType(Enum):
 
 class QuestionDocument(BaseModel):
     path_to_store: Path
-    identifier: str
+    knowledge_base_identifier: str
     creation_timestamp: datetime = Field(default_factory=datetime.now)
     questions: List[QAPairFinal]
 

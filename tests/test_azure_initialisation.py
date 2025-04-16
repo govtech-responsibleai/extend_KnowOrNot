@@ -9,10 +9,13 @@ from src.knowornot.SyncLLMClient.azure_client import SyncAzureOpenAIClient
 class TestKnowOrNotClientRegistration:
     """Test client registration functionality in KnowOrNot."""
 
-    def test_create_from_azure_registers_client(self):
-        """Test that create_from_azure registers an Azure client."""
+    def test_add_azure_registers_client(self):
+        """Test that add_azure registers an Azure client."""
         # Create a KnowOrNot instance
-        know_or_not = KnowOrNot.create_from_azure(
+        know_or_not = KnowOrNot()
+
+        # Add Azure client
+        know_or_not.add_azure(
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
             azure_api_version="2023-05-15",
@@ -27,7 +30,9 @@ class TestKnowOrNotClientRegistration:
 
     def test_azure_client_set_as_default(self):
         """Test that the Azure client is set as the default client."""
-        know_or_not = KnowOrNot.create_from_azure(
+        know_or_not = KnowOrNot()
+
+        know_or_not.add_azure(
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
             azure_api_version="2023-05-15",
@@ -44,7 +49,9 @@ class TestKnowOrNotClientRegistration:
 
     def test_get_client_returns_azure_client(self):
         """Test that get_client() returns the Azure client."""
-        know_or_not = KnowOrNot.create_from_azure(
+        know_or_not = KnowOrNot()
+
+        know_or_not.add_azure(
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
             azure_api_version="2023-05-15",
@@ -66,7 +73,9 @@ class TestKnowOrNotClientRegistration:
         azure_api_key = "api_key"
         azure_api_version = "2023-05-15"
 
-        know_or_not = KnowOrNot.create_from_azure(
+        know_or_not = KnowOrNot()
+
+        know_or_not.add_azure(
             azure_endpoint=azure_endpoint,
             azure_api_key=azure_api_key,
             azure_api_version=azure_api_version,
@@ -92,7 +101,9 @@ class TestKnowOrNotClientRegistration:
         mock_azure_client = MagicMock()
         mock_azure_openai.return_value = mock_azure_client
 
-        KnowOrNot.create_from_azure(
+        know_or_not = KnowOrNot()
+
+        know_or_not.add_azure(
             azure_endpoint=azure_endpoint,
             azure_api_key=azure_api_key,
             azure_api_version=azure_api_version,

@@ -16,9 +16,10 @@ class TestKnowOrNot:
         assert know_or_not.default_sync_client is None
         assert know_or_not.fact_manager is None
 
-    def test_create_from_azure_with_params(self):
-        """Test factory method with all parameters provided."""
-        know_or_not = KnowOrNot.create_from_azure(
+    def test_add_azure_with_params(self):
+        """Test adding Azure client with all parameters provided."""
+        know_or_not = KnowOrNot()
+        know_or_not.add_azure(
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
             azure_api_version="2023-05-15",
@@ -49,9 +50,10 @@ class TestKnowOrNot:
             "AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL": "text-embedding-3-large",
         },
     )
-    def test_create_from_azure_with_env_vars(self):
-        """Test factory method using environment variables."""
-        know_or_not = KnowOrNot.create_from_azure()
+    def test_add_azure_with_env_vars(self):
+        """Test adding Azure client using environment variables."""
+        know_or_not = KnowOrNot()
+        know_or_not.add_azure()
 
         # Test that a client was registered
         assert len(know_or_not.client_registry) == 1
@@ -72,7 +74,8 @@ class TestKnowOrNot:
             with pytest.raises(
                 EnvironmentError, match="AZURE_OPENAI_ENDPOINT is not set"
             ):
-                KnowOrNot.create_from_azure(
+                know_or_not = KnowOrNot()
+                know_or_not.add_azure(
                     azure_api_key="api_key",
                     azure_api_version="2023-05-15",
                 )
@@ -83,7 +86,8 @@ class TestKnowOrNot:
             with pytest.raises(
                 EnvironmentError, match="AZURE_OPENAI_API_KEY is not set"
             ):
-                KnowOrNot.create_from_azure(
+                know_or_not = KnowOrNot()
+                know_or_not.add_azure(
                     azure_endpoint="https://endpoint.com",
                     azure_api_version="2023-05-15",
                 )
@@ -94,7 +98,8 @@ class TestKnowOrNot:
             with pytest.raises(
                 EnvironmentError, match="AZURE_OPENAI_API_VERSION is not set"
             ):
-                KnowOrNot.create_from_azure(
+                know_or_not = KnowOrNot()
+                know_or_not.add_azure(
                     azure_endpoint="https://endpoint.com",
                     azure_api_key="api_key",
                 )

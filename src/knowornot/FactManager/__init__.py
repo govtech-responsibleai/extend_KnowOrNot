@@ -42,6 +42,7 @@ class FactManager:
         document: SplitSourceDocument,
         llm_client: SyncLLMClient,
         alternative_prompt: Optional[str] = None,
+        ai_model: Optional[str] = None,
     ) -> AtomicFactDocument:
         prompt_to_use = ""
         if not alternative_prompt:
@@ -51,6 +52,7 @@ class FactManager:
         return llm_client.get_structured_response(
             prompt=prompt_to_use + " The document is " + str(document),
             response_model=AtomicFactDocument,
+            ai_model=ai_model,
         )
 
     def _load_text_file(self, file_path: Path) -> str:
@@ -75,12 +77,13 @@ class FactManager:
         with open(file_path, "r", encoding="utf-8") as file:
             return file.read()
 
-    def _parse_source_to_atomic_facts(
+    def _parse_sources_to_atomic_facts(
         self,
         source_list: List[Path],
         destination_dir: Optional[Path] = None,
         alternative_prompt: Optional[str] = None,
         alt_llm_client: Optional[SyncLLMClient] = None,
+        alternative_ai_model: Optional[str] = None,
     ) -> List[AtomicFactDocument]:
         """
         Parse a list of source files and convert them to atomic facts using a given LLM client.
@@ -120,6 +123,7 @@ class FactManager:
                 document=split_document,
                 llm_client=llm_client,
                 alternative_prompt=alternative_prompt,
+                ai_model=alternative_ai_model,
             )
             self.logger.info(f"Generated atomic facts for: {source}")
             self.logger.debug(f"Atomic facts: {document}")

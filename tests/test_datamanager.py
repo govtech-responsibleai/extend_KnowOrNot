@@ -131,7 +131,7 @@ class TestFactManager(unittest.TestCase):
     @patch.object(FactManager, "_load_text_file")
     @patch.object(FactManager, "_split_sentences")
     @patch.object(FactManager, "_convert_source_document_to_facts")
-    def test_parse_source_to_atomic_facts_normal(
+    def test_parse_sources_to_atomic_facts_normal(
         self, mock_convert, mock_split, mock_load
     ):
         # Setup mocks
@@ -145,7 +145,7 @@ class TestFactManager(unittest.TestCase):
         # Test with single source
         source_list = [Path("test.txt")]
 
-        result = self.fact_manager._parse_source_to_atomic_facts(source_list)
+        result = self.fact_manager._parse_sources_to_atomic_facts(source_list)
 
         mock_load.assert_called_once_with(Path("test.txt"))
         mock_split.assert_called_once()
@@ -157,7 +157,7 @@ class TestFactManager(unittest.TestCase):
     @patch.object(FactManager, "_split_sentences")
     @patch.object(FactManager, "_convert_source_document_to_facts")
     @patch.object(AtomicFactDocument, "save_to_json")
-    def test_parse_source_to_atomic_facts_with_destination(
+    def test_parse_sources_to_atomic_facts_with_destination(
         self, mock_save, mock_convert, mock_split, mock_load
     ):
         # Setup mocks
@@ -174,7 +174,7 @@ class TestFactManager(unittest.TestCase):
             source_list = [Path("test.txt")]
             destination_dir = Path("/output")
 
-            result = self.fact_manager._parse_source_to_atomic_facts(
+            result = self.fact_manager._parse_sources_to_atomic_facts(
                 source_list=source_list, destination_dir=destination_dir
             )
 
@@ -182,27 +182,27 @@ class TestFactManager(unittest.TestCase):
             self.assertEqual(len(result), 1)
             self.assertEqual(result[0], expected_facts)
 
-    def test_parse_source_to_atomic_facts_invalid_destination(self):
+    def test_parse_sources_to_atomic_facts_invalid_destination(self):
         # Mock Path.is_dir to return False
         with patch.object(Path, "is_dir", return_value=False):
             source_list = [Path("test.txt")]
             destination_dir = Path("/output")
 
             with self.assertRaises(ValueError) as context:
-                self.fact_manager._parse_source_to_atomic_facts(
+                self.fact_manager._parse_sources_to_atomic_facts(
                     source_list=source_list, destination_dir=destination_dir
                 )
 
             self.assertIn("Destination must be a directory", str(context.exception))
 
-    def test_parse_source_to_atomic_facts_llm_cant_use_instructor(self):
+    def test_parse_sources_to_atomic_facts_llm_cant_use_instructor(self):
         # Set LLM client to not support instructor
         self.mock_llm_client.can_use_instructor = False
 
         source_list = [Path("test.txt")]
 
         with self.assertRaises(ValueError) as context:
-            self.fact_manager._parse_source_to_atomic_facts(source_list=source_list)
+            self.fact_manager._parse_sources_to_atomic_facts(source_list=source_list)
 
         self.assertIn("cannot use instructor", str(context.exception))
 
@@ -240,7 +240,7 @@ class TestFactManager(unittest.TestCase):
             destination_dir = Path("/output")
 
             # Run parse_source_to_atomic_facts
-            self.fact_manager._parse_source_to_atomic_facts(
+            self.fact_manager._parse_sources_to_atomic_facts(
                 source_list=source_list, destination_dir=destination_dir
             )
 
@@ -291,4 +291,33 @@ class TestKnowOrNotFactManager(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             self.know_or_not._get_fact_manager()
 
-        self.assertIn("You must set a LLM Client", str(context.exception))
+        # Check for the updated error message
+        self.assertIn(
+            "default client is not set and no alternative client has been provided",
+            str(context.exception),
+        )
+
+    def test_get_fact_manager_with_alternative_client(self):
+        # Create alternative client
+        alternative_client = MagicMock(spec=SyncLLMClient)
+
+        # Remove default client to ensure we're using the alternative
+        self.know_or_not.default_sync_client = None
+
+        # Test with alternative client
+        with patch("src.knowornot.FactManager") as mock_fact_manager_class:
+            mock_instance = MagicMock()
+            mock_fact_manager_class.return_value = mock_instance
+
+            result = self.know_or_not._get_fact_manager(
+                alternative_client=alternative_client
+            )
+
+            # Check that FactManager was created with alternative client
+            mock_fact_manager_class.assert_called_once()
+            args, kwargs = mock_fact_manager_class.call_args
+            self.assertEqual(kwargs["sync_llm_client"], alternative_client)
+
+            # Check return value and instance setting
+            self.assertEqual(result, mock_instance)
+            self.assertEqual(self.know_or_not.fact_manager, mock_instance)

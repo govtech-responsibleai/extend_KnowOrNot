@@ -91,16 +91,16 @@ class QuestionExtractor:
 
     def generate_questions_from_documents(
         self,
-        llm_client: SyncLLMClient,
-        identifier: str,
+        knowledge_base_identifier: str,
         documents: List[AtomicFactDocument],
         context_prompt: str,
         method: FilterMethod,
         path_to_save: Path,
         alternative_question_prompt: Optional[str] = None,
         ai_model: Optional[str] = None,
-        diversity_threshold_keyword: float = 0.3,
-        diversity_threshold_semantic: float = 0.3,
+        diversity_threshold_keyword: Optional[float] = 0.3,
+        diversity_threshold_semantic: Optional[float] = 0.3,
+        alternative_llm_client: Optional[SyncLLMClient] = None,
     ) -> QuestionDocument:
         """
         Generates a diverse list of question-answer pairs from an atomic fact document using an LLM client.
@@ -126,6 +126,8 @@ class QuestionExtractor:
 
         total_questions: List[QAPair] = []
 
+        llm_client = alternative_llm_client or self.default_client
+
         for document in documents:
             qa_pairs = self._generate_questions_from_document(
                 llm_client=llm_client,
@@ -137,6 +139,8 @@ class QuestionExtractor:
 
             total_questions.extend(qa_pairs)
 
+        diversity_threshold_keyword = diversity_threshold_keyword or 0.3
+        diversity_threshold_semantic = diversity_threshold_semantic or 0.3
         intermediate_pairs = self._get_diverse_questions(
             question_list=total_questions,
             method=method,
@@ -154,7 +158,6 @@ class QuestionExtractor:
         for idx, qapair in enumerate(intermediate_pairs):
             final_questions.append(
                 QAPairFinal(
-                    identifier=identifier,
                     index=idx,
                     question=qapair.question,
                     answer=qapair.answer,
@@ -162,7 +165,9 @@ class QuestionExtractor:
             )
 
         return QuestionDocument(
-            identifier=identifier, questions=final_questions, path_to_store=path_to_save
+            knowledge_base_identifier=knowledge_base_identifier,
+            questions=final_questions,
+            path_to_store=path_to_save,
         )
 
     def _preprocess_text(self, text: str) -> str:
