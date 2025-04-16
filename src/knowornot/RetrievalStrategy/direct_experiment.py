@@ -46,6 +46,6 @@ class DirectRetrievalStrategy(BaseRetrievalStrategy):
     ) -> QAWithContext:
         return QAWithContext(
             question=question_to_ask.question,
-            expected_answer=None,
+            expected_answer="",
             context_questions=None,
         )

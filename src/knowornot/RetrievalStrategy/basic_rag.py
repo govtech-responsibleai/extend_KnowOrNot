@@ -58,7 +58,7 @@ class BasicRAGStrategy(BaseRetrievalStrategy):
 
         return QAWithContext(
             question=question_to_ask.question,
-            expected_answer=None,
+            expected_answer="",
             context_questions=closest_questions,
         )
 

@@ -1,17 +1,9 @@
-from enum import Enum
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, cast
 from ..SyncLLMClient import SyncLLMClient
-from ..common.models import QAWithContext, QAPair
+from ..common.models import QAWithContext, QAPair, RetrievalType
 import numpy as np
 import logging
-
-
-class RetrievalType(Enum):
-    DIRECT = "DIRECT"
-    LONG_IN_CONTEXT = "LONG_IN_CONTEXT"
-    BASIC_RAG = "BASIC_RAG"
-    HYDE_RAG = "HYDE_RAG"
 
 
 class BaseRetrievalStrategy(ABC):

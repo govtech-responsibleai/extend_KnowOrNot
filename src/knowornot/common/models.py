@@ -4,6 +4,15 @@ from pydantic import BaseModel, Field
 from pathlib import Path
 from typing import List, Optional, Union, Literal
 
+from knowornot.SyncLLMClient import SyncLLMClientEnum
+
+
+class RetrievalType(Enum):
+    DIRECT = "DIRECT"
+    LONG_IN_CONTEXT = "LONG_IN_CONTEXT"
+    BASIC_RAG = "BASIC_RAG"
+    HYDE_RAG = "HYDE_RAG"
+
 
 class AtomicFact(BaseModel):
     fact_text: str
@@ -83,23 +92,36 @@ class QAPairFinal(BaseModel):
         return f"Question: {self.question} \n Answer: {self.answer}"
 
 
-class QAResponse:
+class QAResponse(BaseModel):
     response: str
     citation: Union[int, Literal["no citation"]]
 
 
-class SavedLLMResponse:
+class Prompt(BaseModel):
+    identifier: str
+    content: str
+
+
+class Evaluation(BaseModel):
+    evaluation_client: SyncLLMClientEnum
+    evaluation_model: str
+    evaluation_prompt: Prompt
+
+
+class SavedLLMResponse(BaseModel):
     identifier: str
     llm_response: QAResponse
+    cited_QA: Optional[QAPair]
+    evaluation: Optional[Evaluation] = None
 
 
 class QAWithContext(BaseModel):
     question: str
-    expected_answer: Optional[str]
+    expected_answer: str
     context_questions: Optional[List[QAPair]]
 
 
-class ExperimentInput(BaseModel):
+class IndividualExperimentInput(BaseModel):
     question_to_ask: str
     expected_answer: str
     context: Optional[List[QAPair]]
@@ -108,11 +130,6 @@ class ExperimentInput(BaseModel):
 class ExperimentType(Enum):
     REMOVAL = "removal"
     SYNTHETIC = "synthetic"
-
-
-class Prompt(BaseModel):
-    identifier: str
-    content: str
 
 
 class QuestionDocument(BaseModel):
@@ -124,3 +141,22 @@ class QuestionDocument(BaseModel):
     def save_to_json(self) -> None:
         self.path_to_store.write_text(self.model_dump_json(indent=2))
         return
+
+
+class ExperimentMetadata(BaseModel):
+    experiment_type: ExperimentType
+    retrieval_type: RetrievalType
+    creation_timestamp: datetime
+    client: SyncLLMClientEnum
+    ai_model_used: str
+    knowledge_base_identifier: str
+
+
+class ExperimentInputDocument(BaseModel):
+    metadata: ExperimentMetadata
+    questions: List[IndividualExperimentInput]
+
+
+class ExperimentOutputDocument(BaseModel):
+    metadata: ExperimentMetadata
+    responses: List[SavedLLMResponse]

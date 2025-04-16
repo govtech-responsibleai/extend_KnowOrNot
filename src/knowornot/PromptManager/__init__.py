@@ -20,3 +20,7 @@ class PromptManager:
     Format: Your output MUST be in the following format:
 
     """
+
+    hypothetical_answer_generator: str = """"
+        You are a hypothetical answer generator for a government chatbot in Singapore. Give three answers to the below question that are strictly hypothetical.
+    """

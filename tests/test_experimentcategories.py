@@ -12,7 +12,10 @@ from src.knowornot.RetrievalStrategy.basic_rag import BasicRAGStrategy
 from src.knowornot.RetrievalStrategy.long_in_context import (
     LongInContextStrategy,
 )
-from src.knowornot.RetrievalStrategy.hyde_rag import HydeRAGStrategy
+from src.knowornot.RetrievalStrategy.hyde_rag import (
+    HydeRAGStrategy,
+    HypotheticalAnswers,
+)
 from src.knowornot.common.models import (
     QAPair,
     QAWithContext,
@@ -180,9 +183,7 @@ class TestExperimentCategories:
 
         assert isinstance(result, QAWithContext)
         assert result.question == question.question
-        assert (
-            result.expected_answer is None
-        )  # For synthetic, there's no expected answer
+        assert result.expected_answer == ""  # For synthetic, there's no expected answer
         assert result.context_questions is None  # Direct experiment uses no context
 
     # BasicRAGStrategy tests
@@ -239,7 +240,7 @@ class TestExperimentCategories:
 
         assert isinstance(result, QAWithContext)
         assert result.question == synthetic_question.question
-        assert result.expected_answer is None
+        assert result.expected_answer == ""
         assert result.context_questions is not None, (
             "Context questions should not be None for RAG experiment"
         )
@@ -290,7 +291,7 @@ class TestExperimentCategories:
         assert result.context_questions is not None, (
             "Context questions should not be None for LongInContextStrategy experiment"
         )
-        assert result.expected_answer is None
+        assert not result.expected_answer
         assert (
             result.context_questions == self.sample_qa_pairs
         )  # LongInContextStrategy includes all context questions
@@ -298,41 +299,70 @@ class TestExperimentCategories:
     # HydeRAGStrategy tests
     def test_hyde_rag_get_hypothetical_answer(self):
         question = self.sample_qa_pairs[0]
-        hypothetical_answer = QAPair(
-            question="Hypothetical question?",
-            answer="Hypothetical answer",
-        )
+        mock_answers = HypotheticalAnswers(answers=["Answer 1", "Answer 2", "Answer 3"])
 
-        self.mock_llm_client.get_structured_response.return_value = hypothetical_answer
+        self.mock_llm_client.get_structured_response.return_value = mock_answers
 
         result = self.hyde_rag._get_hypothetical_question_answer(
             question_to_ask=question
         )
 
-        assert result == hypothetical_answer
+        assert isinstance(result, HypotheticalAnswers)
+        assert len(result.answers) == 3
         self.mock_llm_client.get_structured_response.assert_called_once_with(
             prompt=self.hyde_prompt + str(question),
-            response_model=QAPair,
+            response_model=HypotheticalAnswers,
             ai_model=None,
         )
+
+    def test_convert_to_qa_pair_list(self):
+        question = "Test question?"
+        hypothetical_answers = HypotheticalAnswers(answers=["Answer 1", "Answer 2"])
+
+        result = self.hyde_rag._convert_to_qa_pair_list(question, hypothetical_answers)
+
+        assert len(result) == 2
+        assert all(isinstance(qa, QAPair) for qa in result)
+        assert all(qa.question == question for qa in result)
+        assert [qa.answer for qa in result] == hypothetical_answers.answers
 
     def test_hyde_rag_removal(self):
         question = self.sample_qa_pairs[0]
         removed_index = 0
         remaining_qa = self.sample_qa_pairs[1:]
 
-        # Mock the hypothetical answer generation
-        hypothetical_answer = QAPair(
-            question="Hypothetical Q1?",
-            answer="Hypothetical A1",
-        )
+        # Mock hypothetical answers
+        mock_answers = HypotheticalAnswers(answers=["Hypo Answer 1", "Hypo Answer 2"])
         self.hyde_rag._get_hypothetical_question_answer = MagicMock(
-            return_value=hypothetical_answer
+            return_value=mock_answers
         )
 
-        # Mock the embedding of the hypothetical answer to be closest to Q3
-        hypo_embedding = np.array([0.1, 0.9, 0.0])
-        self.hyde_rag._embed_single_qa_pair = MagicMock(return_value=hypo_embedding)
+        # Mock embeddings for the hypothetical answers
+        hypo_embeddings = np.array(
+            [
+                [0.1, 0.9, 0.0],  # Close to Q3
+                [0.2, 0.8, 0.0],  # Also close to Q3
+            ]
+        )
+
+        def mock_embed_qa_pair_list(qa_pairs):
+            if (
+                isinstance(qa_pairs[0], QAPair)
+                and qa_pairs[0].question == question.question
+            ):
+                # This is for the hypothetical answers
+                return hypo_embeddings
+
+            # This is for the remaining questions case
+            remaining_embeddings = np.delete(
+                self.sample_embeddings, removed_index, axis=0
+            )
+            assert len(remaining_embeddings) == len(remaining_qa)
+            return remaining_embeddings
+
+        self.hyde_rag._embed_qa_pair_list = MagicMock(
+            side_effect=mock_embed_qa_pair_list
+        )
 
         result = self.hyde_rag._create_single_removal_experiment(
             question_to_ask=question,
@@ -342,16 +372,22 @@ class TestExperimentCategories:
         )
 
         assert isinstance(result, QAWithContext)
-        assert result.context_questions is not None, (
-            "Context questions should not be None for HydeRAGStrategy experiment"
-        )
         assert result.question == question.question
         assert result.expected_answer == question.answer
+        assert result.context_questions is not None
         assert len(result.context_questions) == 3
-        # Based on our mocked hypo_embedding, closest should be Q3, Q4, Q5 from remaining_qa
-        assert self.sample_qa_pairs[2] in result.context_questions  # Q3
-        assert self.sample_qa_pairs[3] in result.context_questions  # Q4
-        assert self.sample_qa_pairs[4] in result.context_questions  # Q5
+
+        # The mean of hypo_embeddings [0.15, 0.85, 0.0] should be closest to Q3, Q4, then Q5
+        # from the remaining questions (after Q1 was removed)
+        expected_context = [
+            self.sample_qa_pairs[2],  # Q3
+            self.sample_qa_pairs[3],  # Q4
+            self.sample_qa_pairs[4],  # Q5
+        ]
+
+        assert sorted(result.context_questions, key=lambda x: x.question) == sorted(
+            expected_context, key=lambda x: x.question
+        )
 
     def test_hyde_rag_synthetic(self):
         synthetic_question = QAPair(
@@ -359,18 +395,34 @@ class TestExperimentCategories:
             answer="Synthetic answer",
         )
 
-        # Mock the hypothetical answer generation
-        hypothetical_answer = QAPair(
-            question="Hypothetical synthetic Q?",
-            answer="Hypothetical synthetic A",
-        )
+        # Mock hypothetical answers
+        mock_answers = HypotheticalAnswers(answers=["Hypo Answer 1", "Hypo Answer 2"])
         self.hyde_rag._get_hypothetical_question_answer = MagicMock(
-            return_value=hypothetical_answer
+            return_value=mock_answers
         )
 
-        # Mock the embedding of the hypothetical answer to be closest to Q1
-        hypo_embedding = np.array([0.9, 0.1, 0.0])
-        self.hyde_rag._embed_single_qa_pair = MagicMock(return_value=hypo_embedding)
+        # Mock embeddings that will be close to Q1
+        hypo_embeddings = np.array(
+            [
+                [0.95, 0.05, 0.0],  # Very close to Q1
+                [0.85, 0.15, 0.0],  # Also close to Q1
+            ]
+        )
+
+        def mock_embed_qa_pair_list(qa_pairs):
+            if (
+                isinstance(qa_pairs[0], QAPair)
+                and qa_pairs[0].question == synthetic_question.question
+            ):
+                # This is for the hypothetical answers
+                return hypo_embeddings
+
+            # This is for the original questions
+            return self.sample_embeddings
+
+        self.hyde_rag._embed_qa_pair_list = MagicMock(
+            side_effect=mock_embed_qa_pair_list
+        )
 
         result = self.hyde_rag._create_single_synthetic_experiment(
             question_to_ask=synthetic_question,
@@ -380,32 +432,34 @@ class TestExperimentCategories:
 
         assert isinstance(result, QAWithContext)
         assert result.question == synthetic_question.question
-        assert (
-            result.expected_answer == synthetic_question.answer
-        )  # For HydeRAGStrategy synthetic, it keeps the answer
-        assert result.context_questions is not None, (
-            "Context questions should not be None for HydeRAGStrategy experiment"
-        )
+        assert result.expected_answer == synthetic_question.answer
+        assert result.context_questions is not None
         assert len(result.context_questions) == 3
-        # Based on our mocked hypo_embedding, closest should be Q1, Q2, Q5
-        assert self.sample_qa_pairs[0] in result.context_questions  # Q1
-        assert self.sample_qa_pairs[1] in result.context_questions  # Q2
-        assert self.sample_qa_pairs[4] in result.context_questions  # Q5
+
+        # The mean of hypo_embeddings [0.9, 0.1, 0.0] should be closest to Q1, Q2, then Q5
+        expected_context = [
+            self.sample_qa_pairs[0],  # Q1
+            self.sample_qa_pairs[1],  # Q2
+            self.sample_qa_pairs[4],  # Q5
+        ]
+
+        assert sorted(result.context_questions, key=lambda x: x.question) == sorted(
+            expected_context, key=lambda x: x.question
+        )
 
     def test_hyde_rag_with_alternative_client(self):
         question = self.sample_qa_pairs[0]
         alternative_client = MagicMock(spec=SyncLLMClient)
         alternative_client.can_use_instructor = True
-        alternative_client.get_structured_response.return_value = QAPair(
-            question="Alt hypothetical Q?",
-            answer="Alt hypothetical A",
-        )
+        mock_answers = HypotheticalAnswers(answers=["Alt Answer 1", "Alt Answer 2"])
+        alternative_client.get_structured_response.return_value = mock_answers
 
         result = self.hyde_rag._get_hypothetical_question_answer(
             question_to_ask=question, alternative_llm_client=alternative_client
         )
 
-        assert isinstance(result, QAPair)
+        assert isinstance(result, HypotheticalAnswers)
+        assert len(result.answers) == 2
         alternative_client.get_structured_response.assert_called_once()
         self.mock_llm_client.get_structured_response.assert_not_called()
 
