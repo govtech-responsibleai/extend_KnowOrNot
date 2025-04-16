@@ -1,6 +1,6 @@
 from . import BaseRetrievalStrategy, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
-from ..common.models import QAPair, SingleExperimentInput
+from ..common.models import QAPair, QAWithContext
 from typing import List, Optional
 import numpy as np
 import logging
@@ -23,8 +23,8 @@ class LongInContextStrategy(BaseRetrievalStrategy):
         alterative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> SingleExperimentInput:
-        return SingleExperimentInput(
+    ) -> QAWithContext:
+        return QAWithContext(
             question=question_to_ask.question,
             expected_answer=question_to_ask.answer,
             context_questions=remaining_qa,
@@ -38,8 +38,8 @@ class LongInContextStrategy(BaseRetrievalStrategy):
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> SingleExperimentInput:
-        return SingleExperimentInput(
+    ) -> QAWithContext:
+        return QAWithContext(
             question=question_to_ask.question,
             expected_answer=None,
             context_questions=question_list,

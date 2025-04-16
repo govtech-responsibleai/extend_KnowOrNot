@@ -2,7 +2,7 @@ from enum import Enum
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, cast
 from ..SyncLLMClient import SyncLLMClient
-from ..common.models import SingleExperimentInput, QAPair
+from ..common.models import QAWithContext, QAPair
 import numpy as np
 import logging
 
@@ -36,7 +36,7 @@ class BaseRetrievalStrategy(ABC):
         alterative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> SingleExperimentInput:
+    ) -> QAWithContext:
         """
         An abstract method that creates a single experiment input where the question_to_ask
         is removed from the context.
@@ -61,7 +61,7 @@ class BaseRetrievalStrategy(ABC):
 
 
         Returns:
-            SingleExperimentInput: An experiment input object that represents the
+            QAWithContext: An experiment input object that represents the
             removal of question_to_ask from the original list of question-answer pairs.
         """
         pass
@@ -134,12 +134,12 @@ class BaseRetrievalStrategy(ABC):
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> List[SingleExperimentInput]:
+    ) -> List[QAWithContext]:
         """
         Creates a list of removal experiments from a list of questions.
 
         This method splits a list of questions into individual questions and their
-        respective remaining questions. For each split, it generates a `SingleExperimentInput`
+        respective remaining questions. For each split, it generates a `QAWithContext`
         using the `_create_single_removal_experiment` method, which represents an
         experiment based on removing the selected question from the context.
 
@@ -147,11 +147,11 @@ class BaseRetrievalStrategy(ABC):
             question_list (List[QAPair]): A list of question-answer pairs to process.
 
         Returns:
-            List[SingleExperimentInput]: A list of experiments where each experiment
+            List[QAWithContext]: A list of experiments where each experiment
             is based on one question removed from the context.
         """
         embeddings = self._embed_qa_pair_list(question_list)
-        experiment_list: List[SingleExperimentInput] = []
+        experiment_list: List[QAWithContext] = []
         split_questions = self._split_question_list(question_list)
         for question, remaining, index in split_questions:
             self.logger.info(f"Creating removal experiment {index} for {question}")
@@ -178,7 +178,7 @@ class BaseRetrievalStrategy(ABC):
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> SingleExperimentInput:
+    ) -> QAWithContext:
         pass
 
     def create_synthetic_experiments(
@@ -188,9 +188,9 @@ class BaseRetrievalStrategy(ABC):
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> List[SingleExperimentInput]:
+    ) -> List[QAWithContext]:
         embeddings = self._embed_qa_pair_list(context_questions)
-        experiment_list: List[SingleExperimentInput] = []
+        experiment_list: List[QAWithContext] = []
         for idx, question in enumerate(synthetic_questions):
             self.logger.info(f"Creating synthetic experiment {idx} for {question}")
             experiment_list.append(

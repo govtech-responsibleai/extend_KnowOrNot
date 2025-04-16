@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union, Literal
 
 
 class AtomicFact(BaseModel):
@@ -83,15 +83,36 @@ class QAPairFinal(BaseModel):
         return f"Question: {self.question} \n Answer: {self.answer}"
 
 
-class SingleExperimentInput(BaseModel):
+class QAResponse:
+    response: str
+    citation: Union[int, Literal["no citation"]]
+
+
+class SavedLLMResponse:
+    identifier: str
+    llm_response: QAResponse
+
+
+class QAWithContext(BaseModel):
     question: str
     expected_answer: Optional[str]
     context_questions: Optional[List[QAPair]]
 
 
+class ExperimentInput(BaseModel):
+    question_to_ask: str
+    expected_answer: str
+    context: Optional[List[QAPair]]
+
+
 class ExperimentType(Enum):
     REMOVAL = "removal"
     SYNTHETIC = "synthetic"
+
+
+class Prompt(BaseModel):
+    identifier: str
+    content: str
 
 
 class QuestionDocument(BaseModel):

@@ -1,6 +1,6 @@
 from . import BaseRetrievalStrategy, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
-from ..common.models import QAPair, SingleExperimentInput
+from ..common.models import QAPair, QAWithContext
 from typing import List, Optional
 import numpy as np
 import logging
@@ -23,7 +23,7 @@ class BasicRAGStrategy(BaseRetrievalStrategy):
         alterative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> SingleExperimentInput:
+    ) -> QAWithContext:
         remaining_embeddings = np.delete(embeddings, removed_index, axis=0)
         question_embedding = embeddings[removed_index]
 
@@ -33,7 +33,7 @@ class BasicRAGStrategy(BaseRetrievalStrategy):
 
         closest_questions = [remaining_qa[i] for i in closest_indices]
 
-        return SingleExperimentInput(
+        return QAWithContext(
             question=question_to_ask.question,
             expected_answer=question_to_ask.answer,
             context_questions=closest_questions,
@@ -47,7 +47,7 @@ class BasicRAGStrategy(BaseRetrievalStrategy):
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> SingleExperimentInput:
+    ) -> QAWithContext:
         question_embedding = self._embed_single_qa_pair(question_to_ask)
 
         closest_indices = self._get_n_closest_by_cosine_similarity(
@@ -56,7 +56,7 @@ class BasicRAGStrategy(BaseRetrievalStrategy):
 
         closest_questions = [question_list[i] for i in closest_indices]
 
-        return SingleExperimentInput(
+        return QAWithContext(
             question=question_to_ask.question,
             expected_answer=None,
             context_questions=closest_questions,

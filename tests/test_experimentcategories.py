@@ -15,7 +15,7 @@ from src.knowornot.RetrievalStrategy.long_in_context import (
 from src.knowornot.RetrievalStrategy.hyde_rag import HydeRAGStrategy
 from src.knowornot.common.models import (
     QAPair,
-    SingleExperimentInput,
+    QAWithContext,
 )
 from src.knowornot.SyncLLMClient import SyncLLMClient
 
@@ -161,7 +161,7 @@ class TestExperimentCategories:
             embeddings=self.sample_embeddings,
         )
 
-        assert isinstance(result, SingleExperimentInput)
+        assert isinstance(result, QAWithContext)
         assert result.question == question.question
         assert result.expected_answer == question.answer
         assert result.context_questions is None  # Direct experiment uses no context
@@ -178,7 +178,7 @@ class TestExperimentCategories:
             embeddings=self.sample_embeddings,
         )
 
-        assert isinstance(result, SingleExperimentInput)
+        assert isinstance(result, QAWithContext)
         assert result.question == question.question
         assert (
             result.expected_answer is None
@@ -206,7 +206,7 @@ class TestExperimentCategories:
             embeddings=self.sample_embeddings,
         )
 
-        assert isinstance(result, SingleExperimentInput)
+        assert isinstance(result, QAWithContext)
         assert result.question == question.question
         assert result.expected_answer == question.answer
         assert result.context_questions is not None, (
@@ -237,7 +237,7 @@ class TestExperimentCategories:
             embeddings=self.sample_embeddings,
         )
 
-        assert isinstance(result, SingleExperimentInput)
+        assert isinstance(result, QAWithContext)
         assert result.question == synthetic_question.question
         assert result.expected_answer is None
         assert result.context_questions is not None, (
@@ -262,7 +262,7 @@ class TestExperimentCategories:
             embeddings=self.sample_embeddings,
         )
 
-        assert isinstance(result, SingleExperimentInput)
+        assert isinstance(result, QAWithContext)
         assert result.question == question.question
         assert result.expected_answer == question.answer
         assert result.context_questions is not None, (
@@ -285,7 +285,7 @@ class TestExperimentCategories:
             embeddings=self.sample_embeddings,
         )
 
-        assert isinstance(result, SingleExperimentInput)
+        assert isinstance(result, QAWithContext)
         assert result.question == synthetic_question.question
         assert result.context_questions is not None, (
             "Context questions should not be None for LongInContextStrategy experiment"
@@ -341,7 +341,7 @@ class TestExperimentCategories:
             embeddings=self.sample_embeddings,
         )
 
-        assert isinstance(result, SingleExperimentInput)
+        assert isinstance(result, QAWithContext)
         assert result.context_questions is not None, (
             "Context questions should not be None for HydeRAGStrategy experiment"
         )
@@ -378,7 +378,7 @@ class TestExperimentCategories:
             embeddings=self.sample_embeddings,
         )
 
-        assert isinstance(result, SingleExperimentInput)
+        assert isinstance(result, QAWithContext)
         assert result.question == synthetic_question.question
         assert (
             result.expected_answer == synthetic_question.answer
@@ -438,9 +438,9 @@ class TestExperimentCategories:
         assert len(results) == len(self.sample_qa_pairs)
         assert create_spy.call_count == len(self.sample_qa_pairs)
 
-        # Each result should be a SingleExperimentInput
+        # Each result should be a QAWithContext
         for result in results:
-            assert isinstance(result, SingleExperimentInput)
+            assert isinstance(result, QAWithContext)
 
     def test_create_synthetic_experiments(self):
         # Create some synthetic questions
@@ -473,9 +473,9 @@ class TestExperimentCategories:
         assert len(results) == len(synthetic_questions)
         assert create_spy.call_count == len(synthetic_questions)
 
-        # Each result should be a SingleExperimentInput
+        # Each result should be a QAWithContext
         for result in results:
-            assert isinstance(result, SingleExperimentInput)
+            assert isinstance(result, QAWithContext)
 
     # Test edge cases
     def test_empty_question_list(self):

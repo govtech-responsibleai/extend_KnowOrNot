@@ -1,7 +1,7 @@
 from . import BaseRetrievalStrategy, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
 from typing import Optional, List
-from ..common.models import QAPair, SingleExperimentInput
+from ..common.models import QAPair, QAWithContext
 import numpy as np
 import logging
 
@@ -54,7 +54,7 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
         alterative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> SingleExperimentInput:
+    ) -> QAWithContext:
         hypothetical_question = self._get_hypothetical_question_answer(
             question_to_ask=question_to_ask,
             alterative_prompt=alterative_prompt,
@@ -74,7 +74,7 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
 
         closest_questions = [remaining_qa[i] for i in closest_real_indices]
 
-        return SingleExperimentInput(
+        return QAWithContext(
             question=question_to_ask.question,
             expected_answer=question_to_ask.answer,
             context_questions=closest_questions,
@@ -88,7 +88,7 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
-    ) -> SingleExperimentInput:
+    ) -> QAWithContext:
         hypothetical_question = self._get_hypothetical_question_answer(
             question_to_ask=question_to_ask,
             alterative_prompt=alternative_prompt,
@@ -106,7 +106,7 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
 
         closest_questions = [question_list[i] for i in closest_real_indices]
 
-        return SingleExperimentInput(
+        return QAWithContext(
             question=question_to_ask.question,
             expected_answer=question_to_ask.answer,
             context_questions=closest_questions,
