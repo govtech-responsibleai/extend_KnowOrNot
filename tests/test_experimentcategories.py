@@ -45,7 +45,7 @@ class TestExperimentCategories:
         self.hyde_prompt = "Generate a hypothetical answer for this question:"
         self.hyde_rag = HydeRAGStrategy(
             default_client=self.mock_llm_client,
-            hypothetical_question_prompt=self.hyde_prompt,
+            hypothetical_answer_prompt=self.hyde_prompt,
             closest_k=3,
             logger=MagicMock(),
         )
@@ -98,7 +98,7 @@ class TestExperimentCategories:
         ):
             HydeRAGStrategy(
                 default_client=invalid_client,
-                hypothetical_question_prompt="prompt",
+                hypothetical_answer_prompt="prompt",
                 logger=MagicMock(),
             )
 

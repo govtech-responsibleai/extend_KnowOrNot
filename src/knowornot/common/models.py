@@ -81,10 +81,8 @@ class QAPair(BaseModel):
         return f"Question: {self.question} \n Answer: {self.answer}"
 
 
-class QAPairFinal(BaseModel):
+class QAPairFinal(QAPair):
     index: int
-    question: str
-    answer: Optional[str]
 
     def __str__(self):
         return f"Index: {self.index} Question: {self.question} \n Answer: {self.answer}"
@@ -153,6 +151,9 @@ class QuestionDocument(BaseModel):
 
 class ExperimentMetadata(BaseModel):
     experiment_type: ExperimentType
+    system_prompt: Prompt
+    input_path: Path
+    output_path: Path
     retrieval_type: RetrievalType
     creation_timestamp: datetime
     client: SyncLLMClientEnum
@@ -164,7 +165,23 @@ class ExperimentInputDocument(BaseModel):
     metadata: ExperimentMetadata
     questions: List[IndividualExperimentInput]
 
+    def save_to_json(self) -> None:
+        self.metadata.input_path.write_text(self.model_dump_json(indent=2))
+
 
 class ExperimentOutputDocument(BaseModel):
     metadata: ExperimentMetadata
     responses: List[SavedLLMResponse]
+
+    def save_to_json(self) -> None:
+        self.metadata.output_path.write_text(self.model_dump_json(indent=2))
+
+    @staticmethod
+    def load_from_json(path: Path) -> "ExperimentOutputDocument":
+        if not path.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {path}")
+
+        with open(path, "r") as f:
+            text = f.read()
+
+        return ExperimentOutputDocument.model_validate_json(text)

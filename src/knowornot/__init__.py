@@ -1,17 +1,25 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Union
 import logging
 
-from knowornot.QuestionExtractor.models import FilterMethod
-
-from .common.models import Prompt, QuestionDocument
+from .QuestionExtractor.models import FilterMethod
+from .common.models import (
+    ExperimentInputDocument,
+    Prompt,
+    QAPair,
+    QAPairFinal,
+    QuestionDocument,
+    RetrievalType,
+)
 from .QuestionExtractor import QuestionExtractor
 from .config import AzureOpenAIConfig
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
 from .FactManager import FactManager
 from .PromptManager import PromptManager
+from .ExperimentManager.models import ExperimentParams, ExperimentType
+from .ExperimentManager import ExperimentManager
 
 __all__ = ["KnowOrNot", "SyncLLMClient"]
 
@@ -26,6 +34,8 @@ class KnowOrNot:
         self.client_registry: Dict[SyncLLMClientEnum, SyncLLMClient] = {}
         self.default_sync_client: Optional[SyncLLMClient] = None
         self.fact_manager: Optional[FactManager] = None
+        self.question_manager: Optional[QuestionExtractor] = None
+        self.experiment_manager: Optional[ExperimentManager] = None
 
     def _setup_logger(self) -> None:
         self.logger.setLevel(logging.INFO)
@@ -167,6 +177,28 @@ class KnowOrNot:
         )
 
         return self.question_manager
+
+    def _get_experiment_manager(
+        self,
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        alternative_hypothetical_answer_prompt: Optional[str] = None,
+    ) -> ExperimentManager:
+        client = alternative_llm_client or self.default_sync_client
+        if not client:
+            raise ValueError(
+                "You must set a default LLM Client or pass one in before performing any experiment related operations"
+            )
+
+        prompt = (
+            alternative_hypothetical_answer_prompt
+            or PromptManager.hypothetical_answer_generator
+        )
+
+        self.experiment_manager = ExperimentManager(
+            default_client=client, logger=self.logger, hypothetical_answer_prompt=prompt
+        )
+
+        return self.experiment_manager
 
     def add_azure(
         self,
@@ -337,3 +369,139 @@ class KnowOrNot:
         question_document.save_to_json()
 
         return question_document
+
+    def _make_questions_for_experiment(self, qa_final: QAPairFinal) -> QAPair:
+        return QAPair(question=qa_final.question, answer=qa_final.answer)
+
+    def create_experiment_input(
+        self,
+        question_document: Union[Path, QuestionDocument],
+        system_prompt: Prompt,
+        experiment_type: Literal["removal", "synthetic"],
+        retrieval_type: Literal["DIRECT", "BASIC_RAG", "LONG_IN_CONTEXT", "HYDE_RAG"],
+        input_store_path: Path,
+        output_store_path: Path,
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        ai_model_to_use: Optional[str] = None,
+        alternative_prompt_for_hyde: Optional[Prompt] = None,
+        alternative_llm_client_for_hyde: Optional[SyncLLMClient] = None,
+        ai_model_for_hyde: Optional[str] = None,
+    ) -> ExperimentInputDocument:
+        """Creates an experiment input document based on the provided parameters.
+
+        This function generates an `ExperimentInputDocument` by orchestrating the
+        necessary components, including loading the question document,
+        validating input parameters, and configuring the experiment manager.
+        It supports different experiment types (removal, synthetic) and retrieval
+        strategies (DIRECT, BASIC_RAG, LONG_IN_CONTEXT, HYDE_RAG).
+
+        Args:
+            question_document (Union[Path, QuestionDocument]): The question document
+                to use for the experiment. It can be a Path to a JSON file or an
+                already loaded QuestionDocument object.
+            system_prompt (Prompt): The system prompt to be used for the experiment.
+                This prompt sets the context for the LLM during experiment execution.
+            experiment_type (Literal["removal", "synthetic"]): The type of
+                experiment to create. "removal" removes questions from the context,
+                while "synthetic" uses generated questions.
+            retrieval_type (Literal["DIRECT", "BASIC_RAG", "LONG_IN_CONTEXT", "HYDE_RAG"]):
+                The retrieval strategy to use for the experiment. Determines how
+                context is retrieved for the questions.
+            input_store_path (Path): The path to store the generated
+                ExperimentInputDocument as a JSON file.
+            output_store_path (Path): The path to store the experiment output
+                document.
+            alternative_llm_client (Optional[SyncLLMClient]): An optional alternative
+                LLM client to use for the core experiment. If not provided, the
+                default LLM client will be used.
+            ai_model_to_use (Optional[str]): An optional AI model to use for the core
+                experiment. If not provided, the default model from the chosen LLM
+                client will be used.
+            alternative_prompt_for_hyde (Optional[Prompt]): An optional alternative
+                prompt for the HYDE_RAG retrieval strategy.
+            alternative_llm_client_for_hyde (Optional[SyncLLMClient]): An optional
+                alternative LLM client to use for the HYDE_RAG retrieval strategy.
+            ai_model_for_hyde (Optional[str]): An optional AI model to use for the
+                HYDE_RAG retrieval strategy.
+
+        Returns:
+            QuestionDocument: The generated ExperimentInputDocument.
+
+        Raises:
+            ValueError: If the experiment_type or retrieval_type is invalid.
+            ValueError: If no default LLM client is set and no alternative is provided.
+        """
+
+        if isinstance(question_document, Path):
+            question_document = QuestionDocument.load_from_json(question_document)
+
+        if experiment_type not in ["removal", "synthetic"]:
+            raise ValueError(
+                f'Expected experiment type to be one of "removal", "synthetic" but got {experiment_type}'
+            )
+
+        if experiment_type == "removal":
+            experiment_type_enum = ExperimentType.REMOVAL
+        elif experiment_type == "synthetic":
+            experiment_type_enum = ExperimentType.SYNTHETIC
+
+        if retrieval_type not in ["DIRECT", "BASIC_RAG", "LONG_IN_CONTEXT", "HYDE_RAG"]:
+            raise ValueError(
+                f"Expected retrieval type to be one of ['DIRECT', 'BASIC_RAG', 'LONG_IN_CONTEXT', 'HYDE_RAG'] but got {retrieval_type}"
+            )
+
+        retrieval_type_enum = RetrievalType(retrieval_type)
+
+        assert isinstance(question_document, QuestionDocument), (
+            f"Expected question_document to be of type QuestionDocument. Got {type(question_document)}"
+        )
+
+        llm_client_to_use = alternative_llm_client or self.default_sync_client
+
+        if not llm_client_to_use:
+            raise ValueError(
+                "You must set a default LLM Client or pass one in before performing any operations"
+            )
+
+        llm_client_enum = llm_client_to_use.enum_name
+
+        questions_for_experiment = list(
+            map(self._make_questions_for_experiment, question_document.questions)
+        )
+
+        experiment_manager = self._get_experiment_manager(
+            alternative_llm_client=alternative_llm_client,
+            alternative_hypothetical_answer_prompt=alternative_prompt_for_hyde.content
+            if alternative_prompt_for_hyde is not None
+            else None,
+        )
+
+        ai_model_for_hyde = (
+            ai_model_for_hyde or alternative_llm_client_for_hyde.config.default_model
+            if alternative_llm_client_for_hyde
+            else None
+        )
+
+        al_model_to_use = ai_model_to_use or llm_client_to_use.config.default_model
+
+        experiment_params = ExperimentParams(
+            system_prompt=system_prompt,
+            experiment_type=experiment_type_enum,
+            retrieval_type=retrieval_type_enum,
+            input_path=input_store_path,
+            output_path=output_store_path,
+            questions=questions_for_experiment,
+            llm_client_enum=llm_client_enum,
+            ai_model_for_experiment=al_model_to_use,
+            knowledge_base_identifier=question_document.knowledge_base_identifier,
+            alternative_llm_client_for_hyde=alternative_llm_client_for_hyde,
+            alternative_prompt_for_hyde=alternative_prompt_for_hyde,
+            ai_model_for_hyde=ai_model_for_hyde,
+        )
+
+        output = experiment_manager.create_experiment(
+            experiment_params=experiment_params
+        )
+        output.save_to_json()
+
+        return output

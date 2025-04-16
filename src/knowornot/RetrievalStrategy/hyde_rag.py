@@ -16,13 +16,13 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
         self,
         default_client: SyncLLMClient,
         logger: logging.Logger,
-        hypothetical_question_prompt: str,
+        hypothetical_answer_prompt: str,
         closest_k: int = 5,
     ):
         super().__init__(
             default_client=default_client, logger=logger, closest_k=closest_k
         )
-        self.hypothetical_question_prompt = hypothetical_question_prompt
+        self.hypothetical_answer_prompt = hypothetical_answer_prompt
 
     @property
     def experiment_type(self):
@@ -35,7 +35,7 @@ class HydeRAGStrategy(BaseRetrievalStrategy):
         alternative_llm_client: Optional[SyncLLMClient] = None,
         ai_model: Optional[str] = None,
     ) -> HypotheticalAnswers:
-        prompt_to_use = alterative_prompt or self.hypothetical_question_prompt
+        prompt_to_use = alterative_prompt or self.hypothetical_answer_prompt
 
         if alternative_llm_client and not alternative_llm_client.can_use_instructor:
             raise ValueError("Alternative client must be able to use instructor")

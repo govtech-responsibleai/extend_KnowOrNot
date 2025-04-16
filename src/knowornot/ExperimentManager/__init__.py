@@ -28,7 +28,7 @@ class ExperimentManager:
         self,
         default_client: SyncLLMClient,
         logger: logging.Logger,
-        hypothetical_question_prompt: str,
+        hypothetical_answer_prompt: str,
     ):
         self.default_client = default_client
         self.logger = logger
@@ -46,7 +46,7 @@ class ExperimentManager:
             RetrievalType.HYDE_RAG: HydeRAGStrategy(
                 default_client=default_client,
                 logger=logger,
-                hypothetical_question_prompt=hypothetical_question_prompt,
+                hypothetical_answer_prompt=hypothetical_answer_prompt,
             ),
         }
 
@@ -129,6 +129,9 @@ class ExperimentManager:
             experiment_type=experiment_params.experiment_type,
             retrieval_type=experiment_params.retrieval_type,
             creation_timestamp=datetime.now(),
+            system_prompt=experiment_params.system_prompt,
+            input_path=experiment_params.input_path,
+            output_path=experiment_params.output_path,
             client=experiment_params.llm_client_enum,
             ai_model_used=experiment_params.ai_model_for_experiment,
             knowledge_base_identifier=experiment_params.knowledge_base_identifier,
