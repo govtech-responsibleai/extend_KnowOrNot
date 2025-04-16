@@ -259,9 +259,8 @@ class TestFactManager(unittest.TestCase):
 
 class TestKnowOrNotFactManager(unittest.TestCase):
     def setUp(self):
-        self.config = MagicMock()
         self.mock_llm_client = MagicMock(spec=SyncLLMClient)
-        self.know_or_not = KnowOrNot(self.config)
+        self.know_or_not = KnowOrNot()
         self.know_or_not.default_sync_client = self.mock_llm_client
 
     @patch("src.knowornot.FactManager")

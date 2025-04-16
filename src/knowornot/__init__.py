@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 import logging
 
 from .QuestionExtractor import QuestionExtractor
-from .config import AzureOpenAIConfig, Config
+from .config import AzureOpenAIConfig
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
 from .FactManager import FactManager
@@ -13,18 +13,26 @@ __all__ = ["KnowOrNot", "SyncLLMClient"]
 
 
 class KnowOrNot:
-    def __init__(self, config: Config):
+    def __init__(self):
         """
         Initialize the KnowOrNot instance with the given configuration.
-
-        Note: Directly setting the configuration like this is not recommended
-        as it may lead to tightly coupled code and reduced flexibility.
-        Consider using dependency injection or a configuration manager instead.
         """
-        self.config = config
+        self.logger: logging.Logger = logging.getLogger(__name__)
+
         self.client_registry: Dict[SyncLLMClientEnum, SyncLLMClient] = {}
         self.default_sync_client: Optional[SyncLLMClient] = None
         self.fact_manager: Optional[FactManager] = None
+
+    def _setup_logger(self) -> None:
+        self.logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(
+            fmt="%(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+        self.logger.info("Config initialized")
 
     def register_client(
         self, client: SyncLLMClient, make_default: bool = False
@@ -126,7 +134,7 @@ class KnowOrNot:
         self.fact_manager = FactManager(
             sync_llm_client=self.default_sync_client,
             default_fact_creation_prompt=PromptManager.default_fact_extraction_prompt,
-            logger=self.config.logger,
+            logger=self.logger,
         )
 
         return self.fact_manager
@@ -143,7 +151,7 @@ class KnowOrNot:
         self.question_manager = QuestionExtractor(
             question_prompt_default=PromptManager.default_question_extraction_prompt,
             default_client=self.default_sync_client,
-            logger=self.config.logger,
+            logger=self.logger,
         )
 
         return self.question_manager
@@ -153,14 +161,8 @@ class KnowOrNot:
         azure_endpoint: Optional[str] = None,
         azure_api_key: Optional[str] = None,
         azure_api_version: Optional[str] = None,
-        azure_batch_endpoint: Optional[str] = None,
-        azure_batch_api_key: Optional[str] = None,
-        azure_batch_api_version: Optional[str] = None,
-        default_synchronous_model: Optional[str] = None,
-        default_batch_model: Optional[str] = None,
+        default_model: Optional[str] = None,
         default_embedding_model: Optional[str] = None,
-        default_batch_embedding_model: Optional[str] = None,
-        separate_batch_client: bool = False,
     ) -> "KnowOrNot":
         """
         Create a `KnowOrNot` instance using Azure configuration details.
@@ -174,29 +176,12 @@ class KnowOrNot:
         the environment variable `AZURE_OPENAI_API_KEY` will be used.
         - azure_api_version (Optional[str]): The Azure API version. If not provided,
         the environment variable `AZURE_OPENAI_API_VERSION` will be used.
-        - azure_batch_endpoint (Optional[str]): The Azure batch endpoint. If not
-        provided, the environment variable `AZURE_OPENAI_BATCH_ENDPOINT` will be used.
-        - azure_batch_api_key (Optional[str]): The Azure batch API key. If not
-        provided, the environment variable `AZURE_OPENAI_BATCH_API_KEY` will be used.
-        - azure_batch_api_version (Optional[str]): The Azure batch API version. If not
-        provided, the environment variable `AZURE_OPENAI_BATCH_API_VERSION` will be used.
-        - default_synchronous_model (Optional[str]): The default model for synchronous operations.
+        - default_model (Optional[str]): The default model for synchronous operations.
         If not provided, the environment variable `AZURE_OPENAI_DEFAULT_MODEL` will be used,
-        with a fallback to "gpt-4o".
-        - default_batch_model (Optional[str]): The default model for batch operations.
-        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_BATCH_MODEL` will be used,
         with a fallback to "gpt-4o".
         - default_embedding_model (Optional[str]): The default embedding model.
         If not provided, the environment variable `AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL` will be used,
         with a fallback to "text-embedding-3-large".
-        - default_batch_embedding_model (Optional[str]): The default embedding model for batch operations.
-        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_BATCH_EMBEDDING_MODEL` will be used,
-        with a fallback to "text-embedding-3-large".
-        - separate_batch_client (bool): Determines whether to use a separate batch
-        client. If `False`, `azure_batch_endpoint`, `azure_batch_api_key`,
-        `azure_batch_api_version`, and `default_batch_model` should not be provided, and will
-        default to the values of `azure_endpoint`, `azure_api_key`, `azure_api_version`,
-        and `default_synchronous_model` respectively. Is False by default.
 
         Returns:
         - KnowOrNot: An instance of the `KnowOrNot` class configured with the specified
@@ -205,25 +190,12 @@ class KnowOrNot:
         Example:
         1. Using environment variables: KnowOrNot.create_from_azure()
 
-        2. Providing all parameters with separate batch client: KnowOrNot.create_from_azure(
+        2. Providing all parameters: KnowOrNot.create_from_azure(
                 azure_endpoint="https://example.com",
                 azure_api_key="example_key",
                 azure_api_version="2023-05-15",
-                azure_batch_endpoint="https://batch.example.com",
-                azure_batch_api_key="batch_key",
-                azure_batch_api_version="2023-05-15",
-                default_synchronous_model="gpt-4o",
-                default_batch_model="gpt-4o-batch",
-                default_embedding_model="text-embedding-3-large",
-                default_batch_embedding_model="text-embedding-3-large",
-                separate_batch_client=True
-            )
-
-        3. Using default batch client: KnowOrNot.create_from_azure(
-                azure_endpoint="https://example.com",
-                azure_api_key="example_key",
-                azure_api_version="2023-05-15",
-                default_synchronous_model="gpt-4o"
+                default_model="gpt-4o",
+                default_embedding_model="text-embedding-3-large"
             )
         """
 
@@ -245,63 +217,12 @@ class KnowOrNot:
                 raise EnvironmentError(
                     "AZURE_OPENAI_API_VERSION is not set and azure_api_version is not provided"
                 )
-        if not default_synchronous_model:
-            default_synchronous_model = os.environ.get(
-                "AZURE_OPENAI_DEFAULT_MODEL", "gpt-4o"
-            )
+        if not default_model:
+            default_model = os.environ.get("AZURE_OPENAI_DEFAULT_MODEL", "gpt-4o")
         if not default_embedding_model:
             default_embedding_model = os.environ.get(
                 "AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL", "text-embedding-3-large"
             )
-
-        if not separate_batch_client:
-            if (
-                azure_batch_endpoint
-                or azure_batch_api_key
-                or azure_batch_api_version
-                or default_batch_model
-                or default_batch_embedding_model
-            ):
-                raise ValueError(
-                    "If separate_batch_client is false, azure_batch_endpoint, azure_batch_api_key, azure_batch_api_version, default_batch_model, and default_batch_embedding_model should not be provided"
-                )
-
-            azure_batch_endpoint = azure_endpoint
-            azure_batch_api_key = azure_api_key
-            azure_batch_api_version = azure_api_version
-            default_batch_model = default_synchronous_model
-            default_batch_embedding_model = default_embedding_model
-
-        else:
-            if not azure_batch_endpoint:
-                azure_batch_endpoint = os.environ.get("AZURE_OPENAI_BATCH_ENDPOINT")
-                if not azure_batch_endpoint:
-                    raise EnvironmentError(
-                        "AZURE_OPENAI_BATCH_ENDPOINT is not set and azure_batch_endpoint is not provided"
-                    )
-            if not azure_batch_api_key:
-                azure_batch_api_key = os.environ.get("AZURE_OPENAI_BATCH_API_KEY")
-                if not azure_batch_api_key:
-                    raise EnvironmentError(
-                        "AZURE_OPENAI_BATCH_API_KEY is not set and azure_batch_api_key is not provided"
-                    )
-            if not azure_batch_api_version:
-                azure_batch_api_version = os.environ.get(
-                    "AZURE_OPENAI_BATCH_API_VERSION"
-                )
-                if not azure_batch_api_version:
-                    raise EnvironmentError(
-                        "AZURE_OPENAI_BATCH_API_VERSION is not set and azure_batch_api_version is not provided"
-                    )
-            if not default_batch_model:
-                default_batch_model = os.environ.get(
-                    "AZURE_OPENAI_DEFAULT_BATCH_MODEL", "gpt-4o"
-                )
-            if not default_batch_embedding_model:
-                default_batch_embedding_model = os.environ.get(
-                    "AZURE_OPENAI_DEFAULT_BATCH_EMBEDDING_MODEL",
-                    "text-embedding-3-large",
-                )
 
         logger = logging.getLogger(__name__)
 
@@ -309,27 +230,12 @@ class KnowOrNot:
             endpoint=azure_endpoint,
             api_key=azure_api_key,
             api_version=azure_api_version,
-            default_model=default_synchronous_model,
+            default_model=default_model,
             default_embedding_model=default_embedding_model,
             logger=logger,
         )
 
-        azure_batch_config = AzureOpenAIConfig(
-            endpoint=azure_batch_endpoint,
-            api_key=azure_batch_api_key,
-            api_version=azure_batch_api_version,
-            default_model=default_batch_model,
-            default_embedding_model=default_batch_embedding_model,
-            logger=logger,
-        )
-
-        output = KnowOrNot(
-            Config(
-                azure_config=azure_config,
-                azure_batch_config=azure_batch_config,
-                logger=logger,
-            )
-        )
+        output = KnowOrNot()
 
         azure_sync_client = SyncAzureOpenAIClient(config=azure_config)
 
