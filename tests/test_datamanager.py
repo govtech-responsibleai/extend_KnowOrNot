@@ -293,32 +293,3 @@ class TestKnowOrNotFactManager(unittest.TestCase):
             self.know_or_not._get_fact_manager()
 
         self.assertIn("You must set a LLM Client", str(context.exception))
-
-    @patch.object(KnowOrNot, "_get_fact_manager")
-    def test_create_facts(self, mock_get_fact_manager):
-        mock_fact_manager = MagicMock()
-        mock_get_fact_manager.return_value = mock_fact_manager
-
-        expected_result = [MagicMock(spec=AtomicFactDocument)]
-        mock_fact_manager._parse_source_to_atomic_facts.return_value = expected_result
-
-        source_list = [Path("test.txt")]
-        destination_dir = Path("/output")
-        alt_prompt = "Alternative prompt"
-        alt_client = MagicMock(spec=SyncLLMClient)
-
-        result = self.know_or_not.create_facts(
-            source_list=source_list,
-            destination_dir=destination_dir,
-            alternative_prompt=alt_prompt,
-            alt_llm_client=alt_client,
-        )
-
-        mock_get_fact_manager.assert_called_once()
-        mock_fact_manager._parse_source_to_atomic_facts.assert_called_once_with(
-            source_list=source_list,
-            destination_dir=destination_dir,
-            alternative_prompt=alt_prompt,
-            alt_llm_client=alt_client,
-        )
-        self.assertEqual(result, expected_result)

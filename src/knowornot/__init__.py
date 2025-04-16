@@ -1,11 +1,8 @@
 import os
-from pathlib import Path
 from typing import Dict, List, Optional
 import logging
 
 from .QuestionExtractor import QuestionExtractor
-from .QuestionExtractor.models import FilterMethod
-from .common.models import AtomicFactDocument, QuestionDocument
 from .config import AzureOpenAIConfig, Config
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
@@ -339,90 +336,3 @@ class KnowOrNot:
         output.register_client(client=azure_sync_client, make_default=True)
 
         return output
-
-    def create_facts(
-        self,
-        source_list: List[Path],
-        destination_dir: Optional[Path] = None,
-        alternative_prompt: Optional[str] = None,
-        alt_llm_client: Optional[SyncLLMClient] = None,
-    ) -> List[AtomicFactDocument]:
-        """
-        Parses a list of source files and converts them to atomic facts using a given LLM client.
-
-        This function is part of the main client's Facade interface, providing a simplified
-        entry point for fact extraction.  It abstracts away the need to directly interact
-        with the underlying `FactManager`, allowing users to call this method directly
-        from the client object.
-
-        For detailed information on the parsing process, parameters, return values, and
-        potential exceptions, see `FactManager._parse_source_to_atomic_facts`.
-        """
-
-        fact_manager = self._get_fact_manager()
-        return fact_manager._parse_source_to_atomic_facts(
-            source_list=source_list,
-            destination_dir=destination_dir,
-            alternative_prompt=alternative_prompt,
-            alt_llm_client=alt_llm_client,
-        )
-
-    def create_questions(
-        self,
-        context_prompt: str,
-        document: AtomicFactDocument,
-        method: FilterMethod,
-        path_to_store: Path,
-        identifier: str,
-        alternative_question_prompt: Optional[str] = None,
-        ai_model: Optional[str] = None,
-        llm_client: Optional[SyncLLMClient] = None,
-        diversity_threshold_keyword: float = 0.3,
-        diversity_threshold_semantic: float = 0.3,
-    ) -> QuestionDocument:
-        """
-        Generates a diverse list of question-answer pairs from an atomic fact document using an LLM client.
-
-        This method iterates over each atomic fact in the document, calls
-        `_generate_question_from_single_fact` to generate a question-answer pair for each fact,
-        accumulates the generated question-answer pairs in a list and then filters out the
-        non-diverse questions based on the filter method.
-
-        Args:
-            llm_client (SyncLLMClient): The LLM client used to generate the question-answer pairs.
-            document (AtomicFactDocument): The atomic fact document from which to generate the question-answer pairs.
-            context_prompt (str): The context to include in the prompt sent to the LLM.
-            alternative_question_prompt (Optional[str]): An optional alternative question prompt to use instead of the default.
-            ai_model (Optional[str]): The AI model to use for generating the structured response.
-            method (FilterMethod): The method to use for filtering out non-diverse questions.
-            path_to_store (Path): The path to store the generated questions.
-            diversity_threshold_keyword (float): The threshold for filtering out non-diverse questions based on keyword similarity.
-            diversity_threshold_semantic (float): The threshold for filtering out non-diverse questions based on semantic similarity.
-            identifier (str): The identifier to assign to the generated questions.
-
-        Returns:
-            QuestionDocument: A `QuestionDocument` containing the identifier and a list of diverse question-answer pairs generated from the atomic fact document.
-
-        Raises:
-            ValueError: If you must set a LLM Client before performing any question related operations or provide one as an argument.
-        """
-        client = llm_client or self.default_sync_client
-
-        if not client:
-            raise ValueError(
-                "You must set a LLM Client before performing any question related operations or provide one as an argument"
-            )
-
-        question_extractor = self._get_question_manager()
-        return question_extractor.generate_questions_from_document(
-            llm_client=client,
-            document=document,
-            context_prompt=context_prompt,
-            path_to_save=path_to_store,
-            alternative_question_prompt=alternative_question_prompt,
-            ai_model=ai_model,
-            diversity_threshold_keyword=diversity_threshold_keyword,
-            diversity_threshold_semantic=diversity_threshold_semantic,
-            method=method,
-            identifier=identifier,
-        )

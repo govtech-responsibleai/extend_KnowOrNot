@@ -89,11 +89,11 @@ class QuestionExtractor:
 
         return output
 
-    def generate_questions_from_document(
+    def generate_questions_from_documents(
         self,
         llm_client: SyncLLMClient,
         identifier: str,
-        document: AtomicFactDocument,
+        documents: List[AtomicFactDocument],
         context_prompt: str,
         method: FilterMethod,
         path_to_save: Path,
@@ -123,16 +123,22 @@ class QuestionExtractor:
         Returns:
             QuestionDocument: A `QuestionDocument` containing the identifier and a list of diverse question-answer pairs generated from the atomic fact document.
         """
-        qa_pairs = self._generate_questions_from_document(
-            llm_client=llm_client,
-            document=document,
-            context_prompt=context_prompt,
-            alternative_question_prompt=alternative_question_prompt,
-            ai_model=ai_model,
-        )
+
+        total_questions: List[QAPair] = []
+
+        for document in documents:
+            qa_pairs = self._generate_questions_from_document(
+                llm_client=llm_client,
+                document=document,
+                context_prompt=context_prompt,
+                alternative_question_prompt=alternative_question_prompt,
+                ai_model=ai_model,
+            )
+
+            total_questions.extend(qa_pairs)
 
         intermediate_pairs = self._get_diverse_questions(
-            qa_pairs,
+            question_list=total_questions,
             method=method,
             diversity_threshold_keyword=diversity_threshold_keyword,
             diversity_threshold_semantic=diversity_threshold_semantic,
@@ -152,7 +158,6 @@ class QuestionExtractor:
                     index=idx,
                     question=qapair.question,
                     answer=qapair.answer,
-                    source=document,
                 )
             )
 

@@ -86,7 +86,6 @@ class QAPairFinal(BaseModel):
     index: int
     question: str
     answer: Optional[str]
-    source: AtomicFactDocument
 
     def __str__(self):
         return f"Question: {self.question} \n Answer: {self.answer}"

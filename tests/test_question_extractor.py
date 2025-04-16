@@ -40,35 +40,93 @@ class TestQuestionExtractor:
 
         assert actual_text == expected_text
 
-    def test_generate_questions_from_document(self):
-        document = AtomicFactDocument(
-            fact_list=[
-                AtomicFact(fact_text="Fact 1", source_citation=0),
-                AtomicFact(fact_text="Fact 2", source_citation=1),
+    def test_generate_questions_from_documents(self):
+        documents = [
+            AtomicFactDocument(
+                fact_list=[
+                    AtomicFact(fact_text="Fact 1", source_citation=0),
+                    AtomicFact(fact_text="Fact 2", source_citation=1),
+                ]
+            ),
+            AtomicFactDocument(
+                fact_list=[
+                    AtomicFact(fact_text="Fact 3", source_citation=2),
+                ]
+            ),
+        ]
+
+        # Create question list to return for each document
+        qa_pairs_doc1 = QuestionList(
+            questions=[
+                QAPair(question="Question 1?", answer="Answer 1."),
+                QAPair(question="Question 2?", answer="Answer 2."),
             ]
         )
+        qa_pairs_doc2 = QuestionList(
+            questions=[QAPair(question="Question 3?", answer="Answer 3.")]
+        )
 
-        # Create question list to return
-        qa_pair_llm1 = QAPair(question="Question 1?", answer="Answer 1.")
-        qa_pair_llm2 = QAPair(question="Question 2?", answer="Answer 2.")
-        question_list = QuestionList(questions=[qa_pair_llm1, qa_pair_llm2])
-
-        self.mock_llm_client.get_structured_response.return_value = question_list
+        # Set up mock to return different values for each call
+        self.mock_llm_client.get_structured_response.side_effect = [
+            qa_pairs_doc1,
+            qa_pairs_doc2,
+        ]
 
         expected_qa_pairs = [
             QAPair(question="Question 1?", answer="Answer 1."),
             QAPair(question="Question 2?", answer="Answer 2."),
+            QAPair(question="Question 3?", answer="Answer 3."),
         ]
 
-        actual_qa_pairs = self.question_extractor._generate_questions_from_document(
-            llm_client=self.mock_llm_client,
-            document=document,
-            context_prompt=self.context_prompt,
-        )
+        actual_qa_pairs = []
+        for doc in documents:
+            qa_pairs = self.question_extractor._generate_questions_from_document(
+                llm_client=self.mock_llm_client,
+                document=doc,
+                context_prompt=self.context_prompt,
+            )
+            actual_qa_pairs.extend(qa_pairs)
 
-        assert len(actual_qa_pairs) == 2
+        assert len(actual_qa_pairs) == 3
         assert actual_qa_pairs == expected_qa_pairs
-        self.mock_llm_client.get_structured_response.assert_called_once()
+        assert self.mock_llm_client.get_structured_response.call_count == 2
+
+    def test_generate_questions_from_documents_full_flow(self):
+        documents = [
+            AtomicFactDocument(
+                fact_list=[AtomicFact(fact_text="Fact 1", source_citation=0)]
+            ),
+            AtomicFactDocument(
+                fact_list=[AtomicFact(fact_text="Fact 2", source_citation=1)]
+            ),
+        ]
+
+        qa_pairs = [
+            QAPair(question="Question 1?", answer="Answer 1."),
+            QAPair(question="Question 2?", answer="Answer 2."),
+        ]
+
+        # Mock the internal methods
+        with patch.object(
+            self.question_extractor,
+            "_generate_questions_from_document",
+            side_effect=[[qa_pairs[0]], [qa_pairs[1]]],
+        ) as mock_generate:
+            with patch.object(
+                self.question_extractor, "_get_diverse_questions", return_value=qa_pairs
+            ) as mock_diverse:
+                result = self.question_extractor.generate_questions_from_documents(
+                    llm_client=self.mock_llm_client,
+                    identifier="test-123",
+                    documents=documents,
+                    context_prompt=self.context_prompt,
+                    method=FilterMethod.KEYWORD,
+                    path_to_save=Path("/tmp/test.json"),
+                )
+
+                assert len(result.questions) == 2
+                assert mock_generate.call_count == 2
+                mock_diverse.assert_called_once()
 
     def test_get_diverse_questions_keyword(self):
         qa_pairs = [
@@ -86,7 +144,9 @@ class TestQuestionExtractor:
             return_value=[qa_pairs[0], qa_pairs[2]],
         ) as mock_filter:
             result = self.question_extractor._get_diverse_questions(
-                qa_pairs, method=FilterMethod.KEYWORD, diversity_threshold_keyword=0.3
+                question_list=qa_pairs,
+                method=FilterMethod.KEYWORD,
+                diversity_threshold_keyword=0.3,
             )
 
             assert result == [qa_pairs[0], qa_pairs[2]]
@@ -107,7 +167,9 @@ class TestQuestionExtractor:
             return_value=[qa_pairs[0]],
         ) as mock_filter:
             result = self.question_extractor._get_diverse_questions(
-                qa_pairs, method=FilterMethod.SEMANTIC, diversity_threshold_semantic=0.3
+                question_list=qa_pairs,
+                method=FilterMethod.SEMANTIC,
+                diversity_threshold_semantic=0.3,
             )
 
             assert result == [qa_pairs[0]]
@@ -134,7 +196,7 @@ class TestQuestionExtractor:
                 return_value=[qa_pairs[2]],
             ) as mock_semantic_filter:
                 result = self.question_extractor._get_diverse_questions(
-                    qa_pairs,
+                    question_list=qa_pairs,
                     method=FilterMethod.BOTH,
                     diversity_threshold_keyword=0.3,
                     diversity_threshold_semantic=0.3,
@@ -147,9 +209,11 @@ class TestQuestionExtractor:
                 )
 
     def test_no_diverse_questions_raises_error(self):
-        document = AtomicFactDocument(
-            fact_list=[AtomicFact(fact_text="Test fact", source_citation=0)]
-        )
+        documents = [
+            AtomicFactDocument(
+                fact_list=[AtomicFact(fact_text="Test fact", source_citation=0)]
+            )
+        ]
 
         # Mock _generate_questions_from_document to return some questions
         with patch.object(
@@ -163,10 +227,10 @@ class TestQuestionExtractor:
             ):
                 # Test that it raises a ValueError
                 with pytest.raises(ValueError, match="No diverse questions generated"):
-                    self.question_extractor.generate_questions_from_document(
+                    self.question_extractor.generate_questions_from_documents(
                         llm_client=self.mock_llm_client,
                         identifier="test-123",
-                        document=document,
+                        documents=documents,
                         context_prompt=self.context_prompt,
                         method=FilterMethod.KEYWORD,
                         path_to_save=Path("/tmp/error_test.json"),
