@@ -142,6 +142,16 @@ class QuestionDocument(BaseModel):
         self.path_to_store.write_text(self.model_dump_json(indent=2))
         return
 
+    @staticmethod
+    def load_from_json(path: Path) -> "QuestionDocument":
+        if not path.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {path}")
+
+        with open(path, "r") as f:
+            text = f.read()
+
+        return QuestionDocument.model_validate_json(text)
+
 
 class ExperimentMetadata(BaseModel):
     experiment_type: ExperimentType
