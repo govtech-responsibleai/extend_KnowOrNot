@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 from pathlib import Path
-from typing import Generic, List, Optional, Type, TypeVar, Union, Literal
+from typing import List, Optional, Type, Union, Literal
 from ..SyncLLMClient import SyncLLMClientEnum
 
 
@@ -182,12 +182,10 @@ class ExperimentOutputDocument(BaseModel):
         return ExperimentOutputDocument.model_validate_json(text)
 
 
-T = TypeVar("T", bound=Enum, covariant=True)
-
-
 class EvaluationSpec(BaseModel):
     name: str
     prompt: Prompt
+    tag_name: str
     recommended_llm_client_enum: Optional[SyncLLMClientEnum]
     recommended_llm_model: Optional[str]
     evaluation_outcome: Type[Enum]
@@ -198,24 +196,25 @@ class EvaluationSpec(BaseModel):
     ]
 
 
-class EvaluationOutput(BaseModel, Generic[T]):
+class EvaluationOutput(BaseModel):
     evaluation_id: str
-    evaluation_timestamp: datetime = Field(default_factory=datetime.now)
+    evaluation_timestamp: datetime
     evaluation_name: str
-    evaluation_outcome: T
+    evaluation_outcome: Enum
 
 
-class LLMResponseWithEvaluation(BaseModel, Generic[T]):
+class LLMResponseWithEvaluation(BaseModel):
     llm_response: SavedLLMResponse
-    evaluation: EvaluationOutput[T]
+    evaluations: List[EvaluationOutput]
 
 
-class EvaluationMetadata(BaseModel, Generic[T]):
+class EvaluationMetadata(BaseModel):
     evaluation_name: str
     evaluator_client_enum: SyncLLMClientEnum
     evaluator_model: str
     evaluation_prompt: Prompt
-    evaluation_outcomes_enum: Type[T]
+    tag_name: str
+    evaluation_outcomes_enum: Type[Enum]
     in_context: List[Literal["question", "expected_answer", "context"]] = [
         "question",
         "expected_answer",
@@ -224,6 +223,20 @@ class EvaluationMetadata(BaseModel, Generic[T]):
 
 
 class EvaluatedExperimentDocument(BaseModel):
+    path_to_store: Path
     experiment_metadata: ExperimentMetadata
-    evaluation_metadata: List[EvaluationMetadata[Enum]]
-    responses: List[LLMResponseWithEvaluation[Enum]]
+    evaluation_metadata: List[EvaluationMetadata]
+    responses: List[LLMResponseWithEvaluation]
+
+    def save_to_json(self) -> None:
+        self.path_to_store.write_text(self.model_dump_json(indent=2))
+
+    @staticmethod
+    def load_from_json(path: Path) -> "EvaluatedExperimentDocument":
+        if not path.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {path}")
+
+        with open(path, "r") as f:
+            text = f.read()
+
+        return EvaluatedExperimentDocument.model_validate_json(text)

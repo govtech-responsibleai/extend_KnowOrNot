@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from ..config import LLMClientConfig
 
 T = TypeVar("T", bound=BaseModel)
+U = TypeVar("U", bound=Enum)
 
 
 class Message(BaseModel):
@@ -112,29 +113,29 @@ class SyncLLMClient(ABC):
         self,
         prompt: Union[str, List[Message]],
         tag_name: str,
-        enum_class: Type[Enum],
+        enum_class: Type[U],
         on_multiple: Literal["error", "first", "last"],
         ai_model: Optional[str] = None,
-    ) -> Enum: ...
+    ) -> U: ...
 
     @overload
     def prompt_for_enum(
         self,
         prompt: Union[str, List[Message]],
         tag_name: str,
-        enum_class: Type[Enum],
+        enum_class: Type[U],
         on_multiple: Literal["list"],
         ai_model: Optional[str] = None,
-    ) -> List[Enum]: ...
+    ) -> List[U]: ...
 
     def prompt_for_enum(
         self,
         prompt: Union[str, List[Message]],
         tag_name: str,
-        enum_class: Type[Enum],
+        enum_class: Type[U],
         on_multiple: Literal["error", "first", "last", "list"],
         ai_model: Optional[str] = None,
-    ) -> Union[Enum, List[Enum]]:
+    ) -> Union[U, List[U]]:
         """Prompts the LLM and extracts values from XML tags in the response, validating against an enum.
 
         Args:
