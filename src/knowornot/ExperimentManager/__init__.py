@@ -79,8 +79,6 @@ class ExperimentManager:
                     + qa_with_context.question
                     + "\n"
                     + f"The context is {self._create_context_string(qa_with_context.context_questions)}",
-                    expected_answer=qa_with_context.expected_answer,
-                    context=qa_with_context.context_questions,
                     source_context_qa=qa_with_context,
                 )
             )
@@ -162,12 +160,14 @@ class ExperimentManager:
             if answer.citation == "no citation":
                 citation = None
             else:
-                if experiment_input.context is None:
+                if experiment_input.source_context_qa.context_questions is None:
                     self.logger.error(
                         f"Context is None but citation is not 'no citation'. This should not happen. {experiment_input}"
                     )
                     continue
-                citation = experiment_input.context[answer.citation]
+                citation = experiment_input.source_context_qa.context_questions[
+                    answer.citation
+                ]
 
             identifier = (
                 experiment.metadata.knowledge_base_identifier
@@ -177,6 +177,7 @@ class ExperimentManager:
             )
             final_response = SavedLLMResponse(
                 identifier=identifier,
+                experiment_input=experiment_input,
                 llm_response=answer,
                 cited_QA=citation,
             )

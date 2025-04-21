@@ -106,17 +106,16 @@ class QAWithContext(BaseModel):
     context_questions: Optional[List[QAPairFinal]]
 
 
-class SavedLLMResponse(BaseModel):
-    identifier: str
-    llm_response: QAResponse
-    cited_QA: Optional[QAPairFinal]
-
-
 class IndividualExperimentInput(BaseModel):
     prompt_to_llm: str
-    expected_answer: str
-    context: Optional[List[QAPairFinal]]
     source_context_qa: QAWithContext
+
+
+class SavedLLMResponse(BaseModel):
+    identifier: str
+    experiment_input: IndividualExperimentInput
+    llm_response: QAResponse
+    cited_QA: Optional[QAPairFinal]
 
 
 class ExperimentType(Enum):
