@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Optional, Type, TypeVar, Union
+from typing import List, Optional, Type, TypeVar, Union, overload, Literal
+import re
 
 from pydantic import BaseModel
 
@@ -105,6 +106,98 @@ class SyncLLMClient(ABC):
         self, prompt_list: List[str], model: Optional[str] = None
     ) -> List[List[float]]:
         pass
+
+    @overload
+    def prompt_for_enum(
+        self,
+        prompt: Union[str, List[Message]],
+        tag_name: str,
+        enum_class: Type[Enum],
+        on_multiple: Literal["error", "first", "last"],
+        ai_model: Optional[str] = None,
+    ) -> Enum: ...
+
+    @overload
+    def prompt_for_enum(
+        self,
+        prompt: Union[str, List[Message]],
+        tag_name: str,
+        enum_class: Type[Enum],
+        on_multiple: Literal["list"],
+        ai_model: Optional[str] = None,
+    ) -> List[Enum]: ...
+
+    def prompt_for_enum(
+        self,
+        prompt: Union[str, List[Message]],
+        tag_name: str,
+        enum_class: Type[Enum],
+        on_multiple: Literal["error", "first", "last", "list"],
+        ai_model: Optional[str] = None,
+    ) -> Union[Enum, List[Enum]]:
+        """Prompts the LLM and extracts values from XML tags in the response, validating against an enum.
+
+        Args:
+            prompt: The input prompt to send to the LLM. Can be a string or list of Message objects.
+            tag_name: The name of the XML tag to extract from.
+            enum_class: The Enum class to validate the extracted value(s) against.
+            ai_model: The name of the AI model to use. If None, uses the default model.
+            on_multiple: How to handle multiple tag matches. Options:
+                - "error": Raise ValueError if multiple tags are found (default)
+                - "first": Return only the first match
+                - "last": Return only the last match
+                - "list": Return all matches as a list
+
+        Returns:
+            If on_multiple is "first", "last", or "error" (and only one match): The enum value
+            If on_multiple is "list": A list of enum values
+
+        Raises:
+            ValueError: If no tags are found, if the extracted value isn't in the enum,
+                       or if multiple tags are found when on_multiple="error"
+        """
+        # Get response from LLM
+        response = self.prompt(prompt=prompt, ai_model=ai_model)
+
+        # Create regex pattern for the specified tag
+        pattern = rf"<{tag_name}>(.*?)</{tag_name}>"
+        matches = re.findall(pattern, response, re.DOTALL)
+
+        if not matches:
+            raise ValueError(f"No <{tag_name}> tags found in LLM response")
+
+        # Handle multiple matches according to on_multiple parameter
+        if len(matches) > 1:
+            if on_multiple == "error":
+                raise ValueError(f"Multiple <{tag_name}> tags found in LLM response")
+            elif on_multiple == "first":
+                matches = [matches[0]]
+            elif on_multiple == "last":
+                matches = [matches[-1]]
+            elif on_multiple != "list":
+                raise ValueError(f"Invalid on_multiple value: {on_multiple}")
+
+        # Validate against enum and convert
+        result = []
+        for value in matches:
+            value = value.strip()
+            try:
+                # Try direct value match
+                enum_value = enum_class(value)
+                result.append(enum_value)
+            except ValueError:
+                # Try case-insensitive match
+                for enum_item in enum_class:
+                    if enum_item.value.upper() == value.upper():
+                        result.append(enum_item)
+                        break
+                else:  # No match found
+                    raise ValueError(
+                        f"Value '{value}' from tag <{tag_name}> is not valid for {enum_class.__name__}"
+                    )
+
+        # Return result based on on_multiple
+        return result if on_multiple == "list" else result[0]
 
     @property
     @abstractmethod
