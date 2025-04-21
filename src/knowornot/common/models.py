@@ -81,10 +81,10 @@ class QAPair(BaseModel):
 
 
 class QAPairFinal(QAPair):
-    index: int
+    identifier: str
 
     def __str__(self):
-        return f"Index: {self.index} Question: {self.question} \n Answer: {self.answer}"
+        return f"Index: {self.identifier} Question: {self.question} \n Answer: {self.answer}"
 
 
 class QAResponse(BaseModel):

@@ -156,9 +156,10 @@ class QuestionExtractor:
         final_questions: List[QAPairFinal] = []
 
         for idx, qapair in enumerate(intermediate_pairs):
+            identifier = f"{knowledge_base_identifier}_{idx}"
             final_questions.append(
                 QAPairFinal(
-                    index=idx,
+                    identifier=identifier,
                     question=qapair.question,
                     answer=qapair.answer,
                 )
