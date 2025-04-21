@@ -466,9 +466,7 @@ class KnowOrNot:
 
         llm_client_enum = llm_client_to_use.enum_name
 
-        questions_for_experiment = list(
-            map(self._make_questions_for_experiment, question_document.questions)
-        )
+        questions_for_experiment = question_document.questions
 
         experiment_manager = self._get_experiment_manager(
             alternative_llm_client=alternative_llm_client,

@@ -17,7 +17,7 @@ from src.knowornot.RetrievalStrategy.hyde_rag import (
     HypotheticalAnswers,
 )
 from src.knowornot.common.models import (
-    QAPair,
+    QAPairFinal,
     QAWithContext,
 )
 from src.knowornot.SyncLLMClient import SyncLLMClient
@@ -52,7 +52,8 @@ class TestExperimentCategories:
 
         # Create sample QA pairs for testing
         self.sample_qa_pairs = [
-            QAPair(
+            QAPairFinal(
+                identifier=f"Question {i}",
                 question=f"Question {i}?",
                 answer=f"Answer {i}",
             )
@@ -170,7 +171,8 @@ class TestExperimentCategories:
         assert result.context_questions is None  # Direct experiment uses no context
 
     def test_direct_experiment_synthetic(self):
-        question = QAPair(
+        question = QAPairFinal(
+            identifier="synthetic",
             question="Synthetic question?",
             answer="Synthetic answer",
         )
@@ -221,7 +223,8 @@ class TestExperimentCategories:
         assert self.sample_qa_pairs[4] in result.context_questions  # Q5
 
     def test_basic_rag_synthetic(self):
-        synthetic_question = QAPair(
+        synthetic_question = QAPairFinal(
+            identifier="synthetic",
             question="Synthetic question?",
             answer="Synthetic answer",
         )
@@ -275,7 +278,8 @@ class TestExperimentCategories:
         )  # LongInContextStrategy includes all remaining questions
 
     def test_long_in_context_synthetic(self):
-        synthetic_question = QAPair(
+        synthetic_question = QAPairFinal(
+            identifier="synthetic",
             question="Synthetic question?",
             answer="Synthetic answer",
         )
@@ -322,7 +326,7 @@ class TestExperimentCategories:
         result = self.hyde_rag._convert_to_qa_pair_list(question, hypothetical_answers)
 
         assert len(result) == 2
-        assert all(isinstance(qa, QAPair) for qa in result)
+        assert all(isinstance(qa, QAPairFinal) for qa in result)
         assert all(qa.question == question for qa in result)
         assert [qa.answer for qa in result] == hypothetical_answers.answers
 
@@ -347,7 +351,7 @@ class TestExperimentCategories:
 
         def mock_embed_qa_pair_list(qa_pairs):
             if (
-                isinstance(qa_pairs[0], QAPair)
+                isinstance(qa_pairs[0], QAPairFinal)
                 and qa_pairs[0].question == question.question
             ):
                 # This is for the hypothetical answers
@@ -390,7 +394,8 @@ class TestExperimentCategories:
         )
 
     def test_hyde_rag_synthetic(self):
-        synthetic_question = QAPair(
+        synthetic_question = QAPairFinal(
+            identifier="synthetic",
             question="Synthetic question?",
             answer="Synthetic answer",
         )
@@ -411,7 +416,7 @@ class TestExperimentCategories:
 
         def mock_embed_qa_pair_list(qa_pairs):
             if (
-                isinstance(qa_pairs[0], QAPair)
+                isinstance(qa_pairs[0], QAPairFinal)
                 and qa_pairs[0].question == synthetic_question.question
             ):
                 # This is for the hypothetical answers
@@ -499,7 +504,8 @@ class TestExperimentCategories:
     def test_create_synthetic_experiments(self):
         # Create some synthetic questions
         synthetic_questions = [
-            QAPair(
+            QAPairFinal(
+                identifier=f"Synthetic Q{i}",
                 question=f"Synthetic Q{i}?",
                 answer=f"Synthetic A{i}",
             )

@@ -1,6 +1,6 @@
 from . import BaseRetrievalStrategy, RetrievalType
 from ..SyncLLMClient import SyncLLMClient
-from ..common.models import QAPair, QAWithContext
+from ..common.models import QAPairFinal, QAWithContext
 from typing import List, Optional
 import numpy as np
 import logging
@@ -16,9 +16,9 @@ class BasicRAGStrategy(BaseRetrievalStrategy):
 
     def _create_single_removal_experiment(
         self,
-        question_to_ask: QAPair,
+        question_to_ask: QAPairFinal,
         removed_index: int,
-        remaining_qa: List[QAPair],
+        remaining_qa: List[QAPairFinal],
         embeddings: np.ndarray,
         alterative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
@@ -34,6 +34,7 @@ class BasicRAGStrategy(BaseRetrievalStrategy):
         closest_questions = [remaining_qa[i] for i in closest_indices]
 
         return QAWithContext(
+            identifier=question_to_ask.identifier,
             question=question_to_ask.question,
             expected_answer=question_to_ask.answer,
             context_questions=closest_questions,
@@ -41,8 +42,8 @@ class BasicRAGStrategy(BaseRetrievalStrategy):
 
     def _create_single_synthetic_experiment(
         self,
-        question_to_ask: QAPair,
-        question_list: List[QAPair],
+        question_to_ask: QAPairFinal,
+        question_list: List[QAPairFinal],
         embeddings: np.ndarray,
         alternative_prompt: Optional[str] = None,
         alternative_llm_client: Optional[SyncLLMClient] = None,
@@ -57,6 +58,7 @@ class BasicRAGStrategy(BaseRetrievalStrategy):
         closest_questions = [question_list[i] for i in closest_indices]
 
         return QAWithContext(
+            identifier=question_to_ask.identifier,
             question=question_to_ask.question,
             expected_answer="",
             context_questions=closest_questions,

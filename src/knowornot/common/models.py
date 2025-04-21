@@ -83,8 +83,10 @@ class QAPair(BaseModel):
 class QAPairFinal(QAPair):
     identifier: str
 
-    def __str__(self):
-        return f"Index: {self.identifier} Question: {self.question} \n Answer: {self.answer}"
+    def __str__(self, show_identifier: bool = False):
+        if show_identifier:
+            return f"Identifier: {self.identifier} \n Question: {self.question} \n Answer: {self.answer}"
+        return f"Question: {self.question} \n Answer: {self.answer}"
 
 
 class QAResponse(BaseModel):
@@ -98,21 +100,22 @@ class Prompt(BaseModel):
 
 
 class QAWithContext(BaseModel):
+    identifier: str
     question: str
     expected_answer: str
-    context_questions: Optional[List[QAPair]]
+    context_questions: Optional[List[QAPairFinal]]
 
 
 class SavedLLMResponse(BaseModel):
     identifier: str
     llm_response: QAResponse
-    cited_QA: Optional[QAPair]
+    cited_QA: Optional[QAPairFinal]
 
 
 class IndividualExperimentInput(BaseModel):
     prompt_to_llm: str
     expected_answer: str
-    context: Optional[List[QAPair]]
+    context: Optional[List[QAPairFinal]]
     source_context_qa: QAWithContext
 
 

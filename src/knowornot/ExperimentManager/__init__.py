@@ -2,7 +2,7 @@ from datetime import datetime
 from ..common.models import (
     ExperimentOutputDocument,
     IndividualExperimentInput,
-    QAPair,
+    QAPairFinal,
     QAWithContext,
     QAResponse,
     SavedLLMResponse,
@@ -56,7 +56,7 @@ class ExperimentManager:
         except KeyError as e:
             raise KeyError(f"Retrieval type {retrieval_type} is not registered") from e
 
-    def _create_context_string(self, qa_pairs: Optional[List[QAPair]]) -> str:
+    def _create_context_string(self, qa_pairs: Optional[List[QAPairFinal]]) -> str:
         if not qa_pairs:
             return ""
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from ..RetrievalStrategy import RetrievalType
 from ..SyncLLMClient import SyncLLMClientEnum, SyncLLMClient
-from ..common.models import QAPair, ExperimentType, Prompt
+from ..common.models import ExperimentType, Prompt, QAPairFinal
 from typing import List, Optional
 from pydantic import BaseModel
 from pathlib import Path
@@ -13,7 +13,7 @@ class ExperimentParams:
     retrieval_type: RetrievalType
     input_path: Path
     output_path: Path
-    questions: List[QAPair]
+    questions: List[QAPairFinal]
     llm_client_enum: SyncLLMClientEnum
     ai_model_for_experiment: str
     knowledge_base_identifier: str
