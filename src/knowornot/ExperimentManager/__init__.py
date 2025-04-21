@@ -75,7 +75,7 @@ class ExperimentManager:
         for qa_with_context in qa_with_context_list:
             individual_experiment_inputs.append(
                 IndividualExperimentInput(
-                    question_to_ask=system_prompt
+                    prompt_to_llm=system_prompt
                     + qa_with_context.question
                     + "\n"
                     + f"The context is {self._create_context_string(qa_with_context.context_questions)}",
@@ -153,7 +153,7 @@ class ExperimentManager:
         llm_response_list: List[SavedLLMResponse] = []
         for idx, experiment_input in enumerate(experiment.questions):
             answer = sync_client.get_structured_response(
-                prompt=experiment_input.question_to_ask,
+                prompt=experiment_input.prompt_to_llm,
                 ai_model=experiment.metadata.ai_model_used,
                 response_model=QAResponse,
             )

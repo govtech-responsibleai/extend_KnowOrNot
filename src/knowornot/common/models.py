@@ -110,7 +110,7 @@ class SavedLLMResponse(BaseModel):
 
 
 class IndividualExperimentInput(BaseModel):
-    question_to_ask: str
+    prompt_to_llm: str
     expected_answer: str
     context: Optional[List[QAPair]]
 
