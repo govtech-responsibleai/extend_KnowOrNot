@@ -2,9 +2,8 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 from pathlib import Path
-from typing import List, Optional, Union, Literal
-
-from knowornot.SyncLLMClient import SyncLLMClientEnum
+from typing import Generic, List, Optional, Type, TypeVar, Union, Literal
+from ..SyncLLMClient import SyncLLMClientEnum
 
 
 class RetrievalType(Enum):
@@ -98,23 +97,16 @@ class Prompt(BaseModel):
     content: str
 
 
-class Evaluation(BaseModel):
-    evaluation_client: SyncLLMClientEnum
-    evaluation_model: str
-    evaluation_prompt: Prompt
+class QAWithContext(BaseModel):
+    question: str
+    expected_answer: str
+    context_questions: Optional[List[QAPair]]
 
 
 class SavedLLMResponse(BaseModel):
     identifier: str
     llm_response: QAResponse
     cited_QA: Optional[QAPair]
-    evaluation: Optional[Evaluation] = None
-
-
-class QAWithContext(BaseModel):
-    question: str
-    expected_answer: str
-    context_questions: Optional[List[QAPair]]
 
 
 class IndividualExperimentInput(BaseModel):
@@ -185,3 +177,50 @@ class ExperimentOutputDocument(BaseModel):
             text = f.read()
 
         return ExperimentOutputDocument.model_validate_json(text)
+
+
+T = TypeVar("T", bound=Enum, covariant=True)
+
+
+class EvaluationSpec(BaseModel):
+    name: str
+    prompt: Prompt
+    recommended_llm_client_enum: Optional[SyncLLMClientEnum]
+    recommended_llm_model: Optional[str]
+    evaluation_outcome: Type[Enum]
+    in_context: List[Literal["question", "llm_answer", "context"]] = [
+        "question",
+        "llm_answer",
+        "context",
+    ]
+
+
+class EvaluationOutput(BaseModel, Generic[T]):
+    evaluation_id: str
+    evaluation_timestamp: datetime = Field(default_factory=datetime.now)
+    evaluation_name: str
+    evaluation_outcome: T
+
+
+class LLMResponseWithEvaluation(BaseModel, Generic[T]):
+    llm_response: SavedLLMResponse
+    evaluation: EvaluationOutput[T]
+
+
+class EvaluationMetadata(BaseModel, Generic[T]):
+    evaluation_name: str
+    evaluator_client_enum: SyncLLMClientEnum
+    evaluator_model: str
+    evaluation_prompt: Prompt
+    evaluation_outcomes_enum: Type[T]
+    in_context: List[Literal["question", "llm_answer", "context"]] = [
+        "question",
+        "llm_answer",
+        "context",
+    ]
+
+
+class EvaluatedExperimentDocument(BaseModel):
+    experiment_metadata: ExperimentMetadata
+    evaluation_metadata: List[EvaluationMetadata[Enum]]
+    responses: List[LLMResponseWithEvaluation[Enum]]

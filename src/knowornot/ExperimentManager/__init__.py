@@ -178,7 +178,6 @@ class ExperimentManager:
                 identifier=identifier,
                 llm_response=answer,
                 cited_QA=citation,
-                evaluation=None,
             )
 
             llm_response_list.append(final_response)
