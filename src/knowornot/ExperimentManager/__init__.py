@@ -81,6 +81,7 @@ class ExperimentManager:
                     + f"The context is {self._create_context_string(qa_with_context.context_questions)}",
                     expected_answer=qa_with_context.expected_answer,
                     context=qa_with_context.context_questions,
+                    source_context_qa=qa_with_context,
                 )
             )
         return individual_experiment_inputs

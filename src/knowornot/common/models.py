@@ -113,6 +113,7 @@ class IndividualExperimentInput(BaseModel):
     prompt_to_llm: str
     expected_answer: str
     context: Optional[List[QAPair]]
+    source_context_qa: QAWithContext
 
 
 class ExperimentType(Enum):
