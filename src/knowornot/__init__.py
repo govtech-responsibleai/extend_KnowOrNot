@@ -36,6 +36,7 @@ class KnowOrNot:
         self.fact_manager: Optional[FactManager] = None
         self.question_manager: Optional[QuestionExtractor] = None
         self.experiment_manager: Optional[ExperimentManager] = None
+        self._setup_logger()
 
     def _setup_logger(self) -> None:
         self.logger.setLevel(logging.INFO)
