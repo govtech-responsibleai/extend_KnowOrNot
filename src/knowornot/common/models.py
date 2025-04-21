@@ -191,9 +191,9 @@ class EvaluationSpec(BaseModel):
     recommended_llm_client_enum: Optional[SyncLLMClientEnum]
     recommended_llm_model: Optional[str]
     evaluation_outcome: Type[Enum]
-    in_context: List[Literal["question", "llm_answer", "context"]] = [
+    in_context: List[Literal["question", "expected_answer", "context"]] = [
         "question",
-        "llm_answer",
+        "expected_answer",
         "context",
     ]
 
@@ -216,9 +216,9 @@ class EvaluationMetadata(BaseModel, Generic[T]):
     evaluator_model: str
     evaluation_prompt: Prompt
     evaluation_outcomes_enum: Type[T]
-    in_context: List[Literal["question", "llm_answer", "context"]] = [
+    in_context: List[Literal["question", "expected_answer", "context"]] = [
         "question",
-        "llm_answer",
+        "expected_answer",
         "context",
     ]
 
