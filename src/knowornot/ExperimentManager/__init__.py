@@ -149,8 +149,17 @@ class ExperimentManager:
         client_enum = experiment.metadata.client_enum
         sync_client = client_registry[client_enum]
 
+        self.logger.info(
+            f"Running experiment with client {client_enum} and model {experiment.metadata.ai_model_used}"
+        )
+        self.logger.info(f"There are {len(experiment.questions)} questions")
+        self.logger.info(
+            f"The experiment type is {experiment.metadata.experiment_type}"
+        )
+
         llm_response_list: List[SavedLLMResponse] = []
         for idx, experiment_input in enumerate(experiment.questions):
+            self.logger.info(f"Running question {idx}")
             answer = sync_client.get_structured_response(
                 prompt=experiment_input.prompt_to_llm,
                 ai_model=experiment.metadata.ai_model_used,
@@ -163,6 +172,15 @@ class ExperimentManager:
                 if experiment_input.source_context_qa.context_questions is None:
                     self.logger.error(
                         f"Context is None but citation is not 'no citation'. This should not happen. {experiment_input}"
+                    )
+                    continue
+                if (
+                    answer.citation
+                    >= len(experiment_input.source_context_qa.context_questions)
+                    or answer.citation < 0
+                ):
+                    self.logger.error(
+                        f"Citation is out of bounds. This should not happen. {answer.citation} is the citation but there are only {len(experiment_input.source_context_qa.context_questions)} context questions"
                     )
                     continue
                 citation = experiment_input.source_context_qa.context_questions[
@@ -183,6 +201,7 @@ class ExperimentManager:
             )
 
             llm_response_list.append(final_response)
+            self.logger.info(f"Finished question {idx}")
 
         return ExperimentOutputDocument(
             metadata=experiment.metadata, responses=llm_response_list

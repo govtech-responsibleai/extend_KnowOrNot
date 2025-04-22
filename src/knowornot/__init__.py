@@ -585,6 +585,8 @@ class KnowOrNot:
         except KeyError:
             raise ValueError(f"Client with enum {llm_client_enum} is not registered")
 
+        self.logger.info(f"Client to use: {client_to_use}")
+
         experiment_manager = self._get_experiment_manager(
             alternative_llm_client=client_to_use
         )

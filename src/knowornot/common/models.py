@@ -49,12 +49,12 @@ class AtomicFactDocument(BaseModel):
             f.write(self.model_dump_json(indent=2))
 
     @staticmethod
-    def load_from_json(path: Path) -> "AtomicFactDocument":
+    def load_from_json(path: Path | str) -> "AtomicFactDocument":
         """
         Read an AtomicFactDocument from a JSON file at the specified path.
 
         Args:
-            path (Path): Path to the JSON file
+            path (Path | str): Path or string to the JSON file
 
         Returns:
             AtomicFactDocument: The loaded document
@@ -63,6 +63,9 @@ class AtomicFactDocument(BaseModel):
             ValueError: If the path doesn't end with .json
             FileNotFoundError: If the file doesn't exist
         """
+        if isinstance(path, str):
+            path = Path(path)
+
         if not path.suffix == ".json":
             raise ValueError(f"The path must end with .json. Got: {path}")
 
@@ -134,7 +137,9 @@ class QuestionDocument(BaseModel):
         return
 
     @staticmethod
-    def load_from_json(path: Path) -> "QuestionDocument":
+    def load_from_json(path: Path | str) -> "QuestionDocument":
+        if isinstance(path, str):
+            path = Path(path)
         if not path.suffix == ".json":
             raise ValueError(f"The path must end with .json. Got: {path}")
 
@@ -172,7 +177,9 @@ class ExperimentOutputDocument(BaseModel):
         self.metadata.output_path.write_text(self.model_dump_json(indent=2))
 
     @staticmethod
-    def load_from_json(path: Path) -> "ExperimentOutputDocument":
+    def load_from_json(path: Path | str) -> "ExperimentOutputDocument":
+        if isinstance(path, str):
+            path = Path(path)
         if not path.suffix == ".json":
             raise ValueError(f"The path must end with .json. Got: {path}")
 
@@ -232,7 +239,9 @@ class EvaluatedExperimentDocument(BaseModel):
         self.path_to_store.write_text(self.model_dump_json(indent=2))
 
     @staticmethod
-    def load_from_json(path: Path) -> "EvaluatedExperimentDocument":
+    def load_from_json(path: Path | str) -> "EvaluatedExperimentDocument":
+        if isinstance(path, str):
+            path = Path(path)
         if not path.suffix == ".json":
             raise ValueError(f"The path must end with .json. Got: {path}")
 
