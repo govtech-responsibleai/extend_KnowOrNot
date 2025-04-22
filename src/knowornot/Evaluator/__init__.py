@@ -83,7 +83,7 @@ class Evaluator:
                 evaluation_name=evaluation_name,
                 evaluation_prompt=spec.prompt,
                 tag_name=spec.tag_name,
-                evaluation_outcomes_enum=spec.evaluation_outcome,
+                evaluation_outcomes_list=spec.evaluation_outcomes,
             )
 
             metadata_items.append(metadata)
@@ -96,11 +96,11 @@ class Evaluator:
                     evaluation_kind.evaluator_client_enum
                 ]
                 context = self._create_context(evaluation_kind, response)
-                evaluation_raw = evaluator_client.prompt_for_enum(
+                evaluation_raw = evaluator_client.prompt_and_extract_tag(
                     prompt=context,
                     ai_model=evaluation_kind.evaluator_model,
                     tag_name=evaluation_kind.tag_name,
-                    enum_class=evaluation_kind.evaluation_outcomes_enum,
+                    allowed_list=evaluation_kind.evaluation_outcomes_list,
                     on_multiple="last",
                 )
 

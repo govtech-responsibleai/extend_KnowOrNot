@@ -109,39 +109,39 @@ class SyncLLMClient(ABC):
         pass
 
     @overload
-    def prompt_for_enum(
+    def prompt_and_extract_tag(
         self,
         prompt: Union[str, List[Message]],
         tag_name: str,
-        enum_class: Type[U],
+        allowed_list: List[str],
         on_multiple: Literal["error", "first", "last"],
         ai_model: Optional[str] = None,
-    ) -> U: ...
+    ) -> str: ...
 
     @overload
-    def prompt_for_enum(
+    def prompt_and_extract_tag(
         self,
         prompt: Union[str, List[Message]],
         tag_name: str,
-        enum_class: Type[U],
+        allowed_list: List[str],
         on_multiple: Literal["list"],
         ai_model: Optional[str] = None,
-    ) -> List[U]: ...
+    ) -> List[str]: ...
 
-    def prompt_for_enum(
+    def prompt_and_extract_tag(
         self,
         prompt: Union[str, List[Message]],
         tag_name: str,
-        enum_class: Type[U],
+        allowed_list: List[str],
         on_multiple: Literal["error", "first", "last", "list"],
         ai_model: Optional[str] = None,
-    ) -> Union[U, List[U]]:
-        """Prompts the LLM and extracts values from XML tags in the response, validating against an enum.
+    ) -> Union[str, List[str]]:
+        """Prompts the LLM and extracts values from XML tags in the response, validating against an allowed list.
 
         Args:
             prompt: The input prompt to send to the LLM. Can be a string or list of Message objects.
             tag_name: The name of the XML tag to extract from.
-            enum_class: The Enum class to validate the extracted value(s) against.
+            allowed_list: The list of allowed values to validate the extracted value(s) against.
             ai_model: The name of the AI model to use. If None, uses the default model.
             on_multiple: How to handle multiple tag matches. Options:
                 - "error": Raise ValueError if multiple tags are found (default)
@@ -150,11 +150,11 @@ class SyncLLMClient(ABC):
                 - "list": Return all matches as a list
 
         Returns:
-            If on_multiple is "first", "last", or "error" (and only one match): The enum value
-            If on_multiple is "list": A list of enum values
+            If on_multiple is "first", "last", or "error" (and only one match): The extracted value
+            If on_multiple is "list": A list of extracted values
 
         Raises:
-            ValueError: If no tags are found, if the extracted value isn't in the enum,
+            ValueError: If no tags are found, if the extracted value isn't in the allowed list,
                        or if multiple tags are found when on_multiple="error"
         """
         # Get response from LLM
@@ -178,24 +178,15 @@ class SyncLLMClient(ABC):
             elif on_multiple != "list":
                 raise ValueError(f"Invalid on_multiple value: {on_multiple}")
 
-        # Validate against enum and convert
+        # Validate against allowed list and convert
         result = []
         for value in matches:
             value = value.strip()
-            try:
-                # Try direct value match
-                enum_value = enum_class(value)
-                result.append(enum_value)
-            except ValueError:
-                # Try case-insensitive match
-                for enum_item in enum_class:
-                    if enum_item.value.upper() == value.upper():
-                        result.append(enum_item)
-                        break
-                else:  # No match found
-                    raise ValueError(
-                        f"Value '{value}' from tag <{tag_name}> is not valid for {enum_class.__name__}"
-                    )
+            if value not in allowed_list:
+                raise ValueError(
+                    f"Value '{value}' from tag <{tag_name}> is not in the allowed list: {allowed_list}"
+                )
+            result.append(value)
 
         # Return result based on on_multiple
         return result if on_multiple == "list" else result[0]

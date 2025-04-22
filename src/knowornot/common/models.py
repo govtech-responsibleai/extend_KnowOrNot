@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 from pathlib import Path
-from typing import List, Optional, Type, Union, Literal
+from typing import List, Optional, Union, Literal
 from ..SyncLLMClient import SyncLLMClientEnum
 
 
@@ -195,7 +195,7 @@ class EvaluationSpec(BaseModel):
     tag_name: str
     recommended_llm_client_enum: Optional[SyncLLMClientEnum]
     recommended_llm_model: Optional[str]
-    evaluation_outcome: Type[Enum]
+    evaluation_outcomes: List[str]
     in_context: List[Literal["question", "expected_answer", "context"]] = [
         "question",
         "expected_answer",
@@ -207,7 +207,7 @@ class EvaluationOutput(BaseModel):
     evaluation_id: str
     evaluation_timestamp: datetime
     evaluation_name: str
-    evaluation_outcome: Enum
+    evaluation_outcome: str
 
 
 class LLMResponseWithEvaluation(BaseModel):
@@ -221,7 +221,7 @@ class EvaluationMetadata(BaseModel):
     evaluator_model: str
     evaluation_prompt: Prompt
     tag_name: str
-    evaluation_outcomes_enum: Type[Enum]
+    evaluation_outcomes_list: List[str]
     in_context: List[Literal["question", "expected_answer", "context"]] = [
         "question",
         "expected_answer",

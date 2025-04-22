@@ -1,7 +1,6 @@
-from enum import Enum
 import os
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Type, Union
+from typing import Dict, List, Literal, Optional, Union
 import logging
 
 from .QuestionExtractor.models import FilterMethod
@@ -603,7 +602,7 @@ class KnowOrNot:
         evaluation_name: str,
         prompt_identifier: str,
         prompt_content: str,
-        evaluation_outcome: Type[Enum],
+        evaluation_outcomes: List[str],
         tag_name: str,
         in_context: List[Literal["question", "expected_answer", "context"]] = [
             "question",
@@ -620,7 +619,7 @@ class KnowOrNot:
             evaluation_name (str): The name of the evaluation.
             prompt_identifier (str): The identifier for the prompt.
             prompt_content (str): The content of the prompt.
-            evaluation_outcome (Type[Enum]): The type of the evaluation outcome.
+            evaluation_outcomes (List[str]): The possible outcomes of the evaluation.
             tag_name (str): The tag associated with the evaluation.
             in_context (List[Literal["question", "expected_answer", "context"]], optional):
                 The parts of the prompt to include in the context. Defaults to [
@@ -635,18 +634,20 @@ class KnowOrNot:
         Returns:
             EvaluationSpec: The created EvaluationSpec object.
         """
-        if not recommended_llm_client_enum:
-            if not self.default_sync_client:
-                raise ValueError(
-                    "You must set a default LLM Client or pass one in before performing any operations"
-                )
+
+        if not recommended_llm_client_enum and self.default_sync_client:
             recommended_llm_client_enum = self.default_sync_client.enum_name
+        else:
+            raise ValueError(
+                "No default LLM client is available and no client is specified"
+            )
+
         return EvaluationSpec(
             name=evaluation_name,
             prompt=Prompt(content=prompt_content, identifier=prompt_identifier),
             in_context=in_context,
             tag_name=tag_name,
-            evaluation_outcome=evaluation_outcome,
+            evaluation_outcomes=evaluation_outcomes,
             recommended_llm_client_enum=recommended_llm_client_enum,
             recommended_llm_model=recommended_llm_model,
         )
