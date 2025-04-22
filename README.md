@@ -13,7 +13,7 @@ Modern LLMs have a tendency to hallucinate - confidently providing incorrect inf
 ## Installation
 
 ```bash
-pip install knowornot # in this case not so, do uv add ../KnoworNot
+pip install knowornot # in this case - do uv add ../KnoworNot
 ```
 
 ## Quick Start
@@ -64,7 +64,7 @@ experiment_output = kon.run_experiment_sync(experiment_input)
 abstention_spec = kon.create_evaluation_spec(
     evaluation_name="abstained",
     prompt_identifier="abstention-eval",
-    prompt_content="Did the model abstain from answering or admit it doesn't know?",
+    prompt_content="Did the model abstain from answering or admit it doesn't know? Or did it answer the question? Give your answer in <abstention></abstention> tags. The options for content between the tags are abstained, and attempted_answer",
     evaluation_outcomes=["abstained", "attempted_answer"],
     tag_name="abstention"
 )
@@ -72,8 +72,8 @@ abstention_spec = kon.create_evaluation_spec(
 accuracy_spec = kon.create_evaluation_spec(
     evaluation_name="accuracy",
     prompt_identifier="accuracy-eval",
-    prompt_content="Is the model's answer accurate compared to the expected answer?",
-    evaluation_outcomes=["accurate", "inaccurate", "partially_accurate"],
+    prompt_content="Is the model's answer accurate compared to the expected answer? Give your answer in <accuracy></accuracy> tags. The possible options to but in between these are accurate and inaccurate",
+    evaluation_outcomes=["accurate", "inaccurate"],
     tag_name="accuracy"
 )
 
