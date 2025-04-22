@@ -6,6 +6,7 @@ import logging
 from .QuestionExtractor.models import FilterMethod
 from .common.models import (
     ExperimentInputDocument,
+    ExperimentOutputDocument,
     Prompt,
     QAPair,
     QAPairFinal,
@@ -500,6 +501,28 @@ class KnowOrNot:
 
         output = experiment_manager.create_experiment(
             experiment_params=experiment_params
+        )
+        output.save_to_json()
+
+        return output
+
+    def run_experiment_sync(
+        self,
+        experiment_input: ExperimentInputDocument,
+    ) -> ExperimentOutputDocument:
+        llm_client_enum = experiment_input.metadata.client_enum
+        try:
+            client_to_use = self.get_client(llm_client_enum)
+
+        except KeyError:
+            raise ValueError(f"Client with enum {llm_client_enum} is not registered")
+
+        experiment_manager = self._get_experiment_manager(
+            alternative_llm_client=client_to_use
+        )
+        output = experiment_manager.run_experiment_sync(
+            experiment=experiment_input,
+            client_registry=self.client_registry,
         )
         output.save_to_json()
 

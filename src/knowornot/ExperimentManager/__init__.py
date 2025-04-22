@@ -131,7 +131,7 @@ class ExperimentManager:
             system_prompt=experiment_params.system_prompt,
             input_path=experiment_params.input_path,
             output_path=experiment_params.output_path,
-            client=experiment_params.llm_client_enum,
+            client_enum=experiment_params.llm_client_enum,
             ai_model_used=experiment_params.ai_model_for_experiment,
             knowledge_base_identifier=experiment_params.knowledge_base_identifier,
         )
@@ -146,7 +146,7 @@ class ExperimentManager:
         experiment: ExperimentInputDocument,
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
     ) -> ExperimentOutputDocument:
-        client_enum = experiment.metadata.client
+        client_enum = experiment.metadata.client_enum
         sync_client = client_registry[client_enum]
 
         llm_response_list: List[SavedLLMResponse] = []

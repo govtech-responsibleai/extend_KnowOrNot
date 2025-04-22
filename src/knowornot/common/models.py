@@ -151,7 +151,7 @@ class ExperimentMetadata(BaseModel):
     output_path: Path
     retrieval_type: RetrievalType
     creation_timestamp: datetime
-    client: SyncLLMClientEnum
+    client_enum: SyncLLMClientEnum
     ai_model_used: str
     knowledge_base_identifier: str
 
