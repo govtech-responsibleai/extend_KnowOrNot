@@ -1,10 +1,12 @@
+from enum import Enum
 import os
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Type, Union
 import logging
 
 from .QuestionExtractor.models import FilterMethod
 from .common.models import (
+    EvaluatedExperimentDocument,
     ExperimentInputDocument,
     ExperimentOutputDocument,
     Prompt,
@@ -12,6 +14,7 @@ from .common.models import (
     QAPairFinal,
     QuestionDocument,
     RetrievalType,
+    EvaluationSpec,
 )
 from .QuestionExtractor import QuestionExtractor
 from .config import AzureOpenAIConfig
@@ -21,6 +24,7 @@ from .FactManager import FactManager
 from .PromptManager import PromptManager
 from .ExperimentManager.models import ExperimentParams, ExperimentType
 from .ExperimentManager import ExperimentManager
+from .Evaluator import Evaluator
 
 __all__ = ["KnowOrNot", "SyncLLMClient"]
 
@@ -37,6 +41,7 @@ class KnowOrNot:
         self.fact_manager: Optional[FactManager] = None
         self.question_manager: Optional[QuestionExtractor] = None
         self.experiment_manager: Optional[ExperimentManager] = None
+        self.evaluator: Optional[Evaluator] = None
         self._setup_logger()
 
     def _setup_logger(self) -> None:
@@ -202,6 +207,27 @@ class KnowOrNot:
 
         return self.experiment_manager
 
+    def _get_evaluator(
+        self,
+        evaluation_spec_dict: Dict[str, EvaluationSpec],
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        model_to_use: Optional[str] = None,
+    ) -> Evaluator:
+        client = alternative_llm_client or self.default_sync_client
+        if not client:
+            raise ValueError(
+                "You must set a default LLM Client or pass one in before performing any experiment related operations"
+            )
+
+        self.evaluator = Evaluator(
+            default_client=client,
+            logger=self.logger,
+            evaluation_dict=evaluation_spec_dict,
+            evaluation_model=model_to_use,
+        )
+
+        return self.evaluator
+
     def add_azure(
         self,
         azure_endpoint: Optional[str] = None,
@@ -308,13 +334,33 @@ class KnowOrNot:
 
         Args:
             source_paths(List[Path]): A list of txt files to make the questions from
+            knowledge_base_identifier (str): The identifier for the knowledge base
+            context_prompt (str): The context to include in the prompt sent to the LLM to generate the questions.
+            path_to_save_questions (Path): The path to save the questions to. Must be a json.
+            filter_method (Literal["keyword", "semantic", "both"]): The method to use for filtering the facts.
+            alternative_fact_creation_llm_prompt (Optional[Prompt]): An alternative prompt to use for fact creation. If not provided, the default prompt from PromptManager will be used.
+            alternative_fact_creator_llm_client (Optional[SyncLLMClient]): An alternative client to use for fact creation. If not provided, the default client will be used.
+            alternative_fact_creation_llm_model (Optional[str]): An alternative model to use for fact creation. If not provided, the default model of either the client provided or the default client will be used with preference for the client provided.
+            alternative_question_creation_llm_prompt (Optional[Prompt]): An alternative prompt to use for question creation. If not provided, the default prompt from PromptManager will be used.
+            alternative_question_creator_llm_client (Optional[SyncLLMClient]): An alternative client to use for question creation. If not provided, the default client will be used.
+            fact_storage_dir (Optional[Path]): The directory to store the facts in. If not provided, facts will not be stored.
+            semantic_filter_threshold (Optional[float]): The threshold to use for semantic filtering. If not provided, the default threshold of 0.3 will be used.
+            keyword_filter_threshold (Optional[float]): The threshold to use for keyword filtering. If not provided, the default threshold of 0.3 will be used.
 
+        Returns:
+            QuestionDocument: A QuestionDocument object containing the questions and answers
+
+        Raises:
+            TypeError: If any of the provided source paths are not of type Path
+            FileNotFoundError: If any of the provided source paths do not exist
+            ValueError: If no client is set and no alternative client is provided
+            ValueError: If any of the provided source paths are not .txt files
+            ValueError: If the provided fact_storage_dir is not a directory
+            ValueError: If the provided filter_method is not one of ['keyword', 'semantic', 'both']
+            ValueError: If the alternative client provided, or default client cannot use instructor
+            ValueError: If the question process is unable to create any diverse questions
 
         """
-
-        fact_manager = self._get_fact_manager(
-            alternative_client=alternative_fact_creator_llm_client
-        )
 
         for path in source_paths:
             if not isinstance(path, Path):
@@ -323,6 +369,10 @@ class KnowOrNot:
                 raise FileNotFoundError(f"{path} does not exist")
             if not path.suffix.lower() == ".txt":
                 raise ValueError(f"Only .txt files are provided. Got {path}")
+
+        fact_manager = self._get_fact_manager(
+            alternative_client=alternative_fact_creator_llm_client
+        )
 
         if fact_storage_dir is not None:
             if not fact_storage_dir.is_dir():
@@ -510,6 +560,24 @@ class KnowOrNot:
         self,
         experiment_input: ExperimentInputDocument,
     ) -> ExperimentOutputDocument:
+        """
+        Executes an experiment synchronously using the specified experiment input.
+
+        This function retrieves the appropriate LLM client based on the client enum
+        in the experiment metadata, then executes the experiment using the ExperimentManager.
+        The result is saved to a JSON file.
+
+        Args:
+            experiment_input (ExperimentInputDocument): The input document containing
+            the experiment details and metadata.
+
+        Returns:
+            ExperimentOutputDocument: The output document containing the results of the experiment.
+
+        Raises:
+            ValueError: If the client enum specified in the experiment metadata is not registered.
+        """
+
         llm_client_enum = experiment_input.metadata.client_enum
         try:
             client_to_use = self.get_client(llm_client_enum)
@@ -527,3 +595,95 @@ class KnowOrNot:
         output.save_to_json()
 
         return output
+
+    def create_evaluation_spec(
+        self,
+        evaluation_name: str,
+        prompt_identifier: str,
+        prompt_content: str,
+        evaluation_outcome: Type[Enum],
+        tag_name: str,
+        in_context: List[Literal["question", "expected_answer", "context"]] = [
+            "question",
+            "expected_answer",
+            "context",
+        ],
+        recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
+        recommended_llm_model: Optional[str] = None,
+    ) -> EvaluationSpec:
+        """
+        Creates an EvaluationSpec object based on the provided parameters.
+
+        Args:
+            evaluation_name (str): The name of the evaluation.
+            prompt_identifier (str): The identifier for the prompt.
+            prompt_content (str): The content of the prompt.
+            evaluation_outcome (Type[Enum]): The type of the evaluation outcome.
+            tag_name (str): The tag associated with the evaluation.
+            in_context (List[Literal["question", "expected_answer", "context"]], optional):
+                The parts of the prompt to include in the context. Defaults to [
+                    "question", "expected_answer", "context"].
+            recommended_llm_client_enum (Optional[SyncLLMClientEnum], optional):
+                The recommended LLM client enum for this evaluation. Defaults to
+                None, in which case the default client's enum is used.
+            recommended_llm_model (Optional[str], optional):
+                The recommended LLM model for this evaluation. Defaults to None in which
+                case the given client's default model is used, or the default client's model is used.
+
+        Returns:
+            EvaluationSpec: The created EvaluationSpec object.
+        """
+        if not recommended_llm_client_enum:
+            if not self.default_sync_client:
+                raise ValueError(
+                    "You must set a default LLM Client or pass one in before performing any operations"
+                )
+            recommended_llm_client_enum = self.default_sync_client.enum_name
+        return EvaluationSpec(
+            name=evaluation_name,
+            prompt=Prompt(content=prompt_content, identifier=prompt_identifier),
+            in_context=in_context,
+            tag_name=tag_name,
+            evaluation_outcome=evaluation_outcome,
+            recommended_llm_client_enum=recommended_llm_client_enum,
+            recommended_llm_model=recommended_llm_model,
+        )
+
+    def create_evaluator(
+        self,
+        evaluation_dict: Dict[str, EvaluationSpec],
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        alternative_llm_model: Optional[str] = None,
+    ) -> Evaluator:
+        """
+        Creates an Evaluator object from the given evaluation specifications.
+
+        Args:
+            evaluation_dict (Dict[str, EvaluationSpec]): A dictionary mapping evaluation names to EvaluationSpec objects.
+            alternative_llm_client (Optional[SyncLLMClient], optional): The LLM client to use for evaluation. Defaults to None.
+            alternative_llm_model (Optional[str], optional): The LLM model to use for evaluation. Defaults to None.
+
+        Returns:
+            Evaluator: The created Evaluator object.
+        """
+        evaluator = self._get_evaluator(
+            evaluation_spec_dict=evaluation_dict,
+            alternative_llm_client=alternative_llm_client,
+            model_to_use=alternative_llm_model,
+        )
+
+        return evaluator
+
+    def evaluate_experiment(
+        self, experiment_output: ExperimentOutputDocument, path_to_store: Path
+    ) -> EvaluatedExperimentDocument:
+        if not self.evaluator:
+            raise ValueError(
+                "You must create an evaluator with create_evaluator before evaluating an experiment"
+            )
+
+        return self.evaluator.evaluate_document(
+            document=experiment_output,
+            client_registry=self.client_registry,
+            path_to_store=path_to_store,
+        )
