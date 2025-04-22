@@ -654,7 +654,7 @@ class KnowOrNot:
 
     def create_evaluator(
         self,
-        evaluation_dict: Dict[str, EvaluationSpec],
+        evaluation_list: List[EvaluationSpec],
         alternative_llm_client: Optional[SyncLLMClient] = None,
         alternative_llm_model: Optional[str] = None,
     ) -> Evaluator:
@@ -669,6 +669,7 @@ class KnowOrNot:
         Returns:
             Evaluator: The created Evaluator object.
         """
+        evaluation_dict = {spec.name: spec for spec in evaluation_list}
         evaluator = self._get_evaluator(
             evaluation_spec_dict=evaluation_dict,
             alternative_llm_client=alternative_llm_client,
