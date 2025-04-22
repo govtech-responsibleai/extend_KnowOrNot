@@ -13,7 +13,7 @@ Modern LLMs have a tendency to hallucinate - confidently providing incorrect inf
 ## Installation
 
 ```bash
-pip install knowornot
+pip install knowornot # in this case not so, do uv add ../KnoworNot
 ```
 
 ## Quick Start
@@ -113,15 +113,3 @@ KnowOrNot consists of several integrated components:
 3. **ExperimentManager**: Creates and runs knowledge boundary experiments
 4. **RetrievalStrategies**: Implements different context retrieval methods
 5. **Evaluator**: Assesses model responses with customizable metrics
-
-## Advanced Usage
-
-For more advanced usage examples, detailed API documentation, and experimental best practices, please visit our [documentation site](https://knowornot.readthedocs.io/).
-
-## Contributing
-
-We welcome contributions to improve KnowOrNot! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## License
-
-KnowOrNot is released under the MIT License. See [LICENSE](LICENSE) for details.
