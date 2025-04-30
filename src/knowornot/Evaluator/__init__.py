@@ -12,7 +12,10 @@ from ..common.models import (
     EvaluationOutput,
 )
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
+import asyncio
+import concurrent.futures
+from tqdm import tqdm
 
 
 class Evaluator:
@@ -52,15 +55,14 @@ class Evaluator:
 
         return output
 
-    def evaluate_document(
+    def _create_metadata_list(
         self,
-        document: ExperimentOutputDocument,
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         path_to_store: Path,
-    ) -> EvaluatedExperimentDocument:
+    ) -> List[EvaluationMetadata]:
+        output: List[EvaluationMetadata] = []
         if not path_to_store.suffix == ".json":
             raise ValueError(f"The path must end with .json. Got: {path_to_store}")
-        metadata_items: List[EvaluationMetadata] = []
 
         for evaluation_name, spec in self.evaluation_dict.items():
             used_evaluator_client_enum = (
@@ -71,6 +73,7 @@ class Evaluator:
                 raise ValueError(
                     f"{used_evaluator_client_enum} not in client registry. Please add a client for {used_evaluator_client_enum}"
                 )
+
             used_evaluator_client = client_registry[used_evaluator_client_enum]
 
             used_model = (
@@ -86,7 +89,38 @@ class Evaluator:
                 evaluation_outcomes_list=spec.evaluation_outcomes,
             )
 
-            metadata_items.append(metadata)
+            output.append(metadata)
+
+        return output
+
+    def _create_single_evaluation_output(
+        self,
+        evaluation_raw: str,
+        evaluation_kind: EvaluationMetadata,
+        response: SavedLLMResponse,
+    ) -> EvaluationOutput:
+        evaluation_timestamp = datetime.now()
+        evaluation_timestamp_str = evaluation_timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        evaluation_id = f"{evaluation_kind.evaluation_name}_{evaluation_timestamp_str}_{response.identifier}_{evaluation_kind.evaluator_model}"
+
+        evaluation_output = EvaluationOutput(
+            evaluation_name=evaluation_kind.evaluation_name,
+            evaluation_outcome=evaluation_raw,
+            evaluation_timestamp=evaluation_timestamp,
+            evaluation_id=evaluation_id,
+        )
+
+        return evaluation_output
+
+    def evaluate_document(
+        self,
+        document: ExperimentOutputDocument,
+        client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
+        path_to_store: Path,
+    ) -> EvaluatedExperimentDocument:
+        metadata_items = self._create_metadata_list(
+            client_registry=client_registry, path_to_store=path_to_store
+        )
 
         evaluated_llm_responses = []
         for response in document.responses:
@@ -104,21 +138,13 @@ class Evaluator:
                     on_multiple="last",
                 )
 
-                evaluation_timestamp = datetime.now()
-                evaluation_timestamp_str = evaluation_timestamp.strftime(
-                    "%Y-%m-%d %H:%M:%S"
+                evaluation_outputs.append(
+                    self._create_single_evaluation_output(
+                        evaluation_raw=evaluation_raw,
+                        evaluation_kind=evaluation_kind,
+                        response=response,
+                    )
                 )
-
-                evaluation_id = f"{evaluation_kind.evaluation_name}_{evaluation_timestamp_str}_{response.identifier}_{evaluation_kind.evaluator_model}"
-
-                evaluation_output = EvaluationOutput(
-                    evaluation_name=evaluation_kind.evaluation_name,
-                    evaluation_outcome=evaluation_raw,
-                    evaluation_timestamp=evaluation_timestamp,
-                    evaluation_id=evaluation_id,
-                )
-
-                evaluation_outputs.append(evaluation_output)
 
             evaluated_llm_responses.append(
                 LLMResponseWithEvaluation(
@@ -131,6 +157,130 @@ class Evaluator:
             experiment_metadata=document.metadata,
             evaluation_metadata=metadata_items,
             responses=evaluated_llm_responses,
+        )
+
+        output.save_to_json()
+
+        return output
+
+    async def evaluate_document_async(
+        self,
+        document: ExperimentOutputDocument,
+        client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
+        path_to_store: Path,
+        max_workers: int = 8,
+    ) -> EvaluatedExperimentDocument:
+        metadata_items = self._create_metadata_list(
+            client_registry=client_registry, path_to_store=path_to_store
+        )
+
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+        loop = asyncio.get_event_loop()
+
+        evaluated_llm_responses: List[Optional[LLMResponseWithEvaluation]] = [
+            None
+        ] * len(document.responses)
+
+        async def process_evaluation(
+            response_idx: int,
+            response: SavedLLMResponse,
+            evaluation_idx: int,
+            evaluation_kind: EvaluationMetadata,
+        ) -> Tuple[int, int, SavedLLMResponse, EvaluationMetadata, str]:
+            evaluator_client = client_registry[evaluation_kind.evaluator_client_enum]
+            context = self._create_context(evaluation_kind, response)
+
+            # Run the synchronous API call in a thread
+            evaluation_raw = await loop.run_in_executor(
+                executor,
+                lambda: evaluator_client.prompt_and_extract_tag(
+                    prompt=context,
+                    ai_model=evaluation_kind.evaluator_model,
+                    tag_name=evaluation_kind.tag_name,
+                    allowed_list=evaluation_kind.evaluation_outcomes_list,
+                    on_multiple="last",
+                ),
+            )
+
+            return (
+                response_idx,
+                evaluation_idx,
+                response,
+                evaluation_kind,
+                evaluation_raw,
+            )
+
+        # Create tasks for all response+evaluation combinations
+        tasks = []
+        total_tasks = 0
+
+        # Initialize evaluation results storage with the right structure
+        evaluations_by_response = {}
+        for idx, response in enumerate(document.responses):
+            # For each response, create a list with None placeholders for each evaluation
+            evaluations_by_response[idx] = [None] * len(metadata_items)
+
+            # Create tasks for each evaluation
+            for eval_idx, evaluation_kind in enumerate(metadata_items):
+                tasks.append(
+                    process_evaluation(idx, response, eval_idx, evaluation_kind)
+                )
+                total_tasks += 1
+
+        # Process all evaluations concurrently with a progress bar
+        self.logger.info(f"Processing {total_tasks} evaluations")
+        pbar = tqdm(total=total_tasks, desc="Processing evaluations")
+
+        for coro in asyncio.as_completed(tasks):
+            (
+                response_idx,
+                eval_idx,
+                response,
+                evaluation_kind,
+                evaluation_raw,
+            ) = await coro
+
+            evaluation_output = self._create_single_evaluation_output(
+                evaluation_raw=evaluation_raw,
+                evaluation_kind=evaluation_kind,
+                response=response,
+            )
+
+            # Store the evaluation at its correct position in the response's evaluation list
+            evaluations_by_response[response_idx][eval_idx] = evaluation_output
+            pbar.update(1)
+
+        pbar.close()
+
+        # Clean up
+        executor.shutdown()
+
+        # Create the final structure, maintaining both response and evaluation order
+        for idx, response in enumerate(document.responses):
+            evaluated_llm_responses[idx] = LLMResponseWithEvaluation(
+                llm_response=response, evaluations=evaluations_by_response[idx]
+            )
+
+        # Verify that all evaluations are properly placed
+        for resp_idx, resp in enumerate(evaluated_llm_responses):
+            assert resp is not None, f"Missing response at index {resp_idx}"
+            assert all(eval_result is not None for eval_result in resp.evaluations), (
+                f"Missing evaluations for response at index {resp_idx}"
+            )
+
+        confirmed_llm_responses = [
+            resp for resp in evaluated_llm_responses if resp is not None
+        ]
+        for resp_idx, resp in enumerate(confirmed_llm_responses):
+            assert all(eval_result is not None for eval_result in resp.evaluations), (
+                f"Missing evaluations for response at index {resp_idx}"
+            )
+
+        output = EvaluatedExperimentDocument(
+            path_to_store=path_to_store,
+            experiment_metadata=document.metadata,
+            evaluation_metadata=metadata_items,
+            responses=confirmed_llm_responses,
         )
 
         output.save_to_json()
