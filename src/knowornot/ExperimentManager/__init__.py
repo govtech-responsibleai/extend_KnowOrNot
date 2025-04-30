@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from ..common.models import (
     ExperimentOutputDocument,
@@ -21,6 +22,8 @@ from .models import (
 )
 from typing import Dict, List, Optional
 import logging
+import concurrent.futures
+from tqdm import tqdm
 
 
 class ExperimentManager:
@@ -67,6 +70,63 @@ class ExperimentManager:
             )
 
         return context_string
+
+    def _process_QA_response(
+        self,
+        QA_response: QAResponse,
+        experiment_input: IndividualExperimentInput,
+        knowledge_base_identifier: str,
+        idx: int,
+    ) -> SavedLLMResponse:
+        """
+        Process a QA response and create a SavedLLMResponse object
+
+        Returns a SavedLLMResponse object with citation=None if the response processing fails due to citation errors
+
+        Args:
+            QA_response: The response from the LLM
+            experiment_input: The original input to the experiment
+            knowledge_base_identifier: Identifier for the knowledge base
+            idx: Index of the question being processed
+
+        Returns:
+            SavedLLMResponse
+        """
+        if QA_response.citation == "no citation":
+            citation = None
+        else:
+            context_questions = experiment_input.source_context_qa.context_questions
+
+            if context_questions is None:
+                self.logger.error(
+                    f"Context is None but citation is not 'no citation'. This should not happen. {experiment_input}"
+                )
+                citation = None
+            elif (
+                QA_response.citation >= len(context_questions)
+                or QA_response.citation < 0
+            ):
+                self.logger.error(
+                    f"Citation is out of bounds. This should not happen. {QA_response.citation} is the citation but there are only {len(context_questions)} context questions"
+                )
+                citation = None
+            else:
+                citation = context_questions[QA_response.citation]
+
+        identifier = (
+            knowledge_base_identifier
+            + "_"
+            + str(idx)
+            + "_"
+            + datetime.now().strftime("%Y%m%d%H%M%S")
+        )
+
+        return SavedLLMResponse(
+            identifier=identifier,
+            experiment_input=experiment_input,
+            llm_response=QA_response,
+            cited_QA=citation,
+        )
 
     def convert_qa_with_context_to_individual_experiment_inputs(
         self, system_prompt: str, qa_with_context_list: List[QAWithContext]
@@ -166,38 +226,11 @@ class ExperimentManager:
                 response_model=QAResponse,
             )
 
-            if answer.citation == "no citation":
-                citation = None
-            else:
-                if experiment_input.source_context_qa.context_questions is None:
-                    self.logger.error(
-                        f"Context is None but citation is not 'no citation'. This should not happen. {experiment_input}"
-                    )
-                    continue
-                if (
-                    answer.citation
-                    >= len(experiment_input.source_context_qa.context_questions)
-                    or answer.citation < 0
-                ):
-                    self.logger.error(
-                        f"Citation is out of bounds. This should not happen. {answer.citation} is the citation but there are only {len(experiment_input.source_context_qa.context_questions)} context questions"
-                    )
-                    continue
-                citation = experiment_input.source_context_qa.context_questions[
-                    answer.citation
-                ]
-
-            identifier = (
-                experiment.metadata.knowledge_base_identifier
-                + "_"
-                + str(idx)
-                + datetime.now().strftime("%Y%m%d%H%M%S")
-            )
-            final_response = SavedLLMResponse(
-                identifier=identifier,
+            final_response = self._process_QA_response(
                 experiment_input=experiment_input,
-                llm_response=answer,
-                cited_QA=citation,
+                knowledge_base_identifier=experiment.metadata.knowledge_base_identifier,
+                QA_response=answer,
+                idx=idx,
             )
 
             llm_response_list.append(final_response)
@@ -205,4 +238,81 @@ class ExperimentManager:
 
         return ExperimentOutputDocument(
             metadata=experiment.metadata, responses=llm_response_list
+        )
+
+    async def run_experiment_async(
+        self,
+        experiment: ExperimentInputDocument,
+        client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
+        max_workers: int = 8,
+    ) -> ExperimentOutputDocument:
+        client_enum = experiment.metadata.client_enum
+        sync_client = client_registry[client_enum]
+
+        self.logger.info(
+            f"Running async experiment with client {client_enum} and model {experiment.metadata.ai_model_used}"
+        )
+        self.logger.info(f"There are {len(experiment.questions)} questions")
+        self.logger.info(
+            f"The experiment type is {experiment.metadata.experiment_type}"
+        )
+
+        # Create a thread pool executor with the specified number of workers
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+        loop = asyncio.get_event_loop()
+
+        llm_response_list: List[Optional[SavedLLMResponse]] = [None] * len(
+            experiment.questions
+        )
+
+        async def process_question(idx: int, experiment_input):
+            self.logger.info(f"Starting question {idx}")
+
+            # Run the synchronous API call in a thread
+            answer = await loop.run_in_executor(
+                executor,
+                lambda: sync_client.get_structured_response(
+                    prompt=experiment_input.prompt_to_llm,
+                    ai_model=experiment.metadata.ai_model_used,
+                    response_model=QAResponse,
+                ),
+            )
+
+            final_response = self._process_QA_response(
+                experiment_input=experiment_input,
+                knowledge_base_identifier=experiment.metadata.knowledge_base_identifier,
+                QA_response=answer,
+                idx=idx,
+            )
+
+            self.logger.info(f"Finished question {idx}")
+            return idx, final_response
+
+        # Create tasks for all questions
+        tasks = []
+        for idx, experiment_input in enumerate(experiment.questions):
+            tasks.append(process_question(idx, experiment_input))
+
+        # Wait for all tasks to complete
+        pbar = tqdm(total=len(tasks), desc="Processing questions")
+        for coro in asyncio.as_completed(tasks):
+            idx, result = await coro
+            if result is not None:
+                llm_response_list[idx] = result
+            pbar.update(1)
+        pbar.close()
+
+        # Remove any None values (from failed processing)
+        llm_response_list = [r for r in llm_response_list if r is not None]
+
+        # Clean up
+        executor.shutdown()
+
+        assert all(r is not None for r in llm_response_list), (
+            "All responses must be processed correctly"
+        )
+        new_response_list = [r for r in llm_response_list if r is not None]
+
+        return ExperimentOutputDocument(
+            metadata=experiment.metadata, responses=new_response_list
         )
