@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+
 from ..common.models import (
     ExperimentOutputDocument,
     IndividualExperimentInput,
@@ -315,4 +316,21 @@ class ExperimentManager:
 
         return ExperimentOutputDocument(
             metadata=experiment.metadata, responses=new_response_list
+        )
+
+    async def run_multiple_experiments_async(
+        self,
+        experiments: List[ExperimentInputDocument],
+        client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
+        max_workers: int = 8,
+    ) -> List[ExperimentOutputDocument]:
+        return await asyncio.gather(
+            *[
+                self.run_experiment_async(
+                    experiment=experiment,
+                    client_registry=client_registry,
+                    max_workers=max_workers,
+                )
+                for experiment in experiments
+            ]
         )
