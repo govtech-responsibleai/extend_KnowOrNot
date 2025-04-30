@@ -603,6 +603,48 @@ class KnowOrNot:
 
         return output
 
+    async def run_experiment_async(
+        self,
+        experiment_input: ExperimentInputDocument,
+    ) -> ExperimentOutputDocument:
+        """
+        Executes an experiment asynchronously using the specified experiment input.
+
+        This function retrieves the appropriate LLM client based on the client enum
+        in the experiment metadata, then executes the experiment using the ExperimentManager.
+        The result is saved to a JSON file.
+
+        Args:
+            experiment_input (ExperimentInputDocument): The input document containing
+            the experiment details and metadata.
+
+        Returns:
+            ExperimentOutputDocument: The output document containing the results of the experiment.
+
+        Raises:
+            ValueError: If the client enum specified in the experiment metadata is not registered.
+        """
+
+        llm_client_enum = experiment_input.metadata.client_enum
+        try:
+            client_to_use = self.get_client(llm_client_enum)
+
+        except KeyError:
+            raise ValueError(f"Client with enum {llm_client_enum} is not registered")
+
+        self.logger.info(f"Client to use: {client_to_use}")
+
+        experiment_manager = self._get_experiment_manager(
+            alternative_llm_client=client_to_use
+        )
+        output = await experiment_manager.run_experiment_async(
+            experiment=experiment_input,
+            client_registry=self.client_registry,
+        )
+        output.save_to_json()
+
+        return output
+
     def create_evaluation_spec(
         self,
         evaluation_name: str,
