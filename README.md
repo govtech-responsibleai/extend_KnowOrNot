@@ -18,74 +18,7 @@ pip install knowornot # in this case - do uv add ../KnoworNot
 
 ## Quick Start
 
-```python
-from knowornot import KnowOrNot
-from pathlib import Path
-
-# Initialize KnowOrNot
-kon = KnowOrNot()
-
-# Connect to an LLM provider (Azure OpenAI in this example)
-kon.add_azure(
-    azure_endpoint="https://your-endpoint.openai.azure.com",
-    azure_api_key="your-api-key",
-    azure_api_version="2023-05-15"
-)
-
-# Create a knowledge base from documents
-questions = kon.create_questions(
-    source_paths=[Path("document1.txt"), Path("document2.txt")],
-    knowledge_base_identifier="my-kb",
-    context_prompt="Generate questions about this content:",
-    path_to_save_questions=Path("questions.json"),
-    filter_method="both"
-)
-
-# Create system prompt that encourages abstention when uncertain
-system_prompt = kon.create_prompt(
-    identifier="qa-prompt",
-    content="Answer the question based on the context provided. If you cannot find the answer in the context, respond with 'I don't know'."
-)
-
-# Create experiment to test knowledge boundaries
-experiment_input = kon.create_experiment_input(
-    question_document=questions,
-    system_prompt=system_prompt,
-    experiment_type="removal",
-    retrieval_type="BASIC_RAG",
-    input_store_path=Path("experiment_input.json"),
-    output_store_path=Path("experiment_output.json")
-)
-
-# Run the experiment
-experiment_output = kon.run_experiment_sync(experiment_input)
-
-# Create evaluation metrics
-abstention_spec = kon.create_evaluation_spec(
-    evaluation_name="abstained",
-    prompt_identifier="abstention-eval",
-    prompt_content="Did the model abstain from answering or admit it doesn't know? Or did it answer the question? Give your answer in <abstention></abstention> tags. The options for content between the tags are abstained, and attempted_answer",
-    evaluation_outcomes=["abstained", "attempted_answer"],
-    tag_name="abstention"
-)
-
-accuracy_spec = kon.create_evaluation_spec(
-    evaluation_name="accuracy",
-    prompt_identifier="accuracy-eval",
-    prompt_content="Is the model's answer accurate compared to the expected answer? Give your answer in <accuracy></accuracy> tags. The possible options to but in between these are accurate and inaccurate",
-    evaluation_outcomes=["accurate", "inaccurate"],
-    tag_name="accuracy"
-)
-
-# Create evaluator with both metrics
-evaluator = kon.create_evaluator([abstention_spec, accuracy_spec])
-
-# Evaluate the results
-evaluation_results = kon.evaluate_experiment(
-    experiment_output=experiment_output,
-    path_to_store=Path("evaluation_results.json")
-)
-```
+Refer to docs/quickstart.md for more
 
 ## Key Features
 
