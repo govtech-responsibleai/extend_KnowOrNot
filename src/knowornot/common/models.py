@@ -168,6 +168,18 @@ class ExperimentInputDocument(BaseModel):
     def save_to_json(self) -> None:
         self.metadata.input_path.write_text(self.model_dump_json(indent=2))
 
+    @staticmethod
+    def load_from_json(path: Path | str) -> "ExperimentInputDocument":
+        if isinstance(path, str):
+            path = Path(path)
+        if not path.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {path}")
+
+        with open(path, "r") as f:
+            text = f.read()
+
+        return ExperimentInputDocument.model_validate_json(text)
+
 
 class ExperimentOutputDocument(BaseModel):
     metadata: ExperimentMetadata
