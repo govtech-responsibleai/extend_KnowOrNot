@@ -739,3 +739,17 @@ class KnowOrNot:
             client_registry=self.client_registry,
             path_to_store=path_to_store,
         )
+
+    async def evaluate_experiment_async(
+        self, experiment_output: ExperimentOutputDocument, path_to_store: Path
+    ) -> EvaluatedExperimentDocument:
+        if not self.evaluator:
+            raise ValueError(
+                "You must create an evaluator with create_evaluator before evaluating an experiment"
+            )
+
+        return await self.evaluator.evaluate_document_async(
+            document=experiment_output,
+            client_registry=self.client_registry,
+            path_to_store=path_to_store,
+        )
