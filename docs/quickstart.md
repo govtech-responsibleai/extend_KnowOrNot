@@ -103,9 +103,9 @@ try:
     kon.add_azure(
         azure_endpoint="https://YOUR_RESOURCE_NAME.openai.azure.com/",
         azure_api_key="YOUR_API_KEY",
-        azure_api_version="YYYY-MM-DD", # e.g., "2024-02-15"
-        default_model="YOUR_CHAT_DEPLOYMENT_NAME", # Optional
-        default_embedding_model="YOUR_EMBEDDING_DEPLOYMENT_NAME" # Optional
+        azure_api_version="YYYY-MM-DD",
+        default_model="YOUR_CHAT_DEPLOYMENT_NAME",
+        default_embedding_model="YOUR_EMBEDDING_DEPLOYMENT_NAME"
     )
     print("Azure client added by passing parameters directly.")
 

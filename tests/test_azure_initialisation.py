@@ -19,6 +19,8 @@ class TestKnowOrNotClientRegistration:
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
             azure_api_version="2023-05-15",
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )
 
         # Check that the client registry has the Azure client
@@ -36,6 +38,8 @@ class TestKnowOrNotClientRegistration:
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
             azure_api_version="2023-05-15",
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )
 
         # Check that default client is set
@@ -55,6 +59,8 @@ class TestKnowOrNotClientRegistration:
             azure_endpoint="https://endpoint.com",
             azure_api_key="api_key",
             azure_api_version="2023-05-15",
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )
 
         # Get client with no arguments should return default (Azure) client
@@ -79,6 +85,8 @@ class TestKnowOrNotClientRegistration:
             azure_endpoint=azure_endpoint,
             azure_api_key=azure_api_key,
             azure_api_version=azure_api_version,
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )
 
         # Get the Azure client
@@ -107,6 +115,8 @@ class TestKnowOrNotClientRegistration:
             azure_endpoint=azure_endpoint,
             azure_api_key=azure_api_key,
             azure_api_version=azure_api_version,
+            default_model="gpt-4",
+            default_embedding_model="text-embedding-3-large",
         )
 
         # Check that AzureOpenAI was initialized with correct parameters

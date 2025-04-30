@@ -248,11 +248,9 @@ class KnowOrNot:
         - azure_api_version (Optional[str]): The Azure API version. If not provided,
         the environment variable `AZURE_OPENAI_API_VERSION` will be used.
         - default_model (Optional[str]): The default model for synchronous operations.
-        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_MODEL` will be used,
-        with a fallback to "gpt-4o".
+        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_MODEL` will be used.
         - default_embedding_model (Optional[str]): The default embedding model.
-        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL` will be used,
-        with a fallback to "text-embedding-3-large".
+        If not provided, the environment variable `AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL` will be used.
 
         Returns:
         - KnowOrNot: An instance of the `KnowOrNot` class configured with the specified
@@ -289,11 +287,19 @@ class KnowOrNot:
                     "AZURE_OPENAI_API_VERSION is not set and azure_api_version is not provided"
                 )
         if not default_model:
-            default_model = os.environ.get("AZURE_OPENAI_DEFAULT_MODEL", "gpt-4o")
+            default_model = os.environ.get("AZURE_OPENAI_DEFAULT_MODEL")
+            if not default_model:
+                raise EnvironmentError(
+                    "AZURE_OPENAI_DEFAULT_MODEL is not set and default_model is not provided"
+                )
         if not default_embedding_model:
             default_embedding_model = os.environ.get(
-                "AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL", "text-embedding-3-large"
+                "AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL"
             )
+            if not default_embedding_model:
+                raise EnvironmentError(
+                    "AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL is not set and default_embedding_model is not provided"
+                )
 
         logger = logging.getLogger(__name__)
 
