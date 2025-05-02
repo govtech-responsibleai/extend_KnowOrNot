@@ -1,0 +1,20 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Basic Theory of Driving is published by Singapore Traffic Police.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "No part of this publication may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording or otherwise, without the prior permission of the publisher.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "The information contained in this handbook is accurate at the time of publication.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Candidates are advised to log in to the TP website at http://www.police.gov.sg & LTA website at http://www.lta.gov.sg for the latest updates.",
+      "source_citation": 3
+    }
+  ]
+}

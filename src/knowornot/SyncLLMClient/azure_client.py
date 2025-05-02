@@ -15,6 +15,8 @@ from openai.types.chat.chat_completion_user_message_param import (
 from pydantic import BaseModel
 import warnings
 
+from knowornot.SyncLLMClient.exceptions import InitialCallFailedException
+
 from ..config import AzureOpenAIConfig
 from ..SyncLLMClient import Message, SyncLLMClient, SyncLLMClientEnum
 
@@ -37,6 +39,17 @@ class SyncAzureOpenAIClient(SyncLLMClient):
                 message="Client should be an instance of openai.OpenAI or openai.AsyncOpenAI.*",
             )
             self.instructor_client = instructor.from_openai(self.client)
+
+        try:
+            self.prompt("hello", ai_model=self.config.default_model)
+        except Exception as e:
+            raise InitialCallFailedException(
+                model_name=self.config.default_model, error_message=str(e)
+            )
+
+        self.logger.info(
+            f"Using model: {self.config.default_model} as the default model"
+        )
 
     def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
         """

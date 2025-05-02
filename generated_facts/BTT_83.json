@@ -1,0 +1,100 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "240 Lane Use Signs are overhead signs in the KPE, CTE, MCE, Woodsville and Fort Canning tunnels which are used to inform motorists of precautions to take prior to proceeding ahead on the lane.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Each lane use sign will display either a green-down arrow, flashing amber cross or a red cross.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "A green-down arrow indicates that a motorist can drive on ahead.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "A flashing amber cross indicates that a motorist needs to drive with caution due to obstructions on the lane ahead.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "A red cross indicates that a motorist shall not proceed beyond the sign.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Motorists travelling in the tunnel are to adhere to the displays shown on the overhead lane use signs.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "241 The Variable Message Signs on the road are used to disseminate traffic condition information to motorists.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "Entrance Variable Message Signs (EVMS) are located at the entrance of the slip road leading into the tunnel.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "Arterial Variable Message Signs (AVMS) are located along an arterial road that leads to the entrance of the tunnel.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Tunnel Variable Message Signs (TVMS) are overhead signs located in the tunnel.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "242 Barriers and traffic signal controls at entry slip road approaches are activated during the closure of the KPE, MCE and Woodsville tunnels.",
+      "source_citation": 9
+    },
+    {
+      "fact_text": "243 Variable speed limit signs are provided in the KPE and MCE tunnels.",
+      "source_citation": 10
+    },
+    {
+      "fact_text": "In smooth traffic conditions, the display on variable speed limit signs will show a posted speed limit with a red ring that requires motorists’ compliance.",
+      "source_citation": 11
+    },
+    {
+      "fact_text": "At times of congestion, recommended lower speed limits can be displayed without a red ring to smoothen out traffic flow, reduce the risk of flow breakdown, and minimise the risk of accidents.",
+      "source_citation": 12
+    },
+    {
+      "fact_text": "244 KM markings on the vertical face of the kerb wall in the MCE, KPE and CTE tunnels provide location referencing for motorists.",
+      "source_citation": 13
+    },
+    {
+      "fact_text": "245 Exit doors are located next to both the slow and fast lanes of the MCE, KPE and CTE tunnels.",
+      "source_citation": 13
+    },
+    {
+      "fact_text": "246 Escape Staircase doors next to the slow lanes are generally found at intervals of 500m in the main tunnel.",
+      "source_citation": 14
+    },
+    {
+      "fact_text": "There are exit doors along the slip roads.",
+      "source_citation": 15
+    },
+    {
+      "fact_text": "These exit doors lead to escape staircases opening up to surface roads or open areas.",
+      "source_citation": 16
+    },
+    {
+      "fact_text": "247 Cross-passage doors next to the fast lanes are located at intervals of 100m in the main tunnel and lead to the opposite-bound tunnel.",
+      "source_citation": 17
+    },
+    {
+      "fact_text": "248 During an emergency, additional flashing lights at the doors will be activated to alert motorists of the emergency situation, indicate the need for evacuation, and draw attention to the exit locations.",
+      "source_citation": 18
+    },
+    {
+      "fact_text": "249 Emergency telephones are provided in the tunnel next to the slow lane at approximately 100m intervals.",
+      "source_citation": 19
+    },
+    {
+      "fact_text": "250 Each emergency phone has an amber light next to it that can be switched on by the OCC to indicate the intention to communicate with a motorist in the MCE and KPE tunnel.",
+      "source_citation": 20
+    },
+    {
+      "fact_text": "Motorists can pick up the phone set to speak to the OCC.",
+      "source_citation": 21
+    }
+  ]
+}

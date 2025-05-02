@@ -6,7 +6,6 @@ import re
 from pydantic import BaseModel
 
 from ..config import LLMClientConfig
-from .exceptions import InitialCallFailedException
 
 T = TypeVar("T", bound=BaseModel)
 U = TypeVar("U", bound=Enum)
@@ -26,17 +25,6 @@ class SyncLLMClient(ABC):
     def __init__(self, config: LLMClientConfig):
         self.config = config
         self.logger = self.config.logger
-
-        try:
-            self.prompt("hello", ai_model=self.config.default_model)
-        except Exception as e:
-            raise InitialCallFailedException(
-                model_name=self.config.default_model, error_message=str(e)
-            )
-
-        self.logger.info(
-            f"Using model: {self.config.default_model} as the default model"
-        )
 
     @abstractmethod
     def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:

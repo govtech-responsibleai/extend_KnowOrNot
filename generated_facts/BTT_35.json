@@ -1,0 +1,44 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Facility signs give motorists information of facilities and the direction to take to get to them.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Facility signs have black letters on white backgrounds with black borders.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Directions leading to places of interest for tourists have white multi-lingual text on a brown background with white borders.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Vehicles carrying dangerous goods are required to display hazard information signs.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Long vehicles are required to display at least 3 yellow reflective markings on each side of the vehicle and at least 1 red reflective marking at the rear of the vehicle.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "The reflective markings on long vehicles make them more conspicuous to other road users, especially at night.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "Long vehicles include goods vehicles with length exceeding 10 metres, trailers with length exceeding 5 metres, and mobile cranes with length exceeding 10 metres.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Mobile cranes require fitting of rear markings only.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Buses, goods vehicles, and trailers are required to display a marking showing the maximum speed in kilometres per hour that they can be driven or drawn on a road.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "Vehicles must not travel faster than their vehicle speed limit or the posted road speed limit, whichever is lower.",
+      "source_citation": 9
+    }
+  ]
+}

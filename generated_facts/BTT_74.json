@@ -1,0 +1,68 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Motorists, motorcyclists, or cyclists must take special care to watch out for warnings about work activity and obstructions ahead.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Motorists, motorcyclists, or cyclists must be alert to the traffic situation around them.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Motorists, motorcyclists, or cyclists must observe orange warning and information signs that provide help.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Motorists, motorcyclists, or cyclists must not exceed any temporary maximum speed limit posted at the work zone for their safety.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Motorists, motorcyclists, or cyclists must get into the correct lane in good time.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Motorists, motorcyclists, or cyclists must not switch lanes to overtake queuing traffic or move through areas marked off by traffic cones or barriers.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "Motorists, motorcyclists, or cyclists must be cautious not to get into the path of traffic entering or leaving the work area.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "Motorists, motorcyclists, or cyclists must avoid being distracted by activities in the work area.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Motorists, motorcyclists, or cyclists must concentrate on the road ahead and maintain a safe distance from traffic in front.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "Pedestrians must keep away from the work area.",
+      "source_citation": 9
+    },
+    {
+      "fact_text": "Pedestrians must not enter the work area for convenience or as a shortcut.",
+      "source_citation": 10
+    },
+    {
+      "fact_text": "Pedestrians must follow the directional signs for alternative paths when the footpath is blocked.",
+      "source_citation": 11
+    },
+    {
+      "fact_text": "Pedestrians must not walk along the traffic lane if it is not designated and cordoned off for pedestrians.",
+      "source_citation": 12
+    },
+    {
+      "fact_text": "Work zone signs are displayed along the section of the road affected by work activity where temporary traffic control is exercised.",
+      "source_citation": 13
+    },
+    {
+      "fact_text": "Work zone signs contain a black symbol or message with or without a logo on an orange background, and they are either diamond-shaped for warning or rectangular-shaped for information.",
+      "source_citation": 14
+    },
+    {
+      "fact_text": "Lateral shift markers are work zone signs indicating a lateral change in direction of the carriageway or a sharp bend in a road diversion through the work zone.",
+      "source_citation": 15
+    }
+  ]
+}

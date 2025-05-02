@@ -1,0 +1,24 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Slow down and look out for children on the road.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Do not drive into the yellow box when traffic has come to a standstill at the left lane.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Give way to vehicles from the side road entering the main road.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Chevron markings are used to channel traffic.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "No driving or parking of vehicles in the chevron area.",
+      "source_citation": 6
+    }
+  ]
+}

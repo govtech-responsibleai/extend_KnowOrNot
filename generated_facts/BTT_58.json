@@ -1,0 +1,44 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "All persons travelling in vehicles, irrespective of their age, should be appropriately belted up.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Adults below the height of 1.35m shall use booster seats or approved adjustable seat belts to lower the risk of injury in the event of an accident.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "A composition fine of $120 and 3 demerit points will be awarded for failing to belt up.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "At night (between 7.00pm and 7.00am), you must drive with your headlights on.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "At night, always drive well within the limits of your headlights.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Use dipped headlights at night in built-up areas and during rainy weather.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "On unlit roads, always use your high beam.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Dip your headlights when meeting other vehicles and cyclists.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "If you are dazzled by the lights of another vehicle, slow down and stop if necessary.",
+      "source_citation": 9
+    },
+    {
+      "fact_text": "Dip your headlights when driving behind other vehicles.",
+      "source_citation": 10
+    }
+  ]
+}

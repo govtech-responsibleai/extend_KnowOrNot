@@ -1,0 +1,120 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Maintain your vehicle in a roadworthy condition.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "You should pay attention to maintenance matters to prevent accidents.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Keep your tyres up to the correct pressure.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Replace tyres with treads less than 1.6mm in depth.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Smooth or bald tyres can cause skids during hard braking.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Have the brake system checked regularly, especially hydraulic brakes, for any leakage of brake fluid.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "The steering assembly of your car should be checked regularly and kept in good condition.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "Check for vibration or looseness in the steering mechanism or wheels that are out of alignment.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Faulty steering can be as dangerous as a car being driven by a drunk driver.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "Check all your vehicle lights regularly.",
+      "source_citation": 9
+    },
+    {
+      "fact_text": "Keep the direction indicators functional and check them frequently.",
+      "source_citation": 10
+    },
+    {
+      "fact_text": "Signal lights that fail to light up when required can cause accidents.",
+      "source_citation": 11
+    },
+    {
+      "fact_text": "Ensure your horn is in working order.",
+      "source_citation": 12
+    },
+    {
+      "fact_text": "Check the level of coolant in the radiator regularly.",
+      "source_citation": 13
+    },
+    {
+      "fact_text": "Most modern cars have a coolant reservoir with indicator markings for correct levels.",
+      "source_citation": 14
+    },
+    {
+      "fact_text": "Check the coolant level when the engine is cool, especially for cars without coolant reservoirs.",
+      "source_citation": 15
+    },
+    {
+      "fact_text": "Radiator coolant is pressurised when hot, so ensure the engine is cool before opening the radiator cap.",
+      "source_citation": 17
+    },
+    {
+      "fact_text": "Maintain enough oil in the engine and change oil periodically.",
+      "source_citation": 18
+    },
+    {
+      "fact_text": "Check the oil level using the dip-stick.",
+      "source_citation": 19
+    },
+    {
+      "fact_text": "Keep windscreen wipers in good condition.",
+      "source_citation": 20
+    },
+    {
+      "fact_text": "Dirty windscreens and faulty windscreen wipers hinder vision during rain.",
+      "source_citation": 21
+    },
+    {
+      "fact_text": "Keep the battery and its terminals clean.",
+      "source_citation": 22
+    },
+    {
+      "fact_text": "Ensure connections at the battery terminals are securely tightened.",
+      "source_citation": 23
+    },
+    {
+      "fact_text": "Check the battery water level for non-maintenance-free batteries, and refill with distilled or commercial battery water below the low level.",
+      "source_citation": 25
+    },
+    {
+      "fact_text": "Refilling with tap water shortens battery life considerably.",
+      "source_citation": 26
+    },
+    {
+      "fact_text": "Vehicles must be maintained to eliminate excessive smoke and noise emissions.",
+      "source_citation": 27
+    },
+    {
+      "fact_text": "Excessive smoke and noise are nuisances and hazardous to health.",
+      "source_citation": 28
+    },
+    {
+      "fact_text": "Check the exhaust system regularly.",
+      "source_citation": 29
+    },
+    {
+      "fact_text": "Exhaust fumes leaking into the passenger compartment can lead to carbon-monoxide poisoning.",
+      "source_citation": 30
+    }
+  ]
+}

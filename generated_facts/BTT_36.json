@@ -1,0 +1,24 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Parallel broken white lines indicate that traffic approaching these lines must give way to traffic on a major road.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Horizontal white line indicates that traffic is required to stop and must stop close to and before this line.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Parallel dashed or solid white lines indicate a designated crossing.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Turning vehicles must give way to pedestrians when the 'Green Man' is lighted.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "At a zebra crossing, vehicles should slow down and stop if there are pedestrians or cyclists crossing or about to cross.",
+      "source_citation": 5
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Signals given by Police Officers directing traffic take precedence over road signs, traffic light signals, road markings, and traffic regulations.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Vehicles approaching Police Officer from all directions must stop.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Vehicles approaching Police Officer from the front and behind must stop.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Vehicles approaching Police Officer from his/her right and left may proceed.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Vehicles approaching Police Officer from his/her right, front, and behind must stop.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Vehicles approaching Police Officer from his/her left may proceed.",
+      "source_citation": 5
+    }
+  ]
+}
