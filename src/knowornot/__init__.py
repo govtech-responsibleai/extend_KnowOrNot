@@ -425,6 +425,10 @@ class KnowOrNot:
 
         question_document.save_to_json()
 
+        self.logger.info(
+            f"Created question document with {len(question_document.questions)} questions and saved them to {question_document.path_to_store}"
+        )
+
         return question_document
 
     def _make_questions_for_experiment(self, qa_final: QAPairFinal) -> QAPair:
