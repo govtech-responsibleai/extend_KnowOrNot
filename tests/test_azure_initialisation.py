@@ -9,8 +9,12 @@ from src.knowornot.SyncLLMClient.azure_client import SyncAzureOpenAIClient
 class TestKnowOrNotClientRegistration:
     """Test client registration functionality in KnowOrNot."""
 
-    def test_add_azure_registers_client(self):
+    @patch("src.knowornot.SyncLLMClient.SyncLLMClient.prompt")
+    def test_add_azure_registers_client(self, mock_prompt):
         """Test that add_azure registers an Azure client."""
+        # Mock the prompt call made during initialization
+        mock_prompt.return_value = "Hello"
+
         # Create a KnowOrNot instance
         know_or_not = KnowOrNot()
 
@@ -30,8 +34,12 @@ class TestKnowOrNotClientRegistration:
         client = know_or_not.client_registry[SyncLLMClientEnum.AZURE_OPENAI]
         assert isinstance(client, SyncAzureOpenAIClient)
 
-    def test_azure_client_set_as_default(self):
+    @patch("src.knowornot.SyncLLMClient.SyncLLMClient.prompt")
+    def test_azure_client_set_as_default(self, mock_prompt):
         """Test that the Azure client is set as the default client."""
+        # Mock the prompt call made during initialization
+        mock_prompt.return_value = "Hello"
+
         know_or_not = KnowOrNot()
 
         know_or_not.add_azure(
@@ -51,8 +59,12 @@ class TestKnowOrNotClientRegistration:
         )
         assert isinstance(know_or_not.default_sync_client, SyncAzureOpenAIClient)
 
-    def test_get_client_returns_azure_client(self):
+    @patch("src.knowornot.SyncLLMClient.SyncLLMClient.prompt")
+    def test_get_client_returns_azure_client(self, mock_prompt):
         """Test that get_client() returns the Azure client."""
+        # Mock the prompt call made during initialization
+        mock_prompt.return_value = "Hello"
+
         know_or_not = KnowOrNot()
 
         know_or_not.add_azure(
@@ -73,8 +85,12 @@ class TestKnowOrNotClientRegistration:
         assert client.enum_name == SyncLLMClientEnum.AZURE_OPENAI
         assert isinstance(client, SyncAzureOpenAIClient)
 
-    def test_azure_client_configuration(self):
+    @patch("src.knowornot.SyncLLMClient.SyncLLMClient.prompt")
+    def test_azure_client_configuration(self, mock_prompt):
         """Test that the Azure client is configured correctly."""
+        # Mock the prompt call made during initialization
+        mock_prompt.return_value = "Hello"
+
         azure_endpoint = "https://endpoint.com"
         azure_api_key = "api_key"
         azure_api_version = "2023-05-15"
@@ -99,9 +115,13 @@ class TestKnowOrNotClientRegistration:
         assert client.config.api_key == azure_api_key
         assert client.config.api_version == azure_api_version
 
+    @patch("src.knowornot.SyncLLMClient.SyncLLMClient.prompt")
     @patch("src.knowornot.SyncLLMClient.azure_client.AzureOpenAI")
-    def test_azure_client_initialization(self, mock_azure_openai):
+    def test_azure_client_initialization(self, mock_azure_openai, mock_prompt):
         """Test that the Azure client initializes the underlying API client correctly."""
+        # Mock the prompt call made during initialization
+        mock_prompt.return_value = "Hello"
+
         azure_endpoint = "https://endpoint.com"
         azure_api_key = "api_key"
         azure_api_version = "2023-05-15"

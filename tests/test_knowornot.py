@@ -16,8 +16,11 @@ class TestKnowOrNot:
         assert know_or_not.default_sync_client is None
         assert know_or_not.fact_manager is None
 
-    def test_add_azure_with_params(self):
+    @patch("src.knowornot.SyncLLMClient.SyncLLMClient.prompt")
+    def test_add_azure_with_params(self, mock_prompt):
         """Test adding Azure client with all parameters provided."""
+        # Mock the prompt call made during initialization
+        mock_prompt.return_value = "Hello"
         know_or_not = KnowOrNot()
         know_or_not.add_azure(
             azure_endpoint="https://endpoint.com",
@@ -50,8 +53,11 @@ class TestKnowOrNot:
             "AZURE_OPENAI_DEFAULT_EMBEDDING_MODEL": "text-embedding-3-large",
         },
     )
-    def test_add_azure_with_env_vars(self):
+    @patch("src.knowornot.SyncLLMClient.SyncLLMClient.prompt")
+    def test_add_azure_with_env_vars(self, mock_prompt):
         """Test adding Azure client using environment variables."""
+        # Mock the prompt call made during initialization
+        mock_prompt.return_value = "Hello"
         know_or_not = KnowOrNot()
         know_or_not.add_azure()
 
