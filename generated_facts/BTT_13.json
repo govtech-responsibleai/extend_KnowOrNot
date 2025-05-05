@@ -1,0 +1,36 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Width limit signs prohibit the entry of vehicles with width in excess of 2.3m.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Numerals on width limit signs may be altered to indicate different width restrictions.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Height limit signs prohibit the entry of vehicles with an overall height in excess of 4.5m.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Numerals on height limit signs may be altered to indicate different height restrictions.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Driving a vehicle with overall height exceeding 4.5m without police escort is an offence.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Weight limit signs prohibit the entry of vehicles with weight laden or unladen in excess of 10 tonnes.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Numerals on weight limit signs may be altered to indicate different weight restrictions.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Driving a vehicle with laden or unladen weight exceeding 10 tonnes without police escort is an offence.",
+      "source_citation": 5
+    }
+  ]
+}

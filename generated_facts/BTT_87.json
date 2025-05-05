@@ -1,0 +1,44 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Avoid dragging the engine by using the correct gear if you drive a manual vehicle.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Driving the vehicle in the right gear will increase fuel efficiency and reduce emissions.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Drive at a steady speed and avoid unnecessary acceleration or braking as much as possible.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Avoiding unnecessary acceleration and heavy braking helps reduce your vehicle’s fuel consumption.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Maintain a safe distance between your vehicle and the vehicle in front to avoid last-minute braking and to get up to speed as smoothly as possible.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Drive at a safe and steady speed.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "Avoid setting your vehicle’s air-conditioning temperature too low and instead increase the fan speed in order to achieve higher fuel efficiency and reduce emissions.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "Air-conditioning consumes a lot of fuel to keep you cool.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Plan your journey before setting off to avoid traffic congestion or getting lost on the roads.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "Planning your journey can save you both time and fuel as well as reduce emissions.",
+      "source_citation": 9
+    }
+  ]
+}

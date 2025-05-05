@@ -1,0 +1,54 @@
+PART B
+SIGNS & SIGNALS
+
+Expressway Monitoring and Advisory Systems (EMAS)
+
+(b) TRAFFIC INFORMATION DISPLAY (TID) ON EXPRESSWAYS / SELECTED MAJOR ARTERIAL
+ROADS
+These large displays found along the expressways and selected major arterial roads display traffic information in text and
+simple graphic display up to seven colours. They inform motorists of traffic conditions ahead. A red cross indicates location
+with reference to the expressway exits or major road names labelled. A flashing red bar indicates road closure ahead. TIDs
+may also display information on incident type, lane(s) affected, congestion information, travel time information or other
+traffic advisory messages.
+For example, if there is an accident on ECP in the direction towards Airport between Bayshore and Tampines exits, the TID
+below will alert motorists in advance for them to react accordingly.
+
+Incident occurs between
+2 exits (e.g. Bayshore
+and Tampines exits on
+ECP)
+
+Left most lane
+affected
+
+Current location
+Accident Icon
+
+The TID on the left displays traffic information
+in text and traffic symbols. Expressway TIDs like
+these will be phased out.
+
+The following are examples of some other incident scenarios and graphical representations on EMAS TIDs.
+(i)
+
+Road closure along expressway
+
+Flashing red bar to emphasise
+on the road closure ahead
+
+Expressway closure after exit
+reference (e.g. Bayshore exit on
+ECP)
+
+Accident Icon
+(ii) Road closure at expressway exit
+Flashing red bar to emphasise
+on the exit closure ahead
+Exit closure (e.g. Ang Mo Kio
+Ave 1 exit on CTE)
+
+Accident Icon
+
+BASIC THEORY OF DRIVING
+
+30

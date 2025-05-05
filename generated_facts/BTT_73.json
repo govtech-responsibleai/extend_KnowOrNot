@@ -1,0 +1,96 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "The instrument panel or dashboard contains a temperature gauge.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains a speedometer.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains an odometer.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains a tripmeter.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains signal indicators and a hazard light indicator.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains a tachometer.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains a fuel gauge.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains a door ajar warning light.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains a battery warning light.",
+      "source_citation": 9
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains a hand brake indicator.",
+      "source_citation": 10
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains an oil pressure indicator.",
+      "source_citation": 11
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains a high beam indicator.",
+      "source_citation": 12
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains an engine check light.",
+      "source_citation": 13
+    },
+    {
+      "fact_text": "The instrument panel or dashboard contains an empty fuel tank warning light.",
+      "source_citation": 14
+    },
+    {
+      "fact_text": "Various driving controls include a wiper switch.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Various driving controls include a steering wheel.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Various driving controls include a horn.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Various driving controls include a direction indicator switch.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Various driving controls include an accelerator pedal.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "Various driving controls include a brake pedal.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "Various driving controls include a clutch pedal.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Various driving controls include a handbrake.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "Various driving controls include a gear lever.",
+      "source_citation": 9
+    }
+  ]
+}

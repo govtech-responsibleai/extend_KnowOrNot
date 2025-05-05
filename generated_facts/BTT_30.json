@@ -1,0 +1,48 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Expressway Monitoring and Advisory Systems (EMAS) include three types of electronic signboards used on expressways and selected major arterial roads.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Travel Time Display (TTD) electronic advisory signboards are placed at various entrances leading to expressways.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "TTDs provide estimated travel times to selected exits on the expressways from the point the motorist enters a particular expressway.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "The estimated travel times displayed on TTDs are shown in color.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "Green color on TTDs indicates the travel time displayed is up to 50% more than normal travel time.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "Yellow color on TTDs indicates the travel time displayed is between 50% to 125% more than normal travel time.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "Red color on TTDs indicates the travel time displayed is more than 125% of normal travel time.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "Messages about incidents on the expressway are displayed on TTD signboards.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "An example message \"ACCIDENT on CTE (SLE)\" displayed on TTD informs motorists of an accident occurring on CTE towards SLE.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "The phrase \"ACCIDENT\" toggles with \"ON CTE (AYE)\" on TTDs to inform motorists of an accident occurrence on CTE towards AYE.",
+      "source_citation": 10
+    },
+    {
+      "fact_text": "TTDs like these will be phased out.",
+      "source_citation": 11
+    }
+  ]
+}

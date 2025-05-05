@@ -1,6 +1,6 @@
 [project]
 name = "knowornot"
-version = "0.1.0"
+version = "0.1.1"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -8,12 +8,24 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "instructor>=1.7.9",
+    "isort>=6.0.1",
+    "nltk>=3.9.1",
+    "numpy>=2.2.4",
     "openai>=1.70.0",
+    "pre-commit>=4.2.0",
     "pydantic>=2.11.2",
+    "pyright>=1.1.399",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
     "python-dotenv>=1.1.0",
     "requests>=2.32.3",
+    "scikit-learn>=1.6.1",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = []

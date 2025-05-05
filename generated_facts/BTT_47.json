@@ -1,0 +1,28 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Means “GO” for straight ahead vehicles and “GO” for right turn vehicles.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Means “GO” for straight ahead vehicles only.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Vehicles turning right must get ready to “STOP”.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Means “GO” for straight ahead vehicles only.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Vehicles turning right must stop behind the stop line.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Turning vehicles should watch out and give way to pedestrians crossing the road.",
+      "source_citation": 6
+    }
+  ]
+}

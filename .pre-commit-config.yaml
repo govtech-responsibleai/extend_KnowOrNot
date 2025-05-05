@@ -4,30 +4,33 @@ repos:
     hooks:
       - id: ruff-check
         name: Run ruff check
-        entry: uv tool run ruff check --no-cache --exit-first --diff
+        entry: uv tool run ruff check
         language: system
         types: [python]
         stages: [pre-commit]
         verbose: true
-
       - id: ruff-format
         name: Run ruff format
-        entry: uv tool run ruff format --no-cache --diff
+        entry: uv tool run ruff format
         language: system
         types: [python]
         stages: [pre-commit]
         verbose: true
-
-  - repo: https://github.com/pycqa/isort
-    rev: 6.0.1  # Use a specific version
-    hooks:
-      - id: isort
+      - id: pyright
+        name: Run pyright
+        entry: uv run pyright
         language: system
         types: [python]
         stages: [pre-commit]
-        args: [--diff]
         verbose: true
-
+      - id: pytest
+        name: Run pytest
+        entry: bash -c 'uv run pytest || [ $? -eq 5 ]'  # Exit code 5 means no tests collected
+        language: system
+        types: [python]
+        stages: [pre-commit]
+        pass_filenames: false
+        verbose: true
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0  # Use a specific version
     hooks:

@@ -1,0 +1,40 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "The U-turn facility is located ahead.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Three turning lanes are located ahead.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Four waiting lanes are located ahead.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Stop for pedestrians crossing the road.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "There is a Bus Priority Box, also known as Mandatory Give-Way to Buses.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Stop before the Give-Way lines and give way to buses which are waiting to leave the bus stop.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Do not stay in the yellow Give-Way Bus Box.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Give way to buses exiting the bus bay.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "An exclusive left turn and shared left turn lane are ahead, usually along expressways.",
+      "source_citation": 4
+    }
+  ]
+}

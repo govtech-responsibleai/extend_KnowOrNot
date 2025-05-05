@@ -1,0 +1,44 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Stop before the white line.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Give way to traffic from the right and left.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Stop for children to cross the road.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Stop at the red light.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Give way to pedestrians crossing at the junction.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Give way to traffic approaching from the right.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Proceed only when the way is clear and it is safe to do so.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Slow down.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Stop if necessary.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Give way to traffic on the major road.",
+      "source_citation": 3
+    }
+  ]
+}

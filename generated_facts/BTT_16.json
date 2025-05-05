@@ -1,0 +1,24 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Warning signs included in the document cover various types of junctions and traffic situations.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Some warning signs indicate the need to slow down due to vehicles from specific directions.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Merging traffic is pointed out as a situation requiring caution and slower driving.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Two-way traffic warnings include slowing down and staying on the left to avoid oncoming traffic.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Warnings for lanes merging suggest caution regarding merging traffic from either side.",
+      "source_citation": 10
+    }
+  ]
+}

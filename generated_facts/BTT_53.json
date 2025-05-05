@@ -1,0 +1,52 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Road-Hogging is driving at an unreasonably slow speed on the road especially on the right-hand or along the centre of the road.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Road-Hogging hinders the flow of traffic behind and may cause other vehicles to pass dangerously on the left.",
+      "source_citation": 1
+    },
+    {
+      "fact_text": "Motorists who travel at a slow speed should keep to the left side of the road; this applies especially to small capacity motorcycles, goods vehicles and lorries.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "You should only use the right hand lane when overtaking or when you are about to turn right or make a U-turn.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Unless otherwise stated, the speed limit of all roads in Singapore is 50 km/h.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Do not exceed the speed limit of your vehicle or the road, whichever is the lesser.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "Always obey the “Reduce Speed Now” sign.",
+      "source_citation": 6
+    },
+    {
+      "fact_text": "When approaching a junction with a major road, slow down gradually and give way to traffic on the major road.",
+      "source_citation": 7
+    },
+    {
+      "fact_text": "Where there is a “STOP” sign, stop before the stop-line.",
+      "source_citation": 8
+    },
+    {
+      "fact_text": "At an uncontrolled junction where there are no traffic lights, “GIVE WAY” sign or “STOP” sign, you must give way to traffic going straight from the right if you are going straight across.",
+      "source_citation": 9
+    },
+    {
+      "fact_text": "At an uncontrolled junction, if you are turning right, you must give way to traffic going straight from all directions, traffic turning right from the right, and traffic turning left from the opposite direction.",
+      "source_citation": 10
+    },
+    {
+      "fact_text": "At an uncontrolled junction, if you are turning left, you must give way to traffic going straight from the right.",
+      "source_citation": 11
+    }
+  ]
+}

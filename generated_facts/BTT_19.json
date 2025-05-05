@@ -1,0 +1,36 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Warning signs include animals and low flying aircraft ahead.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "A raised zebra crossing ahead requires slowing down and stopping for pedestrians to cross.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "Drivers should beware of elderly or handicapped pedestrians crossing the road.",
+      "source_citation": 3
+    },
+    {
+      "fact_text": "Drivers should beware of children crossing the road.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "School zones require a speed of 40km/h when amber lights flash alternately.",
+      "source_citation": 4
+    },
+    {
+      "fact_text": "Drivers should beware of pedestrians crossing the road ahead.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "Drivers should slow down and look out for children near the start of a school zone.",
+      "source_citation": 5
+    },
+    {
+      "fact_text": "Vehicles must not exceed 40km/h in the silver zone if a 40km/h speed limit sign is attached below.",
+      "source_citation": 6
+    }
+  ]
+}

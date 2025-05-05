@@ -1,0 +1,16 @@
+{
+  "fact_list": [
+    {
+      "fact_text": "Traffic signs are erected for two main purposes: to regulate traffic movements and to warn and inform road users of hazards or give useful information.",
+      "source_citation": 0
+    },
+    {
+      "fact_text": "Mandatory signs are compulsory signs.",
+      "source_citation": 2
+    },
+    {
+      "fact_text": "It is an offence to disobey mandatory signs.",
+      "source_citation": 3
+    }
+  ]
+}
