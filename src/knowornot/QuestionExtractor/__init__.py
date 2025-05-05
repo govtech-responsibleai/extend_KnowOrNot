@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Optional, List
 from ..SyncLLMClient import SyncLLMClient
@@ -101,6 +102,7 @@ class QuestionExtractor:
         diversity_threshold_keyword: Optional[float] = 0.3,
         diversity_threshold_semantic: Optional[float] = 0.3,
         alternative_llm_client: Optional[SyncLLMClient] = None,
+        intermediate_storage_path: Optional[Path] = None,
     ) -> QuestionDocument:
         """
         Generates a diverse list of question-answer pairs from an atomic fact document using an LLM client.
@@ -147,6 +149,14 @@ class QuestionExtractor:
             diversity_threshold_keyword=diversity_threshold_keyword,
             diversity_threshold_semantic=diversity_threshold_semantic,
         )
+
+        if intermediate_storage_path:
+            dict_to_save = {
+                "knowledge_base_identifier": knowledge_base_identifier,
+                "questions": [qapair.model_dump() for qapair in intermediate_pairs],
+            }
+            with open(intermediate_storage_path, "w") as f:
+                json.dump(dict_to_save, f, indent=4)
 
         if not intermediate_pairs:
             raise ValueError(

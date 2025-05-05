@@ -93,6 +93,12 @@ The internal workflow involves:
     *   Higher values result in fewer, more keyword-unique questions.
     *   Defaults to `0.3`.
 
+*   **`intermediate_storage_path`** (`Optional[Path]`):
+    *   Optional.
+    *   If provided, the intermediate `QAPairDocument`s generated from each source file will be saved as JSON files in this path.
+    *   **Constraint:** Must be a json path.
+    *   Useful for auditing, debugging, or reusing the generated questions later.
+
 ## Returns
 
 *   **`QuestionDocument`**: An object containing the `knowledge_base_identifier`, a creation timestamp, and the final list of diverse `QAPairFinal` objects generated from the source documents. This object is also automatically saved as a JSON file to the path specified by `path_to_save_questions`.

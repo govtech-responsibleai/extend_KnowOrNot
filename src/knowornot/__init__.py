@@ -397,6 +397,7 @@ class KnowOrNot:
         fact_storage_dir: Optional[Path] = None,
         semantic_filter_threshold: Optional[float] = None,
         keyword_filter_threshold: Optional[float] = None,
+        intermediate_storage_path: Optional[Path] = None,
     ) -> QuestionDocument:
         """
         Creates diverse question/answer pairs for the documents given.
@@ -415,6 +416,7 @@ class KnowOrNot:
             fact_storage_dir (Optional[Path]): The directory to store the facts in. If not provided, facts will not be stored.
             semantic_filter_threshold (Optional[float]): The threshold to use for semantic filtering. If not provided, the default threshold of 0.3 will be used.
             keyword_filter_threshold (Optional[float]): The threshold to use for keyword filtering. If not provided, the default threshold of 0.3 will be used.
+            intermediate_storage_path (Optional[Path]): The json path to store intermediate outputs in. If not provided, intermediate outputs will not be stored.
 
         Returns:
             QuestionDocument: A QuestionDocument object containing the questions and answers
@@ -428,6 +430,7 @@ class KnowOrNot:
             ValueError: If the provided filter_method is not one of ['keyword', 'semantic', 'both']
             ValueError: If the alternative client provided, or default client cannot use instructor
             ValueError: If the question process is unable to create any diverse questions
+            ValueError: If the intermediate_storage_path is provided but is not a .json file
 
         """
 
@@ -452,6 +455,14 @@ class KnowOrNot:
         if filter_method not in ["keyword", "semantic", "both"]:
             raise ValueError(
                 f"Expected filter_method to be one of ['keyword', 'semantic', 'both']. Got {filter_method}"
+            )
+
+        if (
+            intermediate_storage_path
+            and not intermediate_storage_path.suffix.lower() == ".json"
+        ):
+            raise ValueError(
+                f"Expected intermediate_storage_path to be .json file. Got {intermediate_storage_path}"
             )
 
         fact_document_list = fact_manager._parse_sources_to_atomic_facts(
@@ -485,6 +496,7 @@ class KnowOrNot:
             else None,
             diversity_threshold_keyword=keyword_filter_threshold,
             diversity_threshold_semantic=semantic_filter_threshold,
+            intermediate_storage_path=intermediate_storage_path,
         )
 
         question_document.save_to_json()
