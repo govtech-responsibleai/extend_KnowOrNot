@@ -431,6 +431,67 @@ class KnowOrNot:
 
         return question_document
 
+    def create_diverse_questions_from_QAPairs(
+        self,
+        knowledge_base_identifier: str,
+        qa_pairs: List[Dict[str, str]],
+        method: Literal["keyword", "semantic", "both"],
+        path_to_save: Path,
+        diversity_threshold_keyword: float = 0.3,
+        diversity_threshold_semantic: float = 0.3,
+    ) -> QuestionDocument:
+        """
+        Filters and creates diverse question-answer pairs from provided QAPairs.
+
+        This function processes a list of question-answer pairs (`qa_pairs`), applies a specified filtering method
+        to ensure diversity, and saves the resulting diverse set of questions to a specified path.
+
+        Args:
+            knowledge_base_identifier (str): A unique identifier for the knowledge base associated with the questions.
+            qa_pairs (List[Dict[str, str]]): A list of dictionaries, each containing a 'question' and 'answer' key.
+            method (Literal["keyword", "semantic", "both"]): The filtering method to apply - 'keyword', 'semantic', or 'both'.
+            path_to_save (Path): The file path where the filtered questions will be saved.
+            diversity_threshold_keyword (float, optional): The threshold for keyword diversity filtering. Defaults to 0.3.
+            diversity_threshold_semantic (float, optional): The threshold for semantic diversity filtering. Defaults to 0.3.
+
+        Returns:
+            QuestionDocument: A `QuestionDocument` containing the filtered and diverse question-answer pairs.
+
+        Raises:
+            ValueError: If the `method` is not one of ['keyword', 'semantic', 'both'].
+            ValueError: If any `qa_pair` does not contain 'question' and 'answer' keys.
+        """
+
+        if method not in ["keyword", "semantic", "both"]:
+            raise ValueError(
+                f"Expected method to be one of ['keyword', 'semantic', 'both']. Got {method}"
+            )
+
+        _method: FilterMethod
+        if method == "keyword":
+            _method = FilterMethod.KEYWORD
+        elif method == "semantic":
+            _method = FilterMethod.SEMANTIC
+        elif method == "both":
+            _method = FilterMethod.BOTH
+
+        question_manager = self._get_question_manager(alternative_llm_client=None)
+
+        for qa_pair in qa_pairs:
+            if "question" not in qa_pair or "answer" not in qa_pair:
+                raise ValueError(
+                    f"Expected qa_pair to have 'question' and 'answer' keys. Got {qa_pair}"
+                )
+        qa_pairs_to_use = [QAPair(**qa_pair) for qa_pair in qa_pairs]
+        return question_manager.filter_questions(
+            identifier=knowledge_base_identifier,
+            questions=qa_pairs_to_use,
+            method=_method,
+            path_to_save=path_to_save,
+            diversity_threshold_keyword=diversity_threshold_keyword,
+            diversity_threshold_semantic=diversity_threshold_semantic,
+        )
+
     def _make_questions_for_experiment(self, qa_final: QAPairFinal) -> QAPair:
         return QAPair(question=qa_final.question, answer=qa_final.answer)
 
