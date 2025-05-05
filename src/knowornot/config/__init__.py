@@ -29,6 +29,29 @@ class AzureOpenAIConfig(LLMClientConfig):
 
 
 @dataclass
+class OpenAIConfig(LLMClientConfig):
+    can_use_instructor: bool = True
+
+    organization: Optional[str] = None
+    project: Optional[str] = None
+
+    def __post_init__(self):
+        if not self.api_key:
+            raise ValueError("api_key is required for OpenAIConfig")
+        if self.organization:
+            self.logger.info(
+                f"Using organization: {self.organization} for OpenAI client"
+            )
+        else:
+            self.logger.info("Not using any organization for OpenAI client")
+
+        if self.project:
+            self.logger.info(f"Using project: {self.project} for OpenAI client")
+        else:
+            self.logger.info("Not using any project for OpenAI client")
+
+
+@dataclass
 class Config:
     azure_config: Optional[AzureOpenAIConfig] = None
     azure_batch_config: Optional[AzureOpenAIConfig] = None
