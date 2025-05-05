@@ -165,11 +165,20 @@ class QuestionExtractor:
                 )
             )
 
-        return QuestionDocument(
+        output = QuestionDocument(
             knowledge_base_identifier=knowledge_base_identifier,
             questions=final_questions,
             path_to_store=path_to_save,
         )
+
+        self.logger.info(
+            f"Generated {len(output.questions)} questions from {len(intermediate_pairs)} pairs."
+        )
+        self.logger.info(
+            f"{len(intermediate_pairs) - len(output.questions)} pairs were filtered out because they were too similar"
+        )
+
+        return output
 
     def _preprocess_text(self, text: str) -> str:
         """
