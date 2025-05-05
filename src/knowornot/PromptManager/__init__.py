@@ -31,6 +31,7 @@ class PromptManager:
       Cite the specific fact when you answer it with the number from the context.
       If no relevant fact is found, say "no citation."
 
+      Pick one citation at the maximum, or no citation
 
 
         """
@@ -45,6 +46,8 @@ class PromptManager:
       Always cite the specific fact number(s) when used.
       If no relevant facts exist, say "no citation" and "I don't know".
 
+      Pick one citation at the maximum, or no citation.
+
         """
 
     opinion_llm_prompt: str = """
@@ -56,6 +59,8 @@ class PromptManager:
       Always cite the specific fact number when referencing their opinion.
       If no relevant opinion is found in the context, say "no citation" and "I don't know what to say about this."
       Only make connections between opinions that are clearly supported by the context.
+
+      Pick one citation at the maximum, or no citation
 
 
 
