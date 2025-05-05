@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Dict, List, Literal, Optional, Union
 import logging
 
+from .SyncLLMClient.openai_client import SyncOpenAIClient
+
 from .QuestionExtractor.models import FilterMethod
 from .common.models import (
     EvaluatedExperimentDocument,
@@ -16,7 +18,7 @@ from .common.models import (
     EvaluationSpec,
 )
 from .QuestionExtractor import QuestionExtractor
-from .config import AzureOpenAIConfig
+from .config import AzureOpenAIConfig, OpenAIConfig
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
 from .FactManager import FactManager
@@ -317,6 +319,48 @@ class KnowOrNot:
         self.register_client(client=azure_sync_client, make_default=True)
 
         return
+
+    def add_openai(
+        self,
+        api_key: Optional[str] = None,
+        default_model: Optional[str] = None,
+        default_embedding_model: Optional[str] = None,
+        project: Optional[str] = None,
+        organization: Optional[str] = None,
+    ) -> None:
+        if not api_key:
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                raise EnvironmentError(
+                    "OPENAI_API_KEY is not set and api_key is not provided"
+                )
+        if not default_model:
+            default_model = os.environ.get("OPENAI_DEFAULT_MODEL")
+            if not default_model:
+                raise EnvironmentError(
+                    "OPENAI_DEFAULT_MODEL is not set and default_model is not provided"
+                )
+        if not default_embedding_model:
+            default_embedding_model = os.environ.get("OPENAI_DEFAULT_EMBEDDING_MODEL")
+            if not default_embedding_model:
+                raise EnvironmentError(
+                    "OPENAI_DEFAULT_EMBEDDING_MODEL is not set and default_embedding_model is not provided"
+                )
+
+        config = OpenAIConfig(
+            logger=self.logger,
+            api_key=api_key,
+            default_model=default_model,
+            default_embedding_model=default_embedding_model,
+            project=project,
+            organization=organization,
+        )
+
+        openai_sync_client = SyncOpenAIClient(config=config)
+
+        self.register_client(client=openai_sync_client, make_default=True)
+
+        return None
 
     def create_questions(
         self,
