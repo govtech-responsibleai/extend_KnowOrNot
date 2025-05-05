@@ -690,6 +690,132 @@ class KnowOrNot:
 
         return output
 
+    def create_all_inputs_for_experiment(
+        self,
+        question_document: Union[Path, QuestionDocument],
+        experiment_type: Literal["removal", "synthetic"] = "removal",
+        base_path: Path = Path("experiments"),
+        alternative_llm_client: Optional[SyncLLMClient] = None,
+        ai_model_to_use: Optional[str] = None,
+        alternative_prompt_for_hyde: Optional[Prompt] = None,
+        alternative_llm_client_for_hyde: Optional[SyncLLMClient] = None,
+        ai_model_for_hyde: Optional[str] = None,
+    ) -> List[ExperimentInputDocument]:
+        """
+        Creates multiple experiment input documents using different prompt types and retrieval strategies.
+
+        Args:
+            question_document: The question document to use for the experiments
+            experiment_type: The type of experiment (removal or synthetic)
+            base_path: Base directory to store experiment files
+            alternative_llm_client: Optional alternative LLM client to use
+            ai_model_to_use: Optional AI model to use
+            alternative_prompt_for_hyde: Optional alternative prompt for HYDE_RAG
+            alternative_llm_client_for_hyde: Optional alternative LLM client for HYDE_RAG
+            ai_model_for_hyde: Optional AI model for HYDE_RAG
+
+        Returns:
+            List of created experiment input documents
+        """
+        if isinstance(question_document, Path):
+            question_document = QuestionDocument.load_from_json(question_document)
+
+        knowledge_base_id = question_document.knowledge_base_identifier
+
+        # Determine which model to use
+        client_to_use = alternative_llm_client or self.default_sync_client
+        if not client_to_use:
+            raise ValueError(
+                "No default client available and no alternative client provided"
+            )
+
+        model_to_use = None
+        if ai_model_to_use:
+            model_to_use = ai_model_to_use
+        else:
+            model_to_use = client_to_use.config.default_model
+
+        # Set up prompts and allowed retrieval types for each
+        prompt_configs = [
+            {
+                "name": "basic",
+                "prompt": Prompt(
+                    identifier="basic_llm_prompt",
+                    content=PromptManager.basic_llm_prompt,
+                ),
+                "allowed_retrieval_types": ["DIRECT", "LONG_IN_CONTEXT"],
+            },
+            {
+                "name": "conservative",
+                "prompt": Prompt(
+                    identifier="conservative_llm_prompt",
+                    content=PromptManager.conservative_llm_prompt,
+                ),
+                "allowed_retrieval_types": [
+                    "DIRECT",
+                    "BASIC_RAG",
+                    "LONG_IN_CONTEXT",
+                    "HYDE_RAG",
+                ],
+            },
+            {
+                "name": "opinion",
+                "prompt": Prompt(
+                    identifier="opinion_llm_prompt",
+                    content=PromptManager.opinion_llm_prompt,
+                ),
+                "allowed_retrieval_types": [
+                    "DIRECT",
+                    "BASIC_RAG",
+                    "LONG_IN_CONTEXT",
+                    "HYDE_RAG",
+                ],
+            },
+        ]
+
+        experiment_inputs = []
+
+        for config in prompt_configs:
+            prompt_name = config["name"]
+            system_prompt = config["prompt"]
+            allowed_retrieval_types = config["allowed_retrieval_types"]
+
+            for retrieval_type in allowed_retrieval_types:
+                # Create paths with all necessary information
+                input_path = (
+                    base_path
+                    / "inputs"
+                    / f"{knowledge_base_id}_{experiment_type}_{retrieval_type}_{prompt_name}_{model_to_use}_input.json"
+                )
+                output_path = (
+                    base_path
+                    / "outputs"
+                    / f"{knowledge_base_id}_{experiment_type}_{retrieval_type}_{prompt_name}_{model_to_use}_output.json"
+                )
+
+                # Ensure directories exist
+                input_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # Create the experiment input
+                experiment_input = self.create_experiment_input(
+                    question_document=question_document,
+                    system_prompt=system_prompt,
+                    experiment_type=experiment_type,
+                    retrieval_type=retrieval_type,
+                    input_store_path=input_path,
+                    output_store_path=output_path,
+                    alternative_llm_client=alternative_llm_client,
+                    ai_model_to_use=ai_model_to_use,
+                    alternative_prompt_for_hyde=alternative_prompt_for_hyde,
+                    alternative_llm_client_for_hyde=alternative_llm_client_for_hyde,
+                    ai_model_for_hyde=ai_model_for_hyde,
+                )
+
+                experiment_inputs.append(experiment_input)
+
+        return experiment_inputs
+
     def run_experiment_sync(
         self,
         experiment_input: ExperimentInputDocument,
