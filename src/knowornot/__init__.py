@@ -328,6 +328,26 @@ class KnowOrNot:
         project: Optional[str] = None,
         organization: Optional[str] = None,
     ) -> None:
+        """
+        Registers an OpenAI API client with the KnowOrNot instance.
+
+        If ``api_key`` is not provided, the value of the ``OPENAI_API_KEY`` environment variable is used.
+        If ``default_model`` is not provided, the value of the ``OPENAI_DEFAULT_MODEL`` environment variable is used.
+        If ``default_embedding_model`` is not provided, the value of the ``OPENAI_DEFAULT_EMBEDDING_MODEL`` environment variable is used.
+
+        Args:
+            api_key (str, optional): The API key to use. Must be provided or available in the environment.
+            default_model (str, optional): The model to use by default. Must be provided or available in the environment.
+            default_embedding_model (str, optional): The embedding model to use by default. Must be provided or available in the environment.
+            project (str, optional): The project to associate with the client. Defaults to ``None``.
+            organization (str, optional): The organization to associate with the client. Defaults to ``None``.
+
+        Raises:
+            EnvironmentError: If ``api_key``, ``default_model``, or ``default_embedding_model`` are not provided and not found in the environment.
+
+        Returns:
+            None
+        """
         if not api_key:
             api_key = os.environ.get("OPENAI_API_KEY")
             if not api_key:
