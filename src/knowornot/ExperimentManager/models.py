@@ -3,7 +3,6 @@ from ..RetrievalStrategy import RetrievalType
 from ..SyncLLMClient import SyncLLMClientEnum, SyncLLMClient
 from ..common.models import ExperimentType, Prompt, QAPairFinal
 from typing import List, Optional
-from pydantic import BaseModel
 from pathlib import Path
 
 
@@ -21,7 +20,3 @@ class ExperimentParams:
     alternative_prompt_for_hyde: Optional[Prompt]
     alternative_llm_client_for_hyde: Optional[SyncLLMClient]
     ai_model_for_hyde: Optional[str]
-
-
-class EvaluationMetadata(BaseModel):
-    evaluator_client: SyncLLMClientEnum
