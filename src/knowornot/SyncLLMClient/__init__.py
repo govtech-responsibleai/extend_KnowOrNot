@@ -19,6 +19,7 @@ class Message(BaseModel):
 class SyncLLMClientEnum(Enum):
     AZURE_OPENAI = "AZURE_OPENAI"
     GOOGLE_GEMINI = "GOOGLE_GEMINI"
+    OPENAI = "OPENAI"
 
 
 class SyncLLMClient(ABC):
