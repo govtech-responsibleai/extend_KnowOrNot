@@ -134,15 +134,23 @@ class ExperimentManager:
     ) -> List[IndividualExperimentInput]:
         individual_experiment_inputs = []
         for qa_with_context in qa_with_context_list:
-            individual_experiment_inputs.append(
-                IndividualExperimentInput(
-                    prompt_to_llm=system_prompt
-                    + qa_with_context.question
-                    + "\n"
-                    + f"The context is {self._create_context_string(qa_with_context.context_questions)}",
-                    source_context_qa=qa_with_context,
+            if qa_with_context.context_questions is None:
+                individual_experiment_inputs.append(
+                    IndividualExperimentInput(
+                        prompt_to_llm=system_prompt + "\n" + qa_with_context.question,
+                        source_context_qa=qa_with_context,
+                    )
                 )
-            )
+            else:
+                individual_experiment_inputs.append(
+                    IndividualExperimentInput(
+                        prompt_to_llm=system_prompt
+                        + qa_with_context.question
+                        + "\n"
+                        + f"The context is {self._create_context_string(qa_with_context.context_questions)}",
+                        source_context_qa=qa_with_context,
+                    )
+                )
         return individual_experiment_inputs
 
     def create_experiment(

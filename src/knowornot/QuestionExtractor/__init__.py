@@ -198,8 +198,10 @@ class QuestionExtractor:
 
         final_qa_pairs: List[QAPairFinal] = []
 
+        original_identifier = identifier
+
         for idx, qapair in enumerate(filtered_questions):
-            identifier = f"{identifier}_{idx}"
+            identifier = f"{original_identifier}_{idx}"
             final_qa_pairs.append(
                 QAPairFinal(
                     identifier=identifier,
@@ -213,6 +215,8 @@ class QuestionExtractor:
             questions=final_qa_pairs,
             path_to_store=path_to_save,
         )
+
+        output.save_to_json()
 
         self.logger.info(
             f"Generated {len(output.questions)} questions from {len(filtered_questions)} pairs."
