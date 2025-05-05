@@ -180,6 +180,49 @@ class QuestionExtractor:
 
         return output
 
+    def filter_questions(
+        self,
+        method: FilterMethod,
+        path_to_save: Path,
+        identifier: str,
+        questions: List[QAPair],
+        diversity_threshold_keyword: float = 0.3,
+        diversity_threshold_semantic: float = 0.3,
+    ) -> QuestionDocument:
+        filtered_questions = self._get_diverse_questions(
+            question_list=questions,
+            method=method,
+            diversity_threshold_keyword=diversity_threshold_keyword,
+            diversity_threshold_semantic=diversity_threshold_semantic,
+        )
+
+        final_qa_pairs: List[QAPairFinal] = []
+
+        for idx, qapair in enumerate(filtered_questions):
+            identifier = f"{identifier}_{idx}"
+            final_qa_pairs.append(
+                QAPairFinal(
+                    identifier=identifier,
+                    question=qapair.question,
+                    answer=qapair.answer,
+                )
+            )
+
+        output = QuestionDocument(
+            knowledge_base_identifier=identifier,
+            questions=final_qa_pairs,
+            path_to_store=path_to_save,
+        )
+
+        self.logger.info(
+            f"Generated {len(output.questions)} questions from {len(filtered_questions)} pairs."
+        )
+        self.logger.info(
+            f"{len(filtered_questions) - len(output.questions)} pairs were filtered out because they were too similar"
+        )
+
+        return output
+
     def _preprocess_text(self, text: str) -> str:
         """
         Preprocess text for TF-IDF analysis:
