@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+import json
 from pydantic import BaseModel, Field
 from pathlib import Path
 from typing import List, Optional, Union, Literal
@@ -201,6 +202,13 @@ class ExperimentOutputDocument(BaseModel):
         return ExperimentOutputDocument.model_validate_json(text)
 
 
+class ContextOptionsEnum(Enum):
+    QUESTION = "question"
+    EXPECTED_ANSWER = "expected_answer"
+    CONTEXT = "context"
+    CITED_QA = "cited_qa"
+
+
 class EvaluationSpec(BaseModel):
     name: str
     prompt: Prompt
@@ -261,3 +269,96 @@ class EvaluatedExperimentDocument(BaseModel):
             text = f.read()
 
         return EvaluatedExperimentDocument.model_validate_json(text)
+
+
+class LabelTask(BaseModel):
+    name: str
+    values: List[str]
+    content_in_context: List[ContextOptionsEnum] = [
+        ContextOptionsEnum.QUESTION,
+        ContextOptionsEnum.EXPECTED_ANSWER,
+        ContextOptionsEnum.CONTEXT,
+        ContextOptionsEnum.CITED_QA,
+    ]
+
+
+class HumanLabel(BaseModel):
+    """Represents a single human label for a specific task on a sampled response."""
+
+    labeller_id: str
+    label_task: LabelTask
+    label_value: str
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+
+class LabeledDataSample(BaseModel):
+    """
+    Represents a single data point sampled from experiment results, intended for
+    manual labeling across potentially multiple labeling tasks.
+
+    Stores the original experiment context, LLM interaction details, stratification
+    key, and a list of human labels collected for various tasks on this sample.
+    """
+
+    sample_id: str = Field(
+        default_factory=lambda: f"sample_{datetime.now().strftime('%Y%m%d%H%M%S_%f')}"
+    )
+    experiment_metadata: ExperimentMetadata
+    question: str
+    expected_answer: str
+    context_questions: Optional[List[QAPairFinal]]
+    llm_system_prompt: Prompt
+    llm_response: SavedLLMResponse
+    stratum_key: str
+
+    human_labels: List[HumanLabel] = Field(default_factory=list)
+    label_tasks: Optional[List[LabelTask]] = Field(default_factory=list)
+
+    @staticmethod
+    def save_list_to_json(samples: List["LabeledDataSample"], path: Path) -> None:
+        """
+        Save a list of LabeledDataSample models to a JSON file.
+
+        Args:
+            samples (List[LabeledDataSample]): The list of samples to save.
+            path (Path): The path to the JSON file.
+        """
+        if not path.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {path}")
+
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(
+                json.dumps(
+                    [sample.model_dump(mode="json") for sample in samples], indent=2
+                )
+            )
+
+    @staticmethod
+    def load_list_from_json(path: Path | str) -> List["LabeledDataSample"]:
+        """
+        Load a list of LabeledDataSample models from a JSON file.
+
+        Args:
+            path (Path | str): Path or string to the JSON file.
+
+        Returns:
+            List[LabeledDataSample]: The loaded list of samples.
+
+        Raises:
+            ValueError: If the path doesn't end with .json.
+            FileNotFoundError: If the file doesn't exist.
+            json.JSONDecodeError: If the file content is invalid JSON.
+            ValidationError: If the JSON structure doesn't match the model.
+        """
+        if isinstance(path, str):
+            path = Path(path)
+
+        if not path.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {path}")
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return [LabeledDataSample.model_validate(item) for item in data]
