@@ -17,8 +17,6 @@ class PromptManager:
 
     Clear and Concise Language: Use precise and unambiguous language. The question should be easy to understand and free from jargon or technical terms that are not essential.
 
-    Format: Your output MUST be in the following format:
-
     """
 
     hypothetical_answer_generator: str = """"
