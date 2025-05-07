@@ -1064,6 +1064,7 @@ class KnowOrNot:
         labeled_samples: List[LabeledDataSample],
         label_name: str,
         possible_values: List[str],
+        path_to_save: Path,
         allowed_inputs: List[
             Literal["question", "expected_answer", "context", "cited_qa"]
         ] = ["question", "expected_answer", "context", "cited_qa"],
@@ -1090,4 +1091,5 @@ class KnowOrNot:
         return data_labeller.label_samples(
             labeled_samples=labeled_samples,
             label_task=label_task,
+            path_to_save=path_to_save,
         )

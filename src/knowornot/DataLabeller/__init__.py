@@ -186,17 +186,29 @@ class DataLabeller:
             elif key == ContextOptionsEnum.CITED_QA:
                 string_to_print += f"Cited QA: {llm_response.cited_QA}\n"
 
-        string_to_print += f"The LLM's answer was {llm_response.llm_response.response} "
-
         string_to_print += (
-            f"The task is to decide what the value is for the label {label_task.name} "
+            f"The LLM's answer was: \n {llm_response.llm_response.response} \n"
         )
-        string_to_print += f"Your options are {label_task.values} "
 
-        label_value = input(string_to_print)
+        string_to_print += f"The task is to decide what the value is for the label {label_task.name} \n"
+        string_to_print += "Your options are:\n"
+        for i, value in enumerate(label_task.values, start=1):
+            string_to_print += f"{i}. {value}\n"
 
-        if label_value not in label_task.values:
-            raise ValueError("Label value must be one of the values in label_task")
+        while True:
+            user_input = input(string_to_print)
+            try:
+                value_number = int(user_input)
+                if value_number >= 1 and value_number <= len(label_task.values):
+                    label_value = label_task.values[value_number - 1]
+                    break
+
+            except Exception:
+                pass
+
+            print(
+                f"ERROR: Please enter a number between 1 and {len(label_task.values)}"
+            )
 
         return HumanLabel(
             labeller_id=human_labeller_id,
@@ -208,6 +220,7 @@ class DataLabeller:
         self,
         labeled_samples: List[LabeledDataSample],
         label_task: LabelTask,
+        path_to_save: Path,
     ) -> List[LabeledDataSample]:
         """
         Label a list of LabeledDataSample objects with a specific label task.
@@ -221,6 +234,11 @@ class DataLabeller:
 
         """
 
+        if path_to_save.suffix != ".json":
+            raise ValueError(
+                f"Expected path_to_save to be a .json file, but got {path_to_save}"
+            )
+
         for sample in labeled_samples:
             if not sample.label_tasks:
                 sample.label_tasks = []
@@ -230,12 +248,15 @@ class DataLabeller:
 
         human_labeller_id = input()
 
-        for sample in labeled_samples:
+        for index, sample in enumerate(labeled_samples):
             human_label = self._get_input_from_user(
                 human_labeller_id=human_labeller_id,
                 label_task=label_task,
                 llm_response=sample.llm_response,
             )
             sample.human_labels.append(human_label)
+            print(f"Done {index + 1}/{len(labeled_samples)}")
+            print(f"Remaining: {len(labeled_samples) - index - 1}")
+            LabeledDataSample.save_list_to_json(labeled_samples, path_to_save)
 
         return labeled_samples
