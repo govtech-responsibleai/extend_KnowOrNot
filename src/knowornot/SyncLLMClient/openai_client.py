@@ -60,7 +60,7 @@ class SyncOpenAIClient(SyncLLMClient):
         """
         supported_models = ["gpt-4o-search-preview"]
         if tool.type == ToolType.SEARCH and model not in supported_models:
-            raise ValueError(f"Model {model} is not supported for search queries for AzureOpenAI.")
+            raise ValueError(f"Model {model} is not supported for search queries for ßOpenAI.")
 
 
     def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
