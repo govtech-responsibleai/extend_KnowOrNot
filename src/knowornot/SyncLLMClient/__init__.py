@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Optional, Type, TypeVar, Union, overload, Literal
+from typing import List, Optional, Type, TypeVar, Union, overload, Literal, Dict, Any
 import re
 
 from pydantic import BaseModel
@@ -18,7 +18,7 @@ class Message(BaseModel):
 
 class SyncLLMClientEnum(Enum):
     AZURE_OPENAI = "AZURE_OPENAI"
-    GOOGLE_GEMINI = "GOOGLE_GEMINI"
+    GEMINI = "GEMINI"
     OPENAI = "OPENAI"
 
 
@@ -30,6 +30,51 @@ class SyncLLMClient(ABC):
     @abstractmethod
     def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
         pass
+
+    def _apply_json_message_template(self, messages: List[Message], json_model: Type[T]) -> List[Message]:
+        """
+        Applies a template to user and system messages in the list. 
+        This is used to generate a structured response from the LLM, if Instructor does not support the model provided.
+
+        Args:
+            messages: List of Message objects to modify
+            template: The template string to apply to messages
+
+        Returns:
+            List[Message]: New list of messages with template applied
+        """
+
+        system_prompt = (
+            "You are a helpful assistant. Always reply ONLY in JSON, following the exact format given."
+        )
+        def build_user_prompt(query: str, json_model: Type[T]) -> str:
+            schema = json_model.model_json_schema()
+            # Create a simple example structure
+            return f"""
+                Please provide the information using this Pydantic model schema:
+
+                {json_model.model_json_schema()}
+
+                Prompt:
+                {query}
+
+                Only return valid JSON. Do not include any explanation or additional text.
+                IMPORTANT: All strings in the JSON must be properly escaped. Use \\n for newlines and escape any quotes with \\
+                """
+
+        if isinstance(messages, str):
+            return [Message(role="system", content=system_prompt),
+                    Message(role="user", content=build_user_prompt(messages, json_model))]
+        
+        new_messages = []
+        for msg in messages:
+            if msg["role"] == "user":
+                new_messages.append(Message(role="system", content=system_prompt))
+                new_messages.append(Message(role=msg["role"], content=build_user_prompt(msg, json_model)))
+            else:
+                new_messages.append(msg)
+
+        return new_messages
 
     def prompt(
         self, prompt: Union[str, List[Message]], ai_model: Optional[str] = None
@@ -71,6 +116,7 @@ class SyncLLMClient(ABC):
         prompt: Union[str, List[Message]],
         response_model: Type[T],
         ai_model: Optional[str] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> T:
         """
         Generate a structured response from a given prompt using the LLM.
@@ -94,14 +140,24 @@ class SyncLLMClient(ABC):
                 "This LLM client cannot generate structured responses. "
                 "Enable instructor mode in the configuration to use this feature."
             )
-
+        
+        if tools and not self.can_use_tools:
+            raise ValueError(
+                "This LLM client cannot use tools. Use Gemini or OpenAI clients instead."
+            )
+        
         model_to_use: str = ai_model or self.config.default_model
 
         self.logger.debug(f"Using model: {model_to_use} and sending prompt {prompt}")
 
-        return self._generate_structured_response(
-            prompt=prompt, response_model=response_model, model_used=model_to_use
-        )
+        if tools:
+            return self._generate_structured_response(
+                prompt=prompt, response_model=response_model, model_used=model_to_use, tools=tools
+            )
+        else:
+            return self._generate_structured_response(
+                prompt=prompt, response_model=response_model, model_used=model_to_use
+            )
 
     @abstractmethod
     def get_embedding(

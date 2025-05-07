@@ -1,7 +1,17 @@
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List
+from enum import Enum
 import logging
+from pydantic import BaseModel
+
+
+class ToolType(str, Enum):
+    SEARCH = "search"
+
+
+class Tool(BaseModel):
+    type: ToolType
 
 
 @dataclass
@@ -11,6 +21,8 @@ class LLMClientConfig(ABC):
     default_model: str
     default_embedding_model: str
     can_use_instructor: bool = False
+    can_use_tools: bool = False
+    tools: Optional[List[Tool]] = None
 
 
 @dataclass
@@ -31,7 +43,7 @@ class AzureOpenAIConfig(LLMClientConfig):
 @dataclass
 class OpenAIConfig(LLMClientConfig):
     can_use_instructor: bool = True
-
+    can_use_tools: bool = True
     organization: Optional[str] = None
     project: Optional[str] = None
 
@@ -52,9 +64,20 @@ class OpenAIConfig(LLMClientConfig):
 
 
 @dataclass
+class GeminiConfig(LLMClientConfig):
+    can_use_instructor: bool = True
+    can_use_tools: bool = True
+
+    def __post_init__(self):
+        if not self.api_key:
+            raise ValueError("api_key is required for GeminiConfig")
+
+
+@dataclass
 class Config:
     azure_config: Optional[AzureOpenAIConfig] = None
     azure_batch_config: Optional[AzureOpenAIConfig] = None
+    gemini_config: Optional[GeminiConfig] = None
     arbitrary_keys: dict = field(default_factory=dict)
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
 

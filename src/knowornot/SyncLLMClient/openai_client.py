@@ -1,10 +1,12 @@
-from typing import List, Optional, Type, TypeVar, Union
+from typing import List, Optional, Type, TypeVar, Union, Dict, Any
+import json
+import re
 import instructor
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from ..SyncLLMClient.exceptions import InitialCallFailedException
 from ..SyncLLMClient import SyncLLMClient, Message, SyncLLMClientEnum
-from ..config import OpenAIConfig
+from ..config import OpenAIConfig, ToolType
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_assistant_message_param import (
@@ -27,7 +29,13 @@ class SyncOpenAIClient(SyncLLMClient):
         self.config = config
         self.client = OpenAI(api_key=config.api_key)
         self.logger = config.logger
-        self.instructor_client = instructor.from_openai(self.client)
+        self.instructor_client = instructor.from_openai(self.client, 
+                                                        mode=instructor.Mode.TOOLS)
+        
+        # Check if the tools are compatible with the model
+        if self.config.tools: 
+            for tool in self.config.tools:
+                self._check_tool(tool, self.config.default_model)        
 
         try:
             self.prompt("hello", ai_model=self.config.default_model)
@@ -38,6 +46,22 @@ class SyncOpenAIClient(SyncLLMClient):
         self.logger.info(
             f"Using model: {self.config.default_model} as the default model"
         )
+
+    def _check_tool(self, tool: Dict[str, Any], model: str) -> bool:
+        """
+        Checks if a tool requires a specific model configuration.
+        
+        Args:
+            tool: The tool to check
+            
+        Returns:
+            bool: True if the tool is compatible with the current model configuration,
+                  False if the tool requires a different model
+        """
+        supported_models = ["gpt-4o-search-preview"]
+        if tool.type == ToolType.SEARCH and model not in supported_models:
+            raise ValueError(f"Model {model} is not supported for search queries for AzureOpenAI.")
+
 
     def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
         """
@@ -155,13 +179,50 @@ class SyncOpenAIClient(SyncLLMClient):
                         "content": m.content,
                     }
                     messages.append(assistant_message)
-                # Add others as needed
+        
+        try:
+            # For structured responses, we don't want to use tools as instructor handles the response format
+            response = self.instructor_client.chat.completions.create(
+                model=model_used,
+                response_model=response_model,
+                messages=messages,
+            )
+        except Exception as e:
+            # Extract the error message directly from the exception
+            error_message = str(e)
+            # If we get a 404 error about tools not being supported, try without tools mode
+            if "404" in error_message:
+                self.logger.warning(f"Instructor does not support structured responses for model {model_used}. Falling back to standard completion using custom prompt templates and additional LLM client verification. Note that this increases the cost of the request.")
+               
+                # Create a new instructor client without tools mode
+                json_template_messages = self._apply_json_message_template(messages, response_model)
 
-        response = self.instructor_client.chat.completions.create(
-            model=model_used,
-            response_model=response_model,
-            messages=messages,
-        )
+                response_openai = self.client.chat.completions.create(
+                    model=model_used,
+                    messages=json_template_messages
+                )
+
+                raw_output = response_openai.choices[0].message.content.strip()
+
+                try: 
+                    rewrite_messages = [{
+                        "role": "user",
+                        "content": f"Extract the json object from this string: {raw_output}",
+                    }]
+                    # Use a smaller OpenAI model to rewrite into a structured response
+                    response = self.instructor_client.chat.completions.create(
+                                model="gpt-4o-mini-2024-07-18",
+                                response_model=response_model,
+                                messages=rewrite_messages,
+                            )
+                except Exception as e:
+                    raise RuntimeError(f"Failed to parse manually structured response {raw_output}. Consider using a different model.") from e
+
+            else:
+                # Re-raise if it's a different error
+                self.logger.error(f"Error generating structured response: {str(e)}. Try a different model.")
+                raise
+
         return response
 
     def get_embedding(

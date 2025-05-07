@@ -70,7 +70,6 @@ class SyncAzureOpenAIClient(SyncLLMClient):
         Raises:
             ValueError: If the response from the model does not contain any content.
         """
-
         messages: List[ChatCompletionMessageParam] = []
 
         if isinstance(prompt, str):
