@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import random
 from collections import defaultdict
 from typing import List, Dict, Tuple
@@ -35,6 +36,7 @@ class DataLabeller:
         self,
         experiments: List[ExperimentOutputDocument],
         percentage_to_sample: float,
+        json_path: Path,
     ) -> List[LabeledDataSample]:
         """
         Samples data points (LLM responses with context and metadata) for labelling
@@ -53,6 +55,7 @@ class DataLabeller:
                          experiment metadata and a list of LLM responses.
             percentage_to_sample: The percentage of responses to sample from *each stratum*.
                                 Must be a float between 0.0 and 1.0.
+            json_path: The path to save the sampled data to as a JSON file.
 
         Returns:
             A list of LabeledDataSample objects, each representing a response
@@ -65,7 +68,12 @@ class DataLabeller:
             self.logger.error(
                 f"percentage_to_sample must be between 0 and 1. Got {percentage_to_sample}"
             )
-            return []
+            raise ValueError(
+                f"percentage_to_sample must be between 0 and 1. Got {percentage_to_sample}"
+            )
+
+        if not json_path.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {json_path}")
 
         # Dictionary to hold responses paired with metadata, grouped by stratum key
         # Stratum key: (system_prompt_id, retrieval_type, ai_model, knowledge_base_id)
@@ -156,6 +164,8 @@ class DataLabeller:
         self.logger.info(
             f"Successfully sampled {total_sampled_count} LabeledDataSamples."
         )
+
+        LabeledDataSample.save_list_to_json(sampled_data_samples, json_path)
 
         return sampled_data_samples
 

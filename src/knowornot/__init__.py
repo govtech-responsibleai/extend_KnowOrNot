@@ -10,6 +10,7 @@ from .common.models import (
     EvaluatedExperimentDocument,
     ExperimentInputDocument,
     ExperimentOutputDocument,
+    LabeledDataSample,
     Prompt,
     QAPair,
     QAPairFinal,
@@ -26,6 +27,7 @@ from .PromptManager import PromptManager
 from .ExperimentManager.models import ExperimentParams, ExperimentType
 from .ExperimentManager import ExperimentManager
 from .Evaluator import Evaluator
+from .DataLabeller import DataLabeller
 
 __all__ = ["KnowOrNot", "SyncLLMClient"]
 
@@ -43,6 +45,7 @@ class KnowOrNot:
         self.question_manager: Optional[QuestionExtractor] = None
         self.experiment_manager: Optional[ExperimentManager] = None
         self.evaluator: Optional[Evaluator] = None
+        self.data_labeller: Optional[DataLabeller] = None
         self._setup_logger()
 
     def _setup_logger(self) -> None:
@@ -228,6 +231,19 @@ class KnowOrNot:
         )
 
         return self.evaluator
+
+    def _get_data_labeller(
+        self,
+        logger: logging.Logger,
+    ) -> DataLabeller:
+        if self.data_labeller is not None:
+            return self.data_labeller
+
+        self.data_labeller = DataLabeller(
+            logger=logger,
+        )
+
+        return self.data_labeller
 
     def add_azure(
         self,
@@ -1019,4 +1035,24 @@ class KnowOrNot:
             document=experiment_output,
             client_registry=self.client_registry,
             path_to_store=path_to_store,
+        )
+
+    def create_samples_to_label(
+        self,
+        experiment_outputs: List[ExperimentOutputDocument],
+        percentage_to_sample: float,
+        path_to_store: Path,
+    ) -> List[LabeledDataSample]:
+        if not 0 < percentage_to_sample <= 1:
+            raise ValueError("percentage_to_sample must be between 0 and 1")
+
+        if not path_to_store.suffix == ".json":
+            raise ValueError(f"The path must end with .json. Got: {path_to_store}")
+
+        data_labeller = self._get_data_labeller(logger=self.logger)
+
+        return data_labeller.sample_data_stratified(
+            experiments=experiment_outputs,
+            percentage_to_sample=percentage_to_sample,
+            json_path=path_to_store,
         )
