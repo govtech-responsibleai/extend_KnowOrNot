@@ -10,6 +10,8 @@ from .common.models import (
     EvaluatedExperimentDocument,
     ExperimentInputDocument,
     ExperimentOutputDocument,
+    ContextOptionsEnum,
+    LabelTask,
     LabeledDataSample,
     Prompt,
     QAPair,
@@ -1055,4 +1057,37 @@ class KnowOrNot:
             experiments=experiment_outputs,
             percentage_to_sample=percentage_to_sample,
             json_path=path_to_store,
+        )
+
+    def label_samples(
+        self,
+        labeled_samples: List[LabeledDataSample],
+        label_name: str,
+        possible_values: List[str],
+        allowed_inputs: List[
+            Literal["question", "expected_answer", "context", "cited_qa"]
+        ] = ["question", "expected_answer", "context", "cited_qa"],
+    ) -> List[LabeledDataSample]:
+        allowed_values = []
+        for possible_input in allowed_inputs:
+            if possible_input == "question":
+                allowed_values.append(ContextOptionsEnum.QUESTION)
+            elif possible_input == "expected_answer":
+                allowed_values.append(ContextOptionsEnum.EXPECTED_ANSWER)
+            elif possible_input == "context":
+                allowed_values.append(ContextOptionsEnum.CONTEXT)
+            elif possible_input == "cited_qa":
+                allowed_values.append(ContextOptionsEnum.CITED_QA)
+
+        label_task = LabelTask(
+            name=label_name,
+            values=possible_values,
+            content_in_context=allowed_values,
+        )
+
+        data_labeller = self._get_data_labeller(logger=self.logger)
+
+        return data_labeller.label_samples(
+            labeled_samples=labeled_samples,
+            label_task=label_task,
         )
