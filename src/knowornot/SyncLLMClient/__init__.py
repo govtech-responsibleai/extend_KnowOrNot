@@ -115,8 +115,7 @@ class SyncLLMClient(ABC):
         self,
         prompt: Union[str, List[Message]],
         response_model: Type[T],
-        ai_model: Optional[str] = None,
-        tools: Optional[List[Dict[str, Any]]] = None,
+        ai_model: Optional[str] = None
     ) -> T:
         """
         Generate a structured response from a given prompt using the LLM.
@@ -141,23 +140,14 @@ class SyncLLMClient(ABC):
                 "Enable instructor mode in the configuration to use this feature."
             )
         
-        if tools and not self.can_use_tools:
-            raise ValueError(
-                "This LLM client cannot use tools. Use Gemini or OpenAI clients instead."
-            )
-        
         model_to_use: str = ai_model or self.config.default_model
 
         self.logger.debug(f"Using model: {model_to_use} and sending prompt {prompt}")
 
-        if tools:
-            return self._generate_structured_response(
-                prompt=prompt, response_model=response_model, model_used=model_to_use, tools=tools
-            )
-        else:
-            return self._generate_structured_response(
-                prompt=prompt, response_model=response_model, model_used=model_to_use
-            )
+        return self._generate_structured_response(
+            prompt=prompt, response_model=response_model, model_used=model_to_use
+        )
+
 
     @abstractmethod
     def get_embedding(
