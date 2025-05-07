@@ -3,7 +3,7 @@ from enum import Enum
 import json
 from pydantic import BaseModel, Field
 from pathlib import Path
-from typing import List, Optional, Union, Literal
+from typing import Dict, List, Optional, Tuple, Union, Literal
 from ..SyncLLMClient import SyncLLMClientEnum
 
 
@@ -362,3 +362,18 @@ class LabeledDataSample(BaseModel):
             data = json.load(f)
 
         return [LabeledDataSample.model_validate(item) for item in data]
+
+
+class InterAnnotatorAgreement(BaseModel):
+    """
+    Represents the results of inter-annotator agreement calculations for a labeling task.
+    """
+
+    task_name: str
+    fleiss_kappa: float
+    pairwise_cohens_kappa: Dict[Tuple[str, str], float]
+    common_samples: int
+    sample_ids: List[str]
+    annotators: List[str]
+    possible_labels: List[str]
+    calculation_timestamp: datetime = Field(default_factory=datetime.now)
