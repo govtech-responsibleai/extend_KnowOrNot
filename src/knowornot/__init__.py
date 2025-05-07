@@ -1093,3 +1093,14 @@ class KnowOrNot:
             label_task=label_task,
             path_to_save=path_to_save,
         )
+
+    def find_inter_annotator_reliability(
+        self, labeled_samples: List[LabeledDataSample], task_name: str
+    ) -> None:
+        data_labeller = self._get_data_labeller(logger=self.logger)
+        output = data_labeller.calculate_inter_annotator_agreement(
+            labeled_samples=labeled_samples, task_name=task_name
+        )
+
+        print("\nInter-annotator agreement:")
+        print(output)
