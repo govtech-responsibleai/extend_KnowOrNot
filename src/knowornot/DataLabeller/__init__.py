@@ -2,19 +2,21 @@ import logging
 from pathlib import Path
 import random
 from collections import defaultdict
-from typing import List, Dict, Set, Tuple
+from typing import Callable, List, Dict, Sequence, Set, Tuple, Union
 from statsmodels.stats.inter_rater import fleiss_kappa
 import numpy as np
 
 from ..common.models import (
     HumanLabel,
     InterAnnotatorAgreement,
+    LLMResponseWithEvaluation,
     LabelTask,
     LabeledDataSample,
     ExperimentOutputDocument,
     SavedLLMResponse,
     ExperimentMetadata,
     ContextOptionsEnum,
+    EvaluatedExperimentDocument,
 )
 
 
@@ -37,9 +39,14 @@ class DataLabeller:
 
     def sample_data_stratified(
         self,
-        experiments: List[ExperimentOutputDocument],
+        experiments: Sequence[
+            Union[ExperimentOutputDocument, EvaluatedExperimentDocument]
+        ],
         percentage_to_sample: float,
         json_path: Path,
+        filter_function: Callable[
+            [Union[SavedLLMResponse, LLMResponseWithEvaluation]], bool
+        ] = lambda x: True,
     ) -> List[LabeledDataSample]:
         """
         Samples data points (LLM responses with context and metadata) for labelling
@@ -81,14 +88,25 @@ class DataLabeller:
         # Dictionary to hold responses paired with metadata, grouped by stratum key
         # Stratum key: (system_prompt_id, retrieval_type, ai_model, knowledge_base_id)
         response_metadata_pairs_by_stratum: Dict[
-            Tuple[str, str, str, str], List[Tuple[ExperimentMetadata, SavedLLMResponse]]
+            Tuple[str, str, str, str],
+            List[
+                Tuple[
+                    ExperimentMetadata,
+                    Union[SavedLLMResponse, LLMResponseWithEvaluation],
+                ]
+            ],
         ] = defaultdict(list)
         all_response_metadata_pairs: List[
-            Tuple[ExperimentMetadata, SavedLLMResponse]
+            Tuple[
+                ExperimentMetadata, Union[SavedLLMResponse, LLMResponseWithEvaluation]
+            ]
         ] = []
 
         for exp_doc in experiments:
-            metadata = exp_doc.metadata
+            if isinstance(exp_doc, EvaluatedExperimentDocument):
+                metadata = exp_doc.experiment_metadata
+            else:
+                metadata = exp_doc.metadata
             # Define the stratum key based on relevant metadata fields
             stratum_key_tuple = (
                 metadata.system_prompt.identifier,
@@ -97,6 +115,8 @@ class DataLabeller:
                 metadata.knowledge_base_identifier,
             )
             for response in exp_doc.responses:
+                if not filter_function(response):
+                    continue
                 response_metadata_pairs_by_stratum[stratum_key_tuple].append(
                     (metadata, response)
                 )
@@ -147,21 +167,30 @@ class DataLabeller:
             stratum_key_str = str(stratum_key_tuple)  # Store the tuple as a string key
             for metadata, response in sampled_pairs_in_stratum:
                 try:
+                    if isinstance(response, LLMResponseWithEvaluation):
+                        response_used = response.llm_response
+                    else:
+                        response_used = response
+
                     labeled_sample = LabeledDataSample(
                         experiment_metadata=metadata,
-                        question=response.experiment_input.source_context_qa.question,
-                        expected_answer=response.experiment_input.source_context_qa.expected_answer,
-                        context_questions=response.experiment_input.source_context_qa.context_questions,
+                        question=response_used.experiment_input.source_context_qa.question,
+                        expected_answer=response_used.experiment_input.source_context_qa.expected_answer,
+                        context_questions=response_used.experiment_input.source_context_qa.context_questions,
                         llm_system_prompt=metadata.system_prompt,
-                        llm_response=response,
+                        llm_response=response_used,
                         stratum_key=stratum_key_str,
                         label_tasks=None,  # Initially no label tasks assigned
                     )
                     sampled_data_samples.append(labeled_sample)
                 except Exception as e:
                     # Log error if sample creation fails for a specific response
+                    if isinstance(response, LLMResponseWithEvaluation):
+                        response_used = response.llm_response
+                    else:
+                        response_used = response
                     self.logger.error(
-                        f"Failed to create LabeledDataSample for response {response.identifier} in stratum {stratum_key_str}: {e}"
+                        f"Failed to create LabeledDataSample for response {response_used.identifier} in stratum {stratum_key_str}: {e}"
                     )
 
         self.logger.info(

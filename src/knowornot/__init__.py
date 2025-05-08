@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Sequence, Union
 import logging
 
 from .SyncLLMClient.openai_client import SyncOpenAIClient
@@ -1064,7 +1064,9 @@ class KnowOrNot:
 
     def create_samples_to_label(
         self,
-        experiment_outputs: List[ExperimentOutputDocument],
+        experiment_outputs: Sequence[
+            Union[ExperimentOutputDocument, EvaluatedExperimentDocument]
+        ],
         percentage_to_sample: float,
         path_to_store: Path,
     ) -> List[LabeledDataSample]:
