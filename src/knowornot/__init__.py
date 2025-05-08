@@ -215,7 +215,7 @@ class KnowOrNot:
 
     def _get_evaluator(
         self,
-        evaluation_spec_dict: Dict[str, EvaluationSpec],
+        evaluation_spec_dict: Optional[Dict[str, EvaluationSpec]],
         alternative_llm_client: Optional[SyncLLMClient] = None,
         model_to_use: Optional[str] = None,
     ) -> Evaluator:
@@ -1031,7 +1031,9 @@ class KnowOrNot:
         return evaluator
 
     def evaluate_experiment(
-        self, experiment_output: ExperimentOutputDocument, path_to_store: Path
+        self,
+        experiment_output: Union[EvaluatedExperimentDocument, ExperimentOutputDocument],
+        path_to_store: Path,
     ) -> EvaluatedExperimentDocument:
         if not self.evaluator:
             raise ValueError(
@@ -1045,7 +1047,9 @@ class KnowOrNot:
         )
 
     async def evaluate_experiment_async(
-        self, experiment_output: ExperimentOutputDocument, path_to_store: Path
+        self,
+        experiment_output: Union[EvaluatedExperimentDocument, ExperimentOutputDocument],
+        path_to_store: Path,
     ) -> EvaluatedExperimentDocument:
         if not self.evaluator:
             raise ValueError(
@@ -1127,3 +1131,46 @@ class KnowOrNot:
 
         print("\nInter-annotator agreement:")
         print(output)
+
+        return
+
+    async def evaluate_and_compare_to_human_labels(
+        self,
+        labelled_samples: List[LabeledDataSample],
+        task_name: str,
+        annotators_to_compare: List[str],
+        prompt: str,
+        prompt_id: str,
+        path_to_store: Path,
+        recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
+        recommended_llm_model: Optional[str] = None,
+    ) -> Dict:
+        if recommended_llm_client_enum is not None:
+            if recommended_llm_client_enum not in self.client_registry:
+                raise ValueError(
+                    f"{recommended_llm_client_enum} not in client registry. Please add a client for {recommended_llm_client_enum}"
+                )
+
+        client = (
+            self.get_client(recommended_llm_client_enum)
+            if recommended_llm_client_enum is not None
+            else self.default_sync_client
+        )
+        evaluator = self._get_evaluator(
+            evaluation_spec_dict=None,
+            alternative_llm_client=client,
+            model_to_use=recommended_llm_model,
+        )
+        results = await evaluator.evaluate_and_compare_to_human_labels_async(
+            client_registry=self.client_registry,
+            labelled_samples=labelled_samples,
+            task_name=task_name,
+            annotators_to_compare=annotators_to_compare,
+            prompt=prompt,
+            prompt_id=prompt_id,
+            recommended_llm_client_enum=recommended_llm_client_enum,
+            recommended_llm_model=recommended_llm_model,
+            output_path=path_to_store,
+        )
+
+        return results

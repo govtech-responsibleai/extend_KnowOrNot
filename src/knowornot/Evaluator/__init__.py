@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 from pathlib import Path
 from ..SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 import logging
@@ -8,6 +9,7 @@ from ..common.models import (
     EvaluatedExperimentDocument,
     EvaluationMetadata,
     LLMResponseWithEvaluation,
+    LabeledDataSample,
     Prompt,
     SavedLLMResponse,
     EvaluationSpec,
@@ -15,7 +17,7 @@ from ..common.models import (
     LabelTask,
 )
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import asyncio
 import concurrent.futures
 from tqdm import tqdm
@@ -26,7 +28,7 @@ class Evaluator:
         self,
         default_client: SyncLLMClient,
         logger: logging.Logger,
-        evaluation_dict: Dict[str, EvaluationSpec],
+        evaluation_dict: Optional[Dict[str, EvaluationSpec]],
         evaluation_model: Optional[str] = None,
     ):
         self.default_client = default_client
@@ -37,6 +39,16 @@ class Evaluator:
         )
 
         self.logger.info("Initializing evaluator")
+
+    def add_evaluation_spec(self, evaluation_spec: EvaluationSpec) -> None:
+        if not self.evaluation_dict:
+            self.evaluation_dict = {}
+
+        if evaluation_spec.name in self.evaluation_dict:
+            raise ValueError(
+                f"An evaluation spec with name {evaluation_spec.name} already exists"
+            )
+        self.evaluation_dict[evaluation_spec.name] = evaluation_spec
 
     def _create_context(
         self, evaluation_metadata: EvaluationMetadata, response: SavedLLMResponse
@@ -76,6 +88,11 @@ class Evaluator:
         output: List[EvaluationMetadata] = []
         if not path_to_store.suffix == ".json":
             raise ValueError(f"The path must end with .json. Got: {path_to_store}")
+
+        if not self.evaluation_dict:
+            raise ValueError(
+                "You must add at least one evaluation specfication before calling _create_metadata_list"
+            )
 
         for evaluation_name, spec in self.evaluation_dict.items():
             used_evaluator_client_enum = (
@@ -127,7 +144,7 @@ class Evaluator:
 
     def evaluate_document(
         self,
-        document: ExperimentOutputDocument,
+        document: Union[ExperimentOutputDocument, EvaluatedExperimentDocument],
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         path_to_store: Path,
     ) -> EvaluatedExperimentDocument:
@@ -135,9 +152,45 @@ class Evaluator:
             client_registry=client_registry, path_to_store=path_to_store
         )
 
+        # Initialize variables based on document type
+        if isinstance(document, EvaluatedExperimentDocument):
+            # Extract existing evaluation names to avoid duplication
+            existing_eval_names = {
+                meta.evaluation_name for meta in document.evaluation_metadata
+            }
+            # Filter out evaluations we already have
+            metadata_items = [
+                meta
+                for meta in metadata_items
+                if meta.evaluation_name not in existing_eval_names
+            ]
+
+            # If we have no new evaluations to add, return the original document
+            if not metadata_items:
+                return document
+
+            # Set up initial state from existing document
+            experiment_metadata = document.experiment_metadata
+            existing_metadata = list(document.evaluation_metadata)
+            responses = [resp.llm_response for resp in document.responses]
+            existing_evaluations = {
+                resp.llm_response.identifier: resp.evaluations
+                for resp in document.responses
+            }
+        else:
+            # Set up initial state for unevaluated document
+            experiment_metadata = document.metadata
+            existing_metadata = []
+            responses = document.responses
+            existing_evaluations = {resp.identifier: [] for resp in document.responses}
+
+        # Process evaluations for all responses
         evaluated_llm_responses = []
-        for response in document.responses:
-            evaluation_outputs: List[EvaluationOutput] = []
+        for response in responses:
+            response_id = response.identifier
+            evaluation_outputs = list(existing_evaluations.get(response_id, []))
+
+            # Add new evaluations
             for evaluation_kind in metadata_items:
                 evaluator_client = client_registry[
                     evaluation_kind.evaluator_client_enum
@@ -165,20 +218,20 @@ class Evaluator:
                 )
             )
 
+        # Create output document with combined metadata
         output = EvaluatedExperimentDocument(
             path_to_store=path_to_store,
-            experiment_metadata=document.metadata,
-            evaluation_metadata=metadata_items,
+            experiment_metadata=experiment_metadata,
+            evaluation_metadata=existing_metadata + metadata_items,
             responses=evaluated_llm_responses,
         )
 
         output.save_to_json()
-
         return output
 
     async def evaluate_document_async(
         self,
-        document: ExperimentOutputDocument,
+        document: Union[ExperimentOutputDocument, EvaluatedExperimentDocument],
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         path_to_store: Path,
         max_workers: int = 8,
@@ -187,12 +240,44 @@ class Evaluator:
             client_registry=client_registry, path_to_store=path_to_store
         )
 
+        # Initialize variables based on document type
+        if isinstance(document, EvaluatedExperimentDocument):
+            # Extract existing evaluation names to avoid duplication
+            existing_eval_names = {
+                meta.evaluation_name for meta in document.evaluation_metadata
+            }
+            # Filter out evaluations we already have
+            metadata_items = [
+                meta
+                for meta in metadata_items
+                if meta.evaluation_name not in existing_eval_names
+            ]
+
+            # If we have no new evaluations to add, return the original document
+            if not metadata_items:
+                return document
+
+            # Set up initial state from existing document
+            experiment_metadata = document.experiment_metadata
+            existing_metadata = list(document.evaluation_metadata)
+            responses = [resp.llm_response for resp in document.responses]
+            existing_evaluations = {
+                resp.llm_response.identifier: resp.evaluations
+                for resp in document.responses
+            }
+        else:
+            # Set up initial state for unevaluated document
+            experiment_metadata = document.metadata
+            existing_metadata = []
+            responses = document.responses
+            existing_evaluations = {resp.identifier: [] for resp in document.responses}
+
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
         loop = asyncio.get_event_loop()
 
         evaluated_llm_responses: List[Optional[LLMResponseWithEvaluation]] = [
             None
-        ] * len(document.responses)
+        ] * len(responses)
 
         async def process_evaluation(
             response_idx: int,
@@ -204,24 +289,40 @@ class Evaluator:
             context = self._create_context(evaluation_kind, response)
 
             # Run the synchronous API call in a thread
-            evaluation_raw = await loop.run_in_executor(
-                executor,
-                lambda: evaluator_client.prompt_and_extract_tag(
-                    prompt=context,
-                    ai_model=evaluation_kind.evaluator_model,
-                    tag_name=evaluation_kind.tag_name,
-                    allowed_list=evaluation_kind.evaluation_outcomes_list,
-                    on_multiple="last",
-                ),
-            )
+            max_tries = 3
+            for attempt in range(max_tries):
+                try:
+                    evaluation_raw = await loop.run_in_executor(
+                        executor,
+                        lambda: evaluator_client.prompt_and_extract_tag(
+                            prompt=context,
+                            ai_model=evaluation_kind.evaluator_model,
+                            tag_name=evaluation_kind.tag_name,
+                            allowed_list=evaluation_kind.evaluation_outcomes_list,
+                            on_multiple="last",
+                        ),
+                    )
+                    return (
+                        response_idx,
+                        evaluation_idx,
+                        response,
+                        evaluation_kind,
+                        evaluation_raw,
+                    )
+                except Exception as e:
+                    if attempt == max_tries - 1:
+                        self.logger.error(
+                            f"Failed to evaluate sample {response.identifier} after {max_tries} attempts: {e}"
+                        )
+                        # Return a placeholder or error indicator
+                        raise e
+                    else:
+                        self.logger.warning(
+                            f"Attempt {attempt + 1} for sample {response.identifier} failed with error {e}, retrying..."
+                        )
+                        await asyncio.sleep(1)  # Add a short delay before retrying
 
-            return (
-                response_idx,
-                evaluation_idx,
-                response,
-                evaluation_kind,
-                evaluation_raw,
-            )
+            raise ValueError("Should never get here")
 
         # Create tasks for all response+evaluation combinations
         tasks = []
@@ -229,14 +330,23 @@ class Evaluator:
 
         # Initialize evaluation results storage with the right structure
         evaluations_by_response = {}
-        for idx, response in enumerate(document.responses):
-            # For each response, create a list with None placeholders for each evaluation
-            evaluations_by_response[idx] = [None] * len(metadata_items)
+        for idx, response in enumerate(responses):
+            response_id = response.identifier
+            # Start with existing evaluations if any
+            evaluations_by_response[idx] = list(
+                existing_evaluations.get(response_id, [])
+            )
 
-            # Create tasks for each evaluation
+            # Create a placeholder for each new evaluation to be added
+            initial_eval_count = len(evaluations_by_response[idx])
+            evaluations_by_response[idx].extend([None] * len(metadata_items))
+
+            # Create tasks for each new evaluation
             for eval_idx, evaluation_kind in enumerate(metadata_items):
                 tasks.append(
-                    process_evaluation(idx, response, eval_idx, evaluation_kind)
+                    process_evaluation(
+                        idx, response, initial_eval_count + eval_idx, evaluation_kind
+                    )
                 )
                 total_tasks += 1
 
@@ -269,7 +379,7 @@ class Evaluator:
         executor.shutdown()
 
         # Create the final structure, maintaining both response and evaluation order
-        for idx, response in enumerate(document.responses):
+        for idx, response in enumerate(responses):
             evaluated_llm_responses[idx] = LLMResponseWithEvaluation(
                 llm_response=response, evaluations=evaluations_by_response[idx]
             )
@@ -291,8 +401,8 @@ class Evaluator:
 
         output = EvaluatedExperimentDocument(
             path_to_store=path_to_store,
-            experiment_metadata=document.metadata,
-            evaluation_metadata=metadata_items,
+            experiment_metadata=experiment_metadata,
+            evaluation_metadata=existing_metadata + metadata_items,
             responses=confirmed_llm_responses,
         )
 
@@ -335,4 +445,418 @@ class Evaluator:
             recommended_llm_client_enum=recommended_llm_client_enum,
             recommended_llm_model=recommended_llm_model,
             evaluation_outcomes=evaluation_outcomes,
+            in_context=label.content_in_context,
         )
+
+    async def evaluate_and_compare_to_human_labels_async(
+        self,
+        client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
+        labelled_samples: List[LabeledDataSample],
+        task_name: str,
+        annotators_to_compare: List[str],
+        prompt: str,
+        prompt_id: str,
+        output_path: Optional[Path] = None,
+        recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
+        recommended_llm_model: Optional[str] = None,
+        max_workers: int = 8,
+    ) -> Dict:
+        label_tasks: List[LabelTask] = []
+
+        # Find all label tasks with that name
+        # assume that every sample has the label task and every label task with that name is the same
+        # works for now
+        for sample in labelled_samples:
+            if not sample.label_tasks:
+                continue
+            for task in sample.label_tasks:
+                if task.name == task_name:
+                    label_tasks = [task]
+                    break
+
+        if len(label_tasks) == 0:
+            raise ValueError(
+                f"No label tasks with name {task_name} found in the provided samples"
+            )
+
+        # Create evaluation specs
+        label_task = list(label_tasks)[0]
+        evaluation_spec = self.create_evaluation_spec(
+            prompt=prompt,
+            prompt_id=prompt_id,
+            label=label_task,
+            recommended_llm_client_enum=recommended_llm_client_enum,
+            recommended_llm_model=recommended_llm_model,
+        )
+
+        if evaluation_spec.recommended_llm_client_enum is not None:
+            evaluator_client = client_registry[
+                evaluation_spec.recommended_llm_client_enum
+            ]
+        else:
+            evaluator_client = self.default_client
+
+        model = (
+            evaluation_spec.recommended_llm_model
+            or evaluator_client.config.default_model
+        )
+
+        evaluation_metadata = EvaluationMetadata(
+            evaluation_name=evaluation_spec.name,
+            evaluator_client_enum=evaluation_spec.recommended_llm_client_enum
+            or self.default_client.enum_name,
+            evaluator_model=evaluation_spec.recommended_llm_model
+            or evaluator_client.config.default_model,
+            evaluation_prompt=evaluation_spec.prompt,
+            tag_name=evaluation_spec.tag_name,
+            evaluation_outcomes_list=evaluation_spec.evaluation_outcomes,
+            in_context=evaluation_spec.in_context,
+        )
+
+        if not self.evaluation_dict:
+            self.evaluation_dict = {}
+
+        self.evaluation_dict[label_task.name] = evaluation_spec
+
+        # Track results for comparison
+        model_evaluations = {}
+        human_evaluations = {annotator: {} for annotator in annotators_to_compare}
+
+        # Create results dictionary to store all evaluation data
+        results = {
+            "metadata": {
+                "task_name": task_name,
+                "model": model,
+                "evaluation_timestamp": datetime.now().isoformat(),
+                "annotators": annotators_to_compare,
+                "possible_outcomes": evaluation_spec.evaluation_outcomes,
+            },
+            "evaluations": {
+                "model": {},
+                "human": {},
+            },
+            "agreement": {
+                "model_vs_human": {},
+                "inter_annotator": {},
+            },
+            "distribution": {
+                "model": {},
+                "human": {},
+            },
+        }
+
+        # Set up async execution environment
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+        loop = asyncio.get_event_loop()
+
+        # Collect human evaluations first (this doesn't need async as it's just data retrieval)
+        for sample in labelled_samples:
+            for human_label in sample.human_labels:
+                if (
+                    human_label.labeller_id in annotators_to_compare
+                    and human_label.label_task.name == task_name
+                ):
+                    human_evaluations[human_label.labeller_id][sample.sample_id] = (
+                        human_label.label_value
+                    )
+
+                    if human_label.labeller_id not in results["evaluations"]["human"]:
+                        results["evaluations"]["human"][human_label.labeller_id] = {}
+
+                    results["evaluations"]["human"][human_label.labeller_id][
+                        sample.sample_id
+                    ] = human_label.label_value
+
+        # Define async evaluation function
+        async def evaluate_sample(sample: LabeledDataSample) -> Tuple[str, str]:
+            context = self._create_context(evaluation_metadata, sample.llm_response)
+
+            # Run the synchronous API call in a thread with retry logic
+            max_tries = 3
+            for attempt in range(max_tries):
+                try:
+                    model_eval = await loop.run_in_executor(
+                        executor,
+                        lambda: evaluator_client.prompt_and_extract_tag(
+                            prompt=context,
+                            ai_model=model,
+                            tag_name=evaluation_spec.tag_name,
+                            allowed_list=evaluation_spec.evaluation_outcomes,
+                            on_multiple="last",
+                        ),
+                    )
+                    return sample.sample_id, model_eval
+                except Exception as e:
+                    if attempt == max_tries - 1:
+                        self.logger.error(
+                            f"Failed to evaluate sample {sample.sample_id} after {max_tries} attempts: {e}"
+                        )
+                        # Return a placeholder or error indicator
+                        return sample.sample_id, "evaluation_failed"
+                    else:
+                        self.logger.warning(
+                            f"Attempt {attempt + 1} for sample {sample.sample_id} failed with error {e}, retrying..."
+                        )
+                        await asyncio.sleep(1)  # Add a short delay before retrying
+            return sample.sample_id, "evaluation_failed"
+
+        # Create evaluation tasks for all samples
+        self.logger.info(f"Evaluating {len(labelled_samples)} samples with model")
+        print(f"\nEvaluating {len(labelled_samples)} samples using {model} model...")
+
+        # Process evaluations concurrently with a progress bar
+        tasks = [evaluate_sample(sample) for sample in labelled_samples]
+
+        # Use tqdm to display progress
+        pbar = tqdm(total=len(tasks), desc="Model evaluation")
+
+        for task in asyncio.as_completed(tasks):
+            sample_id, model_eval = await task
+
+            # Only store successful evaluations
+            if model_eval != "evaluation_failed":
+                model_evaluations[sample_id] = model_eval
+                results["evaluations"]["model"][sample_id] = model_eval
+
+            pbar.update(1)
+
+        pbar.close()
+
+        # Clean up executor
+        executor.shutdown()
+
+        # Calculate agreement statistics
+        self.logger.info("Calculating agreement statistics")
+        print("\n===== MODEL vs HUMAN ANNOTATOR AGREEMENT =====")
+
+        # Calculate agreement between model and each human annotator
+        for annotator in annotators_to_compare:
+            matching_samples = [
+                sample_id
+                for sample_id in model_evaluations
+                if sample_id in human_evaluations[annotator]
+            ]
+
+            if not matching_samples:
+                print(f"\nNo matching samples found for annotator {annotator}")
+                results["agreement"]["model_vs_human"][annotator] = {
+                    "matching_samples": 0,
+                    "agreement_count": 0,
+                    "agreement_percentage": 0,
+                    "confusion_matrix": None,
+                }
+                continue
+
+            agreement_count = sum(
+                1
+                for sample_id in matching_samples
+                if model_evaluations[sample_id]
+                == human_evaluations[annotator][sample_id]
+            )
+
+            agreement_percentage = (agreement_count / len(matching_samples)) * 100
+
+            print(
+                f"\nAgreement between model and {annotator}: {agreement_percentage:.2f}% ({agreement_count}/{len(matching_samples)})"
+            )
+
+            # Store in results dict
+            results["agreement"]["model_vs_human"][annotator] = {
+                "matching_samples": len(matching_samples),
+                "agreement_count": agreement_count,
+                "agreement_percentage": agreement_percentage,
+            }
+
+            # Create confusion matrix for multi-class comparison
+            if len(evaluation_spec.evaluation_outcomes) > 2:
+                confusion = {}
+                for outcome in evaluation_spec.evaluation_outcomes:
+                    confusion[outcome] = {
+                        other: 0 for other in evaluation_spec.evaluation_outcomes
+                    }
+
+                for sample_id in matching_samples:
+                    model_outcome = model_evaluations[sample_id]
+                    human_outcome = human_evaluations[annotator][sample_id]
+                    confusion[model_outcome][human_outcome] += 1
+
+                print(f"\nConfusion matrix for model vs {annotator}:")
+                # Print header
+                header = "Model \\ Human"
+                for outcome in evaluation_spec.evaluation_outcomes:
+                    header += f"\t{outcome}"
+                print(header)
+
+                # Print rows
+                for model_outcome in evaluation_spec.evaluation_outcomes:
+                    row = model_outcome
+                    for human_outcome in evaluation_spec.evaluation_outcomes:
+                        row += f"\t{confusion[model_outcome][human_outcome]}"
+                    print(row)
+
+                # Store confusion matrix in results
+                results["agreement"]["model_vs_human"][annotator][
+                    "confusion_matrix"
+                ] = confusion
+
+        # Calculate agreement among human annotators for comparison
+        if len(annotators_to_compare) > 1:
+            self.logger.info("Calculating inter-annotator agreement among humans")
+            print("\n===== HUMAN INTER-ANNOTATOR AGREEMENT =====")
+
+            # Find samples that all specified annotators have labeled
+            common_samples = set()
+            for sample_id in set().union(
+                *[set(human_evaluations[a].keys()) for a in annotators_to_compare]
+            ):
+                if all(
+                    sample_id in human_evaluations[a] for a in annotators_to_compare
+                ):
+                    common_samples.add(sample_id)
+
+            results["agreement"]["inter_annotator"]["common_samples"] = list(
+                common_samples
+            )
+
+            if not common_samples:
+                print(
+                    "\nNo samples found that were labeled by all specified annotators"
+                )
+                results["agreement"]["inter_annotator"]["pairwise"] = {}
+                results["agreement"]["inter_annotator"]["full_agreement"] = {
+                    "count": 0,
+                    "percentage": 0,
+                }
+            else:
+                print(
+                    f"\nFound {len(common_samples)} samples labeled by all specified annotators"
+                )
+
+                # Calculate pairwise agreement between human annotators
+                results["agreement"]["inter_annotator"]["pairwise"] = {}
+
+                for i, annotator1 in enumerate(annotators_to_compare):
+                    for annotator2 in annotators_to_compare[i + 1 :]:
+                        pair_key = f"{annotator1}_vs_{annotator2}"
+                        agreement_count = sum(
+                            1
+                            for sample_id in common_samples
+                            if human_evaluations[annotator1][sample_id]
+                            == human_evaluations[annotator2][sample_id]
+                        )
+
+                        agreement_percentage = (
+                            agreement_count / len(common_samples)
+                        ) * 100
+
+                        print(
+                            f"\nAgreement between {annotator1} and {annotator2}: {agreement_percentage:.2f}% ({agreement_count}/{len(common_samples)})"
+                        )
+
+                        # Store in results
+                        results["agreement"]["inter_annotator"]["pairwise"][
+                            pair_key
+                        ] = {
+                            "agreement_count": agreement_count,
+                            "agreement_percentage": agreement_percentage,
+                        }
+
+                # Calculate overall agreement percentage across all human annotators
+                full_agreement_count = sum(
+                    1
+                    for sample_id in common_samples
+                    if len(
+                        set(
+                            human_evaluations[a][sample_id]
+                            for a in annotators_to_compare
+                        )
+                    )
+                    == 1
+                )
+
+                full_agreement_percentage = (
+                    full_agreement_count / len(common_samples)
+                ) * 100
+
+                print(
+                    f"\nFull agreement among all human annotators: {full_agreement_percentage:.2f}% ({full_agreement_count}/{len(common_samples)})"
+                )
+
+                # Store in results
+                results["agreement"]["inter_annotator"]["full_agreement"] = {
+                    "count": full_agreement_count,
+                    "percentage": full_agreement_percentage,
+                }
+
+        # Print distribution of labels
+        print("\n===== LABEL DISTRIBUTION =====")
+
+        # Model label distribution
+        model_distribution = {
+            outcome: 0 for outcome in evaluation_spec.evaluation_outcomes
+        }
+        for label in model_evaluations.values():
+            model_distribution[label] += 1
+
+        print("\nModel label distribution:")
+        for outcome, count in model_distribution.items():
+            percentage = (
+                (count / len(model_evaluations)) * 100 if model_evaluations else 0
+            )
+            print(f"{outcome}: {count} ({percentage:.2f}%)")
+            results["distribution"]["model"][outcome] = {
+                "count": count,
+                "percentage": percentage,
+            }
+
+        # Human label distribution by annotator
+        results["distribution"]["human"] = {}
+
+        for annotator in annotators_to_compare:
+            if not human_evaluations[annotator]:
+                continue
+
+            print(f"\n{annotator} label distribution:")
+            human_distribution = {
+                outcome: 0 for outcome in evaluation_spec.evaluation_outcomes
+            }
+            for label in human_evaluations[annotator].values():
+                human_distribution[label] += 1
+
+            results["distribution"]["human"][annotator] = {}
+
+            for outcome, count in human_distribution.items():
+                percentage = (
+                    (count / len(human_evaluations[annotator])) * 100
+                    if human_evaluations[annotator]
+                    else 0
+                )
+                print(f"{outcome}: {count} ({percentage:.2f}%)")
+                results["distribution"]["human"][annotator][outcome] = {
+                    "count": count,
+                    "percentage": percentage,
+                }
+
+        print("\nEvaluation and comparison completed")
+        self.logger.info("Evaluation and comparison completed")
+
+        # Save results to JSON file if path provided
+        if output_path:
+            if not output_path.parent.exists():
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if not output_path.suffix == ".json":
+                output_path = output_path.with_suffix(".json")
+
+            with open(output_path, "w") as f:
+                # Convert datetime objects to strings for JSON serialization
+                json_results = json.dumps(
+                    results,
+                    default=lambda o: o.isoformat() if isinstance(o, datetime) else o,
+                    indent=2,
+                )
+                f.write(json_results)
+
+            print(f"Results saved to {output_path}")
+
+        return results
