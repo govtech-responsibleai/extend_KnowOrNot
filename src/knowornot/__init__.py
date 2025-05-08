@@ -1098,6 +1098,10 @@ class KnowOrNot:
                 allowed_values.append(ContextOptionsEnum.CONTEXT)
             elif possible_input == "cited_qa":
                 allowed_values.append(ContextOptionsEnum.CITED_QA)
+            else:
+                raise ValueError(
+                    f"Context {possible_input} is not allowed. Allowed contexts are: {['question', 'expected_answer', 'context', 'cited_qa']}"
+                )
 
         label_task = LabelTask(
             name=label_name,
