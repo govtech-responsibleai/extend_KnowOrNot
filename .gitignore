@@ -5,8 +5,12 @@ build/
 dist/
 wheels/
 *.egg-info
+.DS_Store
 
 # Virtual environments
 .venv
 .env
 **/*.swp
+
+# Project specific
+examples/

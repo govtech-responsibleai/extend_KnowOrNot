@@ -1,10 +1,5 @@
 from typing import List, Optional, Type, TypeVar, Union
 import instructor
-from pydantic import BaseModel
-
-from ..SyncLLMClient.exceptions import InitialCallFailedException
-from ..SyncLLMClient import SyncLLMClient, Message, SyncLLMClientEnum
-from ..config import OpenAIConfig
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_assistant_message_param import (
@@ -16,6 +11,12 @@ from openai.types.chat.chat_completion_system_message_param import (
 from openai.types.chat.chat_completion_user_message_param import (
     ChatCompletionUserMessageParam,
 )
+from pydantic import BaseModel
+
+from ..config import OpenAIConfig, ToolType, Tool
+from ..SyncLLMClient.exceptions import InitialCallFailedException
+from ..SyncLLMClient import SyncLLMClient, Message, SyncLLMClientEnum
+
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -27,7 +28,14 @@ class SyncOpenAIClient(SyncLLMClient):
         self.config = config
         self.client = OpenAI(api_key=config.api_key)
         self.logger = config.logger
-        self.instructor_client = instructor.from_openai(self.client)
+        self.instructor_client = instructor.from_openai(
+            self.client, mode=instructor.Mode.TOOLS
+        )
+
+        # Check if the tools are compatible with the model
+        if self.config.tools:
+            for tool in self.config.tools:
+                self._check_tool(tool, self.config.default_model)
 
         try:
             self.prompt("hello", ai_model=self.config.default_model)
@@ -39,26 +47,35 @@ class SyncOpenAIClient(SyncLLMClient):
             f"Using model: {self.config.default_model} as the default model"
         )
 
-    def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
+    def _check_tool(self, tool: Tool, model: str) -> None:
         """
-        Constructs and sends a prompt to the OpenAI chat model and returns the generated response.
-
-        This method handles the conversion of the input `prompt`, which can be a string or a list of `Message` objects,
-        into a list of `ChatCompletionMessageParam` suitable for the OpenAI chat model. It then sends the
-        constructed messages to the model specified by `ai_model` and returns the model's textual response.
+        Checks if a tool requires a specific model configuration.
 
         Args:
-            prompt: The input prompt(s) to send to the chat model. It can be a single string or a list of
-                    `Message` objects, where each message has a role (user, system, or assistant) and content.
-            ai_model: The identifier of the AI model to use for generating the chat response.
+            tool: The tool to check
 
         Returns:
-            The text content of the first message choice returned by the AI model.
-
-        Raises:
-            ValueError: If the response from the model does not contain any content.
+            bool: True if the tool is compatible with the current model configuration,
+                  False if the tool requires a different model
         """
+        supported_models = ["gpt-4o-search-preview"]
+        if tool.type == ToolType.SEARCH and model not in supported_models:
+            raise ValueError(
+                f"Model {model} is not supported for search queries for ßOpenAI."
+            )
 
+    def _convert_to_chat_messages(
+        self, prompt: Union[str, List[Message]]
+    ) -> List[ChatCompletionMessageParam]:
+        """
+        Converts a prompt (either string or list of Message objects) into a list of ChatCompletionMessageParam.
+
+        Args:
+            prompt: Either a string or a list of Message objects
+
+        Returns:
+            List[ChatCompletionMessageParam]: List of messages in OpenAI chat format
+        """
         messages: List[ChatCompletionMessageParam] = []
 
         if isinstance(prompt, str):
@@ -87,7 +104,29 @@ class SyncOpenAIClient(SyncLLMClient):
                         "content": m.content,
                     }
                     messages.append(assistant_message)
-                # Add others as needed
+
+        return messages
+
+    def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
+        """
+        Constructs and sends a prompt to the OpenAI chat model and returns the generated response.
+
+        This method handles the conversion of the input `prompt`, which can be a string or a list of `Message` objects,
+        into a list of `ChatCompletionMessageParam` suitable for the OpenAI chat model. It then sends the
+        constructed messages to the model specified by `ai_model` and returns the model's textual response.
+
+        Args:
+            prompt: The input prompt(s) to send to the chat model. It can be a single string or a list of
+                    `Message` objects, where each message has a role (user, system, or assistant) and content.
+            ai_model: The identifier of the AI model to use for generating the chat response.
+
+        Returns:
+            The text content of the first message choice returned by the AI model.
+
+        Raises:
+            ValueError: If the response from the model does not contain any content.
+        """
+        messages = self._convert_to_chat_messages(prompt)
 
         response = self.client.chat.completions.create(
             model=ai_model,
@@ -127,41 +166,65 @@ class SyncOpenAIClient(SyncLLMClient):
         Raises:
             ValueError: If the response from the model does not contain any content.
         """
-        messages: List[ChatCompletionMessageParam] = []
+        messages = self._convert_to_chat_messages(prompt)
 
-        if isinstance(prompt, str):
-            user_message: ChatCompletionUserMessageParam = {
-                "role": "user",
-                "content": prompt,
-            }
-            messages.append(user_message)
-        else:
-            for m in prompt:
-                if m.role == "user":
-                    user_message: ChatCompletionUserMessageParam = {
-                        "role": "user",
-                        "content": m.content,
-                    }
-                    messages.append(user_message)
-                elif m.role == "system":
-                    system_message: ChatCompletionSystemMessageParam = {
-                        "role": "system",
-                        "content": m.content,
-                    }
-                    messages.append(system_message)
-                elif m.role == "assistant":
-                    assistant_message: ChatCompletionAssistantMessageParam = {
-                        "role": "assistant",
-                        "content": m.content,
-                    }
-                    messages.append(assistant_message)
-                # Add others as needed
+        try:
+            # For structured responses, we don't want to use tools as instructor handles the response format
+            response = self.instructor_client.chat.completions.create(
+                model=model_used,
+                response_model=response_model,
+                messages=messages,
+            )
+        except Exception as e:
+            # Extract the error message directly from the exception
+            error_message = str(e)
+            # If we get a 404 error about tools not being supported, try without tools mode
+            if "404" in error_message:
+                self.logger.warning(
+                    f"Instructor does not support structured responses for model {model_used}. Falling back to standard completion using custom prompt templates and additional LLM client verification. Note that this increases the cost of the request."
+                )
 
-        response = self.instructor_client.chat.completions.create(
-            model=model_used,
-            response_model=response_model,
-            messages=messages,
-        )
+                # Create a new instructor client without tools mode
+                json_template_messages = self._apply_json_message_template(
+                    prompt, response_model
+                )
+
+                response_openai = self.client.chat.completions.create(
+                    model=model_used,
+                    messages=self._convert_to_chat_messages(json_template_messages),
+                )
+
+                if response_openai.choices[0].message.content:
+                    raw_output = response_openai.choices[0].message.content.strip()
+
+                    try:
+                        rewrite_messages = Message(
+                            role="user",
+                            content=f"Extract the json object from this string: {raw_output}",
+                        )
+
+                        # Use a smaller OpenAI model to rewrite into a structured response
+                        response = self.instructor_client.chat.completions.create(
+                            model="gpt-4o-mini-2024-07-18",
+                            response_model=response_model,
+                            messages=self._convert_to_chat_messages([rewrite_messages]),
+                        )
+                    except Exception as e:
+                        raise RuntimeError(
+                            f"Failed to parse manually structured response {raw_output}. Consider using a different model."
+                        ) from e
+                else:
+                    raise RuntimeError(
+                        "Failed to extract response. Consider using a different model."
+                    )
+
+            else:
+                # Re-raise if it's a different error
+                self.logger.error(
+                    f"Error generating structured response: {str(e)}. Try a different model."
+                )
+                raise
+
         return response
 
     def get_embedding(

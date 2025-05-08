@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Callable, Dict, List, Literal, Optional, Sequence, Union
+from typing import Dict, List, Literal, Optional, Union, Any
 import logging
 
 from .SyncLLMClient.openai_client import SyncOpenAIClient
@@ -23,9 +23,10 @@ from .common.models import (
     SavedLLMResponse,
 )
 from .QuestionExtractor import QuestionExtractor
-from .config import AzureOpenAIConfig, OpenAIConfig
+from .config import AzureOpenAIConfig, OpenAIConfig, GeminiConfig, Tool
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
+from .SyncLLMClient.gemini_client import SyncGeminiClient
 from .FactManager import FactManager
 from .PromptManager import PromptManager
 from .ExperimentManager.models import ExperimentParams, ExperimentType
@@ -347,6 +348,7 @@ class KnowOrNot:
         default_embedding_model: Optional[str] = None,
         project: Optional[str] = None,
         organization: Optional[str] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
         """
         Registers an OpenAI API client with the KnowOrNot instance.
@@ -361,9 +363,11 @@ class KnowOrNot:
             default_embedding_model (str, optional): The embedding model to use by default. Must be provided or available in the environment.
             project (str, optional): The project to associate with the client. Defaults to ``None``.
             organization (str, optional): The organization to associate with the client. Defaults to ``None``.
+            tools (List[Dict[str, Any]], optional): List of tool configurations. Each dict should have a 'type' key with a value of 'search'. Defaults to ``None``.
 
         Raises:
             EnvironmentError: If ``api_key``, ``default_model``, or ``default_embedding_model`` are not provided and not found in the environment.
+            ValueError: If any tool dict has an invalid type.
 
         Returns:
             None
@@ -387,6 +391,9 @@ class KnowOrNot:
                     "OPENAI_DEFAULT_EMBEDDING_MODEL is not set and default_embedding_model is not provided"
                 )
 
+        # Convert dict tools to Tool objects if provided
+        tool_objects = Tool.from_dict_list(tools) if tools is not None else None
+
         config = OpenAIConfig(
             logger=self.logger,
             api_key=api_key,
@@ -394,6 +401,7 @@ class KnowOrNot:
             default_embedding_model=default_embedding_model,
             project=project,
             organization=organization,
+            tools=tool_objects,
         )
 
         openai_sync_client = SyncOpenAIClient(config=config)
@@ -401,6 +409,78 @@ class KnowOrNot:
         self.register_client(client=openai_sync_client, make_default=True)
 
         return None
+
+    def add_gemini(
+        self,
+        gemini_api_key: Optional[str] = None,
+        default_model: Optional[str] = None,
+        default_embedding_model: Optional[str] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
+    ) -> None:
+        """
+        Create a `KnowOrNot` instance using Gemini configuration details.
+
+        This is the recommended way to instantiate a KnowOrNot instance with Gemini.
+
+        Parameters:
+        - gemini_api_key (Optional[str]): The Gemini API key. If not provided,
+        the environment variable `GEMINI_API_KEY` will be used.
+        - default_model (Optional[str]): The default model for synchronous operations.
+        If not provided, the environment variable `GEMINI_DEFAULT_MODEL` will be used.
+        - default_embedding_model (Optional[str]): The default embedding model.
+        If not provided, the environment variable `GEMINI_DEFAULT_EMBEDDING_MODEL` will be used.
+
+        Returns:
+        - KnowOrNot: An instance of the `KnowOrNot` class configured with the specified
+        Gemini settings.
+
+        Example:
+        1. Using environment variables: KnowOrNot.create_from_gemini()
+
+        2. Providing all parameters: KnowOrNot.create_from_gemini(
+                gemini_api_key="example_key",
+                default_model="gemini-2.0-flash",
+                default_embedding_model="gemini-embedding-exp-03-07"
+            )
+        """
+
+        if not gemini_api_key:
+            gemini_api_key = os.environ.get("GEMINI_API_KEY")
+            if not gemini_api_key:
+                raise EnvironmentError(
+                    "GEMINI_API_KEY is not set and gemini_api_key is not provided"
+                )
+        if not default_model:
+            default_model = os.environ.get("GEMINI_DEFAULT_MODEL")
+            if not default_model:
+                raise EnvironmentError(
+                    "GEMINI_DEFAULT_MODEL is not set and default_model is not provided"
+                )
+        if not default_embedding_model:
+            default_embedding_model = os.environ.get("GEMINI_DEFAULT_EMBEDDING_MODEL")
+            if not default_embedding_model:
+                raise EnvironmentError(
+                    "GEMINI_DEFAULT_EMBEDDING_MODEL is not set and default_embedding_model is not provided"
+                )
+
+        logger = logging.getLogger(__name__)
+
+        # Convert dict tools to Tool objects if provided
+        tool_objects = Tool.from_dict_list(tools) if tools is not None else None
+
+        gemini_config = GeminiConfig(
+            api_key=gemini_api_key,
+            default_model=default_model,
+            default_embedding_model=default_embedding_model,
+            logger=logger,
+            tools=tool_objects,
+        )
+
+        gemini_sync_client = SyncGeminiClient(config=gemini_config)
+
+        self.register_client(client=gemini_sync_client, make_default=True)
+
+        return
 
     def create_questions(
         self,

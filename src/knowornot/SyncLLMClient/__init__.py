@@ -18,7 +18,7 @@ class Message(BaseModel):
 
 class SyncLLMClientEnum(Enum):
     AZURE_OPENAI = "AZURE_OPENAI"
-    GOOGLE_GEMINI = "GOOGLE_GEMINI"
+    GEMINI = "GEMINI"
     OPENAI = "OPENAI"
 
 
@@ -30,6 +30,64 @@ class SyncLLMClient(ABC):
     @abstractmethod
     def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
         pass
+
+    def _apply_json_message_template(
+        self, prompt: Union[str, List[Message]], json_model: Type[T]
+    ) -> List[Message]:
+        """
+        Applies a template to user and system messages in the list.
+        This is used to generate a structured response from the LLM, if Instructor does not support the model provided.
+
+        Args:
+            prompt: The input prompt(s) to send to the chat model. It can be a single string or a list of
+                    `Message` objects, where each message has a role (user, system, or assistant) and content.
+            json_model: The Pydantic model type that the response should be structured into
+
+        Returns:
+            List[Message]: New list of messages with template applied
+        """
+
+        system_prompt = "You are a helpful assistant. Always reply ONLY in JSON, following the exact format given."
+
+        def build_user_prompt(query: str, json_model: Type[T]) -> str:
+            # Create a simple example structure
+            return f"""
+                Please provide the information using this Pydantic model schema:
+
+                {json_model.model_json_schema()}
+
+                Prompt:
+                {query}
+
+                Only return valid JSON. Do not include any explanation or additional text.
+                IMPORTANT: All strings in the JSON must be properly escaped. Use \\n for newlines and escape any quotes with \\
+                """
+
+        if isinstance(prompt, str):
+            return [
+                Message(role="system", content=system_prompt),
+                Message(role="user", content=build_user_prompt(prompt, json_model)),
+            ]
+
+        messages: List[Message] = []
+
+        for m in prompt:
+            if m.role == "user":
+                user_message = Message(
+                    role="user",
+                    content=build_user_prompt(m.content, json_model),
+                )
+                messages.append(user_message)
+            elif m.role == "system":
+                system_message = Message(
+                    role="system", content=system_prompt + m.content
+                )
+                messages.append(system_message)
+            elif m.role == "assistant":
+                assistant_message = Message(role="assistant", content=m.content)
+                messages.append(assistant_message)
+
+        return messages
 
     def prompt(
         self, prompt: Union[str, List[Message]], ai_model: Optional[str] = None
