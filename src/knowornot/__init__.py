@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union, Any
+from typing import Callable, Dict, List, Literal, Optional, Sequence, Union, Any
 import logging
 
 from .SyncLLMClient.openai_client import SyncOpenAIClient
