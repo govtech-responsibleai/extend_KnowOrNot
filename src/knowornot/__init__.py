@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Callable, Dict, List, Literal, Optional, Sequence, Union
 import logging
 
 from .SyncLLMClient.openai_client import SyncOpenAIClient
@@ -11,6 +11,7 @@ from .common.models import (
     ExperimentInputDocument,
     ExperimentOutputDocument,
     ContextOptionsEnum,
+    LLMResponseWithEvaluation,
     LabelTask,
     LabeledDataSample,
     Prompt,
@@ -19,6 +20,7 @@ from .common.models import (
     QuestionDocument,
     RetrievalType,
     EvaluationSpec,
+    SavedLLMResponse,
 )
 from .QuestionExtractor import QuestionExtractor
 from .config import AzureOpenAIConfig, OpenAIConfig
@@ -1064,10 +1066,26 @@ class KnowOrNot:
 
     def create_samples_to_label(
         self,
-        experiment_outputs: List[ExperimentOutputDocument],
+        experiment_outputs: Sequence[
+            Union[ExperimentOutputDocument, EvaluatedExperimentDocument]
+        ],
         percentage_to_sample: float,
         path_to_store: Path,
+        filter_function: Callable[
+            [Union[SavedLLMResponse, LLMResponseWithEvaluation]], bool
+        ] = lambda x: True,
     ) -> List[LabeledDataSample]:
+        """
+        Samples data points (LLM responses with context and metadata) from the given experiment outputs for human labelling.
+
+        Args:
+            experiment_outputs (Sequence[Union[ExperimentOutputDocument, EvaluatedExperimentDocument]]): A sequence of ExperimentOutputDocument or EvaluatedExperimentDocument objects. The method extracts individual LLM responses (and their evaluations if present) along with their experiment metadata from these documents for sampling.
+            percentage_to_sample (float): The percentage of responses to sample from each stratum after filtering. Must be a float between 0.0 and 1.0.
+            path_to_store (Path): The path to save the sampled data to as a JSON file.
+
+        Returns:
+            List[LabeledDataSample]: A list of LabeledDataSample objects, each representing a response selected for labelling along with its relevant metadata, input, and the stratum key it belonged to. Returns an empty list if no samples are selected.
+        """
         if not 0 < percentage_to_sample <= 1:
             raise ValueError("percentage_to_sample must be between 0 and 1")
 
