@@ -8,9 +8,11 @@ from ..common.models import (
     EvaluatedExperimentDocument,
     EvaluationMetadata,
     LLMResponseWithEvaluation,
+    Prompt,
     SavedLLMResponse,
     EvaluationSpec,
     EvaluationOutput,
+    LabelTask,
 )
 
 from typing import Dict, List, Optional, Tuple
@@ -297,3 +299,40 @@ class Evaluator:
         output.save_to_json()
 
         return output
+
+    def create_evaluation_spec(
+        self,
+        prompt: str,
+        prompt_id: str,
+        label: LabelTask,
+        tag_name: Optional[str] = None,
+        recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
+        recommended_llm_model: Optional[str] = None,
+    ) -> EvaluationSpec:
+        """
+        Creates an EvaluationSpec object based on the provided parameters.
+
+        Args:
+            prompt (str): The content of the prompt to be used for the evaluation.
+            prompt_id (str): The identifier for the prompt.
+            label (LabelTask): The label task containing the evaluation name and possible outcomes.
+            tag_name (Optional[str], optional): The specific XML tag name to use for the evaluation output. Defaults to the evaluation name.
+            recommended_llm_client_enum (Optional[SyncLLMClientEnum], optional): The recommended LLM client enum for this evaluation. Defaults to None.
+            recommended_llm_model (Optional[str], optional): The recommended LLM model for this evaluation. Defaults to None.
+
+        Returns:
+            EvaluationSpec: The created EvaluationSpec object.
+        """
+
+        evaluation_name = label.name
+        evaluation_prompt = Prompt(identifier=prompt_id, content=prompt)
+        evaluation_outcomes = label.values
+
+        return EvaluationSpec(
+            name=evaluation_name,
+            prompt=evaluation_prompt,
+            tag_name=tag_name or evaluation_name,
+            recommended_llm_client_enum=recommended_llm_client_enum,
+            recommended_llm_model=recommended_llm_model,
+            evaluation_outcomes=evaluation_outcomes,
+        )
