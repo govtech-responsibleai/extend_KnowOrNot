@@ -1,6 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from enum import Enum
 import logging
 from pydantic import BaseModel
@@ -12,6 +12,46 @@ class ToolType(str, Enum):
 
 class Tool(BaseModel):
     type: ToolType
+
+    @classmethod
+    def from_dict(cls, tool_dict: Dict[str, Any]) -> "Tool":
+        """
+        Create a Tool instance from a dictionary.
+
+        Args:
+            tool_dict (Dict[str, Any]): Dictionary containing tool configuration.
+                Must have a 'type' key with a value that matches ToolType enum values.
+
+        Returns:
+            Tool: A new Tool instance.
+
+        Raises:
+            ValueError: If the dictionary is missing the 'type' key or has an invalid type value.
+        """
+        if "type" not in tool_dict:
+            raise ValueError("Tool dictionary must have a 'type' key")
+        if tool_dict["type"] not in [t.value for t in ToolType]:
+            raise ValueError(
+                f"Invalid tool type: {tool_dict['type']}. Must be one of {[t.value for t in ToolType]}"
+            )
+        return cls(type=ToolType(tool_dict["type"]))
+
+    @classmethod
+    def from_dict_list(cls, tool_dicts: List[Dict[str, Any]]) -> List["Tool"]:
+        """
+        Create a list of Tool instances from a list of dictionaries.
+
+        Args:
+            tool_dicts (List[Dict[str, Any]]): List of dictionaries containing tool configurations.
+                Each dict must have a 'type' key with a value that matches ToolType enum values.
+
+        Returns:
+            List[Tool]: A list of new Tool instances.
+
+        Raises:
+            ValueError: If any dictionary is missing the 'type' key or has an invalid type value.
+        """
+        return [cls.from_dict(tool_dict) for tool_dict in tool_dicts]
 
 
 @dataclass

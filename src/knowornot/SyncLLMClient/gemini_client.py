@@ -1,9 +1,15 @@
-from typing import List, Optional, Type, TypeVar, Union, Dict, Any
-import json
+from typing import List, Optional, Type, TypeVar, Union
+import warnings
 
 import instructor
 from google import genai
-from google.generativeai import GenerativeModel
+from google.genai.types import Tool, GoogleSearch, GenerateContentConfig
+from google.generativeai.generative_models import GenerativeModel
+from pydantic import BaseModel
+
+from ..config import GeminiConfig, ToolType
+from .exceptions import InitialCallFailedException
+from . import Message, SyncLLMClient, SyncLLMClientEnum
 from openai.types.chat import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_assistant_message_param import (
     ChatCompletionAssistantMessageParam,
@@ -14,12 +20,6 @@ from openai.types.chat.chat_completion_system_message_param import (
 from openai.types.chat.chat_completion_user_message_param import (
     ChatCompletionUserMessageParam,
 )
-from pydantic import BaseModel
-import warnings
-
-from knowornot.SyncLLMClient.exceptions import InitialCallFailedException
-from ..config import GeminiConfig
-from ..SyncLLMClient import Message, SyncLLMClient, SyncLLMClientEnum
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -36,18 +36,23 @@ class SyncGeminiClient(SyncLLMClient):
         if self.config.tools:
             tool_configs = []
             for tool in self.config.tools:
-                if tool.get("type") == "search":
-                    tool_configs.append(genai.types.Tool(google_search=genai.types.GoogleSearchRetrieval))
+                if tool.type == ToolType.SEARCH:
+                    google_search_tool = Tool(google_search=GoogleSearch())
+
+                    tool_configs.append(google_search_tool)
                 else:
-                    raise ValueError(f"Tool type {tool.get('type')} is not supported for Gemini.")
+                    raise ValueError(
+                        f"Tool type {tool.type} is not supported for Gemini."
+                    )
             if tool_configs:
-                self._tool_config = genai.types.GenerateContentConfig(tools=tool_configs)
+                self._tool_config = GenerateContentConfig(tools=tool_configs)
 
         # Initialize instructor client
         with warnings.catch_warnings():
             self.instructor_client = instructor.from_gemini(
                 client=GenerativeModel(model_name=self.config.default_model),
                 mode=instructor.Mode.GEMINI_TOOLS,
+                use_async=False,
             )
 
         try:
@@ -61,11 +66,9 @@ class SyncGeminiClient(SyncLLMClient):
             f"Using model: {self.config.default_model} as the default model"
         )
 
-
-
     def _prompt(
-        self, 
-        prompt: Union[str, List[Message]], 
+        self,
+        prompt: Union[str, List[Message]],
         ai_model: str,
     ) -> str:
         """Send a prompt to the Gemini API and get a response.
@@ -86,9 +89,7 @@ class SyncGeminiClient(SyncLLMClient):
             prompt = "\n".join([f"{msg.role}: {msg.content}" for msg in prompt])
 
         response = self.client.models.generate_content(
-            model=ai_model,
-            contents=prompt,
-            config=self._tool_config
+            model=ai_model, contents=prompt, config=self._tool_config
         )
 
         output = response.text
@@ -118,6 +119,11 @@ class SyncGeminiClient(SyncLLMClient):
         Raises:
             ValueError: If the response from the model does not contain any content.
         """
+        if model_used != self.config.default_model:
+            raise ValueError(
+                "Gemini does not support a different model than the default model. Please instantiate a separate Gemini client for different models."
+            )
+
         messages: List[ChatCompletionMessageParam] = []
 
         if isinstance(prompt, str):
@@ -150,14 +156,11 @@ class SyncGeminiClient(SyncLLMClient):
 
         # Use instructor to generate structured response
         response = self.instructor_client.chat.completions.create(
-            model=model_used,
-            messages=messages,
-            response_model=response_model,
-            tools=self._tool_config
+            messages=messages, response_model=response_model, tools=self._tool_config
         )
 
         return response
-    
+
     def get_embedding(
         self, prompt_list: List[str], model: Optional[str] = None
     ) -> List[List[float]]:
@@ -177,9 +180,9 @@ class SyncGeminiClient(SyncLLMClient):
         for prompt in prompt_list:
             response = self.client.models.embed_content(
                 model=model_to_use,
-                content=prompt,
+                contents=prompt,
             )
-            embeddings.append(response.embedding)
+            embeddings.append(response.embeddings)
 
         return embeddings
 

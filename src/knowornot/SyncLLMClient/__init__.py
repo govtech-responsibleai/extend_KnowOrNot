@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Optional, Type, TypeVar, Union, overload, Literal, Dict, Any
+from typing import List, Optional, Type, TypeVar, Union, overload, Literal
 import re
 
 from pydantic import BaseModel
@@ -31,24 +31,25 @@ class SyncLLMClient(ABC):
     def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
         pass
 
-    def _apply_json_message_template(self, messages: List[Message], json_model: Type[T]) -> List[Message]:
+    def _apply_json_message_template(
+        self, prompt: Union[str, List[Message]], json_model: Type[T]
+    ) -> List[Message]:
         """
-        Applies a template to user and system messages in the list. 
+        Applies a template to user and system messages in the list.
         This is used to generate a structured response from the LLM, if Instructor does not support the model provided.
 
         Args:
-            messages: List of Message objects to modify
-            template: The template string to apply to messages
+            prompt: The input prompt(s) to send to the chat model. It can be a single string or a list of
+                    `Message` objects, where each message has a role (user, system, or assistant) and content.
+            json_model: The Pydantic model type that the response should be structured into
 
         Returns:
             List[Message]: New list of messages with template applied
         """
 
-        system_prompt = (
-            "You are a helpful assistant. Always reply ONLY in JSON, following the exact format given."
-        )
+        system_prompt = "You are a helpful assistant. Always reply ONLY in JSON, following the exact format given."
+
         def build_user_prompt(query: str, json_model: Type[T]) -> str:
-            schema = json_model.model_json_schema()
             # Create a simple example structure
             return f"""
                 Please provide the information using this Pydantic model schema:
@@ -62,19 +63,31 @@ class SyncLLMClient(ABC):
                 IMPORTANT: All strings in the JSON must be properly escaped. Use \\n for newlines and escape any quotes with \\
                 """
 
-        if isinstance(messages, str):
-            return [Message(role="system", content=system_prompt),
-                    Message(role="user", content=build_user_prompt(messages, json_model))]
-        
-        new_messages = []
-        for msg in messages:
-            if msg["role"] == "user":
-                new_messages.append(Message(role="system", content=system_prompt))
-                new_messages.append(Message(role=msg["role"], content=build_user_prompt(msg, json_model)))
-            else:
-                new_messages.append(msg)
+        if isinstance(prompt, str):
+            return [
+                Message(role="system", content=system_prompt),
+                Message(role="user", content=build_user_prompt(prompt, json_model)),
+            ]
 
-        return new_messages
+        messages: List[Message] = []
+
+        for m in prompt:
+            if m.role == "user":
+                user_message = Message(
+                    role="user",
+                    content=build_user_prompt(m.content, json_model),
+                )
+                messages.append(user_message)
+            elif m.role == "system":
+                system_message = Message(
+                    role="system", content=system_prompt + m.content
+                )
+                messages.append(system_message)
+            elif m.role == "assistant":
+                assistant_message = Message(role="assistant", content=m.content)
+                messages.append(assistant_message)
+
+        return messages
 
     def prompt(
         self, prompt: Union[str, List[Message]], ai_model: Optional[str] = None
@@ -115,7 +128,7 @@ class SyncLLMClient(ABC):
         self,
         prompt: Union[str, List[Message]],
         response_model: Type[T],
-        ai_model: Optional[str] = None
+        ai_model: Optional[str] = None,
     ) -> T:
         """
         Generate a structured response from a given prompt using the LLM.
@@ -139,7 +152,7 @@ class SyncLLMClient(ABC):
                 "This LLM client cannot generate structured responses. "
                 "Enable instructor mode in the configuration to use this feature."
             )
-        
+
         model_to_use: str = ai_model or self.config.default_model
 
         self.logger.debug(f"Using model: {model_to_use} and sending prompt {prompt}")
@@ -147,7 +160,6 @@ class SyncLLMClient(ABC):
         return self._generate_structured_response(
             prompt=prompt, response_model=response_model, model_used=model_to_use
         )
-
 
     @abstractmethod
     def get_embedding(

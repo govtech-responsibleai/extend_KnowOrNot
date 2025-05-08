@@ -21,7 +21,7 @@ from .common.models import (
     EvaluationSpec,
 )
 from .QuestionExtractor import QuestionExtractor
-from .config import AzureOpenAIConfig, OpenAIConfig, GeminiConfig
+from .config import AzureOpenAIConfig, OpenAIConfig, GeminiConfig, Tool
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
 from .SyncLLMClient.gemini_client import SyncGeminiClient
@@ -361,9 +361,11 @@ class KnowOrNot:
             default_embedding_model (str, optional): The embedding model to use by default. Must be provided or available in the environment.
             project (str, optional): The project to associate with the client. Defaults to ``None``.
             organization (str, optional): The organization to associate with the client. Defaults to ``None``.
+            tools (List[Dict[str, Any]], optional): List of tool configurations. Each dict should have a 'type' key with a value of 'search'. Defaults to ``None``.
 
         Raises:
             EnvironmentError: If ``api_key``, ``default_model``, or ``default_embedding_model`` are not provided and not found in the environment.
+            ValueError: If any tool dict has an invalid type.
 
         Returns:
             None
@@ -387,6 +389,9 @@ class KnowOrNot:
                     "OPENAI_DEFAULT_EMBEDDING_MODEL is not set and default_embedding_model is not provided"
                 )
 
+        # Convert dict tools to Tool objects if provided
+        tool_objects = Tool.from_dict_list(tools) if tools is not None else None
+
         config = OpenAIConfig(
             logger=self.logger,
             api_key=api_key,
@@ -394,7 +399,7 @@ class KnowOrNot:
             default_embedding_model=default_embedding_model,
             project=project,
             organization=organization,
-            tools=tools,
+            tools=tool_objects,
         )
 
         openai_sync_client = SyncOpenAIClient(config=config)
@@ -458,12 +463,15 @@ class KnowOrNot:
 
         logger = logging.getLogger(__name__)
 
+        # Convert dict tools to Tool objects if provided
+        tool_objects = Tool.from_dict_list(tools) if tools is not None else None
+
         gemini_config = GeminiConfig(
             api_key=gemini_api_key,
             default_model=default_model,
             default_embedding_model=default_embedding_model,
             logger=logger,
-            tools=tools,
+            tools=tool_objects,
         )
 
         gemini_sync_client = SyncGeminiClient(config=gemini_config)
