@@ -1098,6 +1098,7 @@ class KnowOrNot:
             experiments=experiment_outputs,
             percentage_to_sample=percentage_to_sample,
             json_path=path_to_store,
+            filter_function=filter_function,
         )
 
     def label_samples(
