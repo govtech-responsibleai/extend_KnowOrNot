@@ -129,13 +129,17 @@ class DataLabeller:
                 metadata.ai_model_used,
                 metadata.knowledge_base_identifier,
             )
+            filtered_out_count = 0
             for response in exp_doc.responses:
                 if not filter_function(response):
+                    filtered_out_count += 1
                     continue
                 response_metadata_pairs_by_stratum[stratum_key_tuple].append(
                     (metadata, response)
                 )
                 all_response_metadata_pairs.append((metadata, response))
+
+            print(f"Filtered out {filtered_out_count} responses from experiment")
 
         total_responses = len(all_response_metadata_pairs)
         num_strata = len(response_metadata_pairs_by_stratum)
