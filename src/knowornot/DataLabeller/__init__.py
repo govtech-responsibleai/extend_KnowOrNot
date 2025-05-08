@@ -56,24 +56,39 @@ class DataLabeller:
         metadata fields: system prompt, retrieval type, AI model used, and
         knowledge base identifier.
 
-        The method calculates the number of samples to take from each stratum
-        proportionally based on the requested `percentage_to_sample` and the
-        size of each stratum. It then samples randomly within each stratum.
+        The method first filters the responses from the input experiments using
+        the provided `filter_function`. It then calculates the number of samples
+        to take from each stratum proportionally based on the requested
+        `percentage_to_sample` and the size of each stratum *after filtering*.
+        It then samples randomly within each filtered stratum.
 
         Args:
-            experiments: A list of ExperimentOutputDocument objects, each containing
-                         experiment metadata and a list of LLM responses.
-            percentage_to_sample: The percentage of responses to sample from *each stratum*.
-                                Must be a float between 0.0 and 1.0.
+            experiments: A sequence (like a list or tuple) of `ExperimentOutputDocument`
+                         or `EvaluatedExperimentDocument` objects. The method extracts
+                         individual LLM responses (and their evaluations if present)
+                         along with their experiment metadata from these documents for
+                         sampling.
+            percentage_to_sample: The percentage of responses to sample from *each stratum*
+                                  after filtering. Must be a float between 0.0 and 1.0.
             json_path: The path to save the sampled data to as a JSON file.
+            filter_function: An optional function used to filter individual responses
+                             before stratification and sampling. It should accept a single
+                             argument, which will be either a `SavedLLMResponse` or an
+                             `LLMResponseWithEvaluation`, and return `True` if the response
+                             should be included in the sampling pool, or `False` to exclude it.
+                             Defaults to a function that always returns `True` (i.e., no filtering).
 
         Returns:
-            A list of LabeledDataSample objects, each representing a response
+            A list of `LabeledDataSample` objects, each representing a response
             selected for labelling along with its relevant metadata, input,
             and the stratum key it belonged to. Returns an empty list if no
-            responses are found or if the percentage is invalid.
-        """
+            responses are found (or none pass the filter) or if the percentage
+            is invalid.
 
+        Raises:
+            ValueError: If `percentage_to_sample` is not between 0 and 1, or
+                        if `json_path` does not end with '.json'.
+        """
         if not 0.0 <= percentage_to_sample <= 1.0:
             self.logger.error(
                 f"percentage_to_sample must be between 0 and 1. Got {percentage_to_sample}"
