@@ -937,10 +937,13 @@ class KnowOrNot:
         prompt_content: str,
         evaluation_outcomes: List[str],
         tag_name: str,
-        in_context: List[Literal["question", "expected_answer", "context"]] = [
+        in_context: List[
+            Literal["question", "expected_answer", "context", "cited_qa"]
+        ] = [
             "question",
             "expected_answer",
             "context",
+            "cited_qa",
         ],
         recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
         recommended_llm_model: Optional[str] = None,
@@ -975,10 +978,26 @@ class KnowOrNot:
                 "No default LLM client is available and no client is specified"
             )
 
+        context_options_list: List[ContextOptionsEnum] = []
+
+        for item in in_context:
+            if item == "question":
+                context_options_list.append(ContextOptionsEnum.QUESTION)
+            elif item == "expected_answer":
+                context_options_list.append(ContextOptionsEnum.EXPECTED_ANSWER)
+            elif item == "context":
+                context_options_list.append(ContextOptionsEnum.CONTEXT)
+            elif item == "cited_qa":
+                context_options_list.append(ContextOptionsEnum.CITED_QA)
+            else:
+                raise ValueError(
+                    f"Invalid context option: {item} expected one of {['question', 'expected_answer', 'context', 'cited_qa']}"
+                )
+
         return EvaluationSpec(
             name=evaluation_name,
             prompt=Prompt(content=prompt_content, identifier=prompt_identifier),
-            in_context=in_context,
+            in_context=context_options_list,
             tag_name=tag_name,
             evaluation_outcomes=evaluation_outcomes,
             recommended_llm_client_enum=recommended_llm_client_enum,

@@ -3,6 +3,7 @@ from pathlib import Path
 from ..SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 import logging
 from ..common.models import (
+    ContextOptionsEnum,
     ExperimentOutputDocument,
     EvaluatedExperimentDocument,
     EvaluationMetadata,
@@ -42,16 +43,26 @@ class Evaluator:
 
         output += f"\nThe model's answer was {response.llm_response.response}"
 
-        if "question" in evaluation_metadata.in_context:
+        if ContextOptionsEnum.QUESTION in evaluation_metadata.in_context:
             output += (
                 f"\nQuestion: {response.experiment_input.source_context_qa.question}"
             )
 
-        if "expected_answer" in evaluation_metadata.in_context:
+        if ContextOptionsEnum.EXPECTED_ANSWER in evaluation_metadata.in_context:
             output += f"\n Actual Answer: {response.experiment_input.source_context_qa.expected_answer}"
 
-        if "context" in evaluation_metadata.in_context:
+        if ContextOptionsEnum.CONTEXT in evaluation_metadata.in_context:
             output += f"\nContext: {response.experiment_input.source_context_qa.context_questions}"
+
+        if ContextOptionsEnum.CITED_QA in evaluation_metadata.in_context:
+            output += f"\nCited QA: {response.cited_QA}"
+
+        output += f"""Your task is to decide what the value is for the label {evaluation_metadata.tag_name}.
+
+        Think step by step and think out loud. Then in the end classify it according to what you think is the best output for this task.
+
+        Give an XML tag <{evaluation_metadata.tag_name}> </{evaluation_metadata.tag_name}> with ONLY one of the following values: {", ".join(evaluation_metadata.evaluation_outcomes_list)}. This is compulsory and the answer will not parsed otherwise.
+        """
 
         return output
 
