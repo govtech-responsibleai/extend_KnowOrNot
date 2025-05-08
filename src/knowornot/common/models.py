@@ -216,11 +216,7 @@ class EvaluationSpec(BaseModel):
     recommended_llm_client_enum: Optional[SyncLLMClientEnum]
     recommended_llm_model: Optional[str]
     evaluation_outcomes: List[str]
-    in_context: List[Literal["question", "expected_answer", "context"]] = [
-        "question",
-        "expected_answer",
-        "context",
-    ]
+    in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
 
 
 class EvaluationOutput(BaseModel):
