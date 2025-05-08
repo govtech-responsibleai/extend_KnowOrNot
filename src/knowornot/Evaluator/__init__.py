@@ -57,6 +57,13 @@ class Evaluator:
         if ContextOptionsEnum.CITED_QA in evaluation_metadata.in_context:
             output += f"\nCited QA: {response.cited_QA}"
 
+        output += f"""Your task is to decide what the value is for the label {evaluation_metadata.tag_name}.
+
+        Think step by step and think out loud. Then in the end classify it according to what you think is the best output for this task.
+
+        Give an XML tag <{evaluation_metadata.tag_name}> </{evaluation_metadata.tag_name}> with ONLY one of the following values: {", ".join(evaluation_metadata.evaluation_outcomes_list)}. This is compulsory and the answer will not parsed otherwise.
+        """
+
         return output
 
     def _create_metadata_list(
