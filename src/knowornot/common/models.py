@@ -266,12 +266,7 @@ class EvaluatedExperimentDocument(BaseModel):
 class LabelTask(BaseModel):
     name: str
     values: List[str]
-    content_in_context: List[ContextOptionsEnum] = [
-        ContextOptionsEnum.QUESTION,
-        ContextOptionsEnum.EXPECTED_ANSWER,
-        ContextOptionsEnum.CONTEXT,
-        ContextOptionsEnum.CITED_QA,
-    ]
+    content_in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
 
 
 class HumanLabel(BaseModel):

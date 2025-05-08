@@ -188,6 +188,10 @@ class DataLabeller:
                 string_to_print += f"Context: {llm_response.experiment_input.source_context_qa.context_questions}\n"
             elif key == ContextOptionsEnum.CITED_QA:
                 string_to_print += f"Cited QA: {llm_response.cited_QA}\n"
+            else:
+                raise ValueError(
+                    f"Context {key} is not allowed. Allowed contexts are: {list(ContextOptionsEnum)}"
+                )
 
         string_to_print += (
             f"The LLM's answer was: \n {llm_response.llm_response.response} \n"
