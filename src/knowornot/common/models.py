@@ -3,7 +3,7 @@ from enum import Enum
 import json
 from pydantic import BaseModel, Field
 from pathlib import Path
-from typing import List, Optional, Union, Literal
+from typing import Dict, List, Optional, Tuple, Union, Literal
 from ..SyncLLMClient import SyncLLMClientEnum
 
 
@@ -216,11 +216,7 @@ class EvaluationSpec(BaseModel):
     recommended_llm_client_enum: Optional[SyncLLMClientEnum]
     recommended_llm_model: Optional[str]
     evaluation_outcomes: List[str]
-    in_context: List[Literal["question", "expected_answer", "context"]] = [
-        "question",
-        "expected_answer",
-        "context",
-    ]
+    in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
 
 
 class EvaluationOutput(BaseModel):
@@ -242,11 +238,7 @@ class EvaluationMetadata(BaseModel):
     evaluation_prompt: Prompt
     tag_name: str
     evaluation_outcomes_list: List[str]
-    in_context: List[Literal["question", "expected_answer", "context"]] = [
-        "question",
-        "expected_answer",
-        "context",
-    ]
+    in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
 
 
 class EvaluatedExperimentDocument(BaseModel):
@@ -274,12 +266,7 @@ class EvaluatedExperimentDocument(BaseModel):
 class LabelTask(BaseModel):
     name: str
     values: List[str]
-    content_in_context: List[ContextOptionsEnum] = [
-        ContextOptionsEnum.QUESTION,
-        ContextOptionsEnum.EXPECTED_ANSWER,
-        ContextOptionsEnum.CONTEXT,
-        ContextOptionsEnum.CITED_QA,
-    ]
+    content_in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
 
 
 class HumanLabel(BaseModel):
@@ -362,3 +349,18 @@ class LabeledDataSample(BaseModel):
             data = json.load(f)
 
         return [LabeledDataSample.model_validate(item) for item in data]
+
+
+class InterAnnotatorAgreement(BaseModel):
+    """
+    Represents the results of inter-annotator agreement calculations for a labeling task.
+    """
+
+    task_name: str
+    fleiss_kappa: float
+    pairwise_cohens_kappa: Dict[Tuple[str, str], float]
+    common_samples: int
+    sample_ids: List[str]
+    annotators: List[str]
+    possible_labels: List[str]
+    calculation_timestamp: datetime = Field(default_factory=datetime.now)

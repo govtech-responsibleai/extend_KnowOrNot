@@ -11,6 +11,7 @@ from .common.models import (
     ExperimentInputDocument,
     ExperimentOutputDocument,
     ContextOptionsEnum,
+    LLMResponseWithEvaluation,
     LabelTask,
     LabeledDataSample,
     Prompt,
@@ -19,6 +20,7 @@ from .common.models import (
     QuestionDocument,
     RetrievalType,
     EvaluationSpec,
+    SavedLLMResponse,
 )
 from .QuestionExtractor import QuestionExtractor
 from .config import AzureOpenAIConfig, OpenAIConfig, GeminiConfig, Tool
@@ -216,7 +218,7 @@ class KnowOrNot:
 
     def _get_evaluator(
         self,
-        evaluation_spec_dict: Dict[str, EvaluationSpec],
+        evaluation_spec_dict: Optional[Dict[str, EvaluationSpec]],
         alternative_llm_client: Optional[SyncLLMClient] = None,
         model_to_use: Optional[str] = None,
     ) -> Evaluator:
@@ -1017,10 +1019,13 @@ class KnowOrNot:
         prompt_content: str,
         evaluation_outcomes: List[str],
         tag_name: str,
-        in_context: List[Literal["question", "expected_answer", "context"]] = [
+        in_context: List[
+            Literal["question", "expected_answer", "context", "cited_qa"]
+        ] = [
             "question",
             "expected_answer",
             "context",
+            "cited_qa",
         ],
         recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
         recommended_llm_model: Optional[str] = None,
@@ -1055,10 +1060,26 @@ class KnowOrNot:
                 "No default LLM client is available and no client is specified"
             )
 
+        context_options_list: List[ContextOptionsEnum] = []
+
+        for item in in_context:
+            if item == "question":
+                context_options_list.append(ContextOptionsEnum.QUESTION)
+            elif item == "expected_answer":
+                context_options_list.append(ContextOptionsEnum.EXPECTED_ANSWER)
+            elif item == "context":
+                context_options_list.append(ContextOptionsEnum.CONTEXT)
+            elif item == "cited_qa":
+                context_options_list.append(ContextOptionsEnum.CITED_QA)
+            else:
+                raise ValueError(
+                    f"Invalid context option: {item} expected one of {['question', 'expected_answer', 'context', 'cited_qa']}"
+                )
+
         return EvaluationSpec(
             name=evaluation_name,
             prompt=Prompt(content=prompt_content, identifier=prompt_identifier),
-            in_context=in_context,
+            in_context=context_options_list,
             tag_name=tag_name,
             evaluation_outcomes=evaluation_outcomes,
             recommended_llm_client_enum=recommended_llm_client_enum,
@@ -1092,7 +1113,9 @@ class KnowOrNot:
         return evaluator
 
     def evaluate_experiment(
-        self, experiment_output: ExperimentOutputDocument, path_to_store: Path
+        self,
+        experiment_output: Union[EvaluatedExperimentDocument, ExperimentOutputDocument],
+        path_to_store: Path,
     ) -> EvaluatedExperimentDocument:
         if not self.evaluator:
             raise ValueError(
@@ -1106,7 +1129,9 @@ class KnowOrNot:
         )
 
     async def evaluate_experiment_async(
-        self, experiment_output: ExperimentOutputDocument, path_to_store: Path
+        self,
+        experiment_output: Union[EvaluatedExperimentDocument, ExperimentOutputDocument],
+        path_to_store: Path,
     ) -> EvaluatedExperimentDocument:
         if not self.evaluator:
             raise ValueError(
@@ -1121,10 +1146,26 @@ class KnowOrNot:
 
     def create_samples_to_label(
         self,
-        experiment_outputs: List[ExperimentOutputDocument],
+        experiment_outputs: Sequence[
+            Union[ExperimentOutputDocument, EvaluatedExperimentDocument]
+        ],
         percentage_to_sample: float,
         path_to_store: Path,
+        filter_function: Callable[
+            [Union[SavedLLMResponse, LLMResponseWithEvaluation]], bool
+        ] = lambda x: True,
     ) -> List[LabeledDataSample]:
+        """
+        Samples data points (LLM responses with context and metadata) from the given experiment outputs for human labelling.
+
+        Args:
+            experiment_outputs (Sequence[Union[ExperimentOutputDocument, EvaluatedExperimentDocument]]): A sequence of ExperimentOutputDocument or EvaluatedExperimentDocument objects. The method extracts individual LLM responses (and their evaluations if present) along with their experiment metadata from these documents for sampling.
+            percentage_to_sample (float): The percentage of responses to sample from each stratum after filtering. Must be a float between 0.0 and 1.0.
+            path_to_store (Path): The path to save the sampled data to as a JSON file.
+
+        Returns:
+            List[LabeledDataSample]: A list of LabeledDataSample objects, each representing a response selected for labelling along with its relevant metadata, input, and the stratum key it belonged to. Returns an empty list if no samples are selected.
+        """
         if not 0 < percentage_to_sample <= 1:
             raise ValueError("percentage_to_sample must be between 0 and 1")
 
@@ -1159,6 +1200,10 @@ class KnowOrNot:
                 allowed_values.append(ContextOptionsEnum.CONTEXT)
             elif possible_input == "cited_qa":
                 allowed_values.append(ContextOptionsEnum.CITED_QA)
+            else:
+                raise ValueError(
+                    f"Context {possible_input} is not allowed. Allowed contexts are: {['question', 'expected_answer', 'context', 'cited_qa']}"
+                )
 
         label_task = LabelTask(
             name=label_name,
@@ -1173,3 +1218,57 @@ class KnowOrNot:
             label_task=label_task,
             path_to_save=path_to_save,
         )
+
+    def find_inter_annotator_reliability(
+        self, labeled_samples: List[LabeledDataSample], task_name: str
+    ) -> None:
+        data_labeller = self._get_data_labeller(logger=self.logger)
+        output = data_labeller.calculate_inter_annotator_agreement(
+            labeled_samples=labeled_samples, task_name=task_name
+        )
+
+        print("\nInter-annotator agreement:")
+        print(output)
+
+        return
+
+    async def evaluate_and_compare_to_human_labels(
+        self,
+        labelled_samples: List[LabeledDataSample],
+        task_name: str,
+        annotators_to_compare: List[str],
+        prompt: str,
+        prompt_id: str,
+        path_to_store: Path,
+        recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
+        recommended_llm_model: Optional[str] = None,
+    ) -> Dict:
+        if recommended_llm_client_enum is not None:
+            if recommended_llm_client_enum not in self.client_registry:
+                raise ValueError(
+                    f"{recommended_llm_client_enum} not in client registry. Please add a client for {recommended_llm_client_enum}"
+                )
+
+        client = (
+            self.get_client(recommended_llm_client_enum)
+            if recommended_llm_client_enum is not None
+            else self.default_sync_client
+        )
+        evaluator = self._get_evaluator(
+            evaluation_spec_dict=None,
+            alternative_llm_client=client,
+            model_to_use=recommended_llm_model,
+        )
+        results = await evaluator.evaluate_and_compare_to_human_labels_async(
+            client_registry=self.client_registry,
+            labelled_samples=labelled_samples,
+            task_name=task_name,
+            annotators_to_compare=annotators_to_compare,
+            prompt=prompt,
+            prompt_id=prompt_id,
+            recommended_llm_client_enum=recommended_llm_client_enum,
+            recommended_llm_model=recommended_llm_model,
+            output_path=path_to_store,
+        )
+
+        return results
