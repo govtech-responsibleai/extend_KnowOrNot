@@ -1029,6 +1029,7 @@ class KnowOrNot:
         ],
         recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
         recommended_llm_model: Optional[str] = None,
+        include_xml_prompting: bool = True,
     ) -> EvaluationSpec:
         """
         Creates an EvaluationSpec object based on the provided parameters.
@@ -1048,7 +1049,7 @@ class KnowOrNot:
             recommended_llm_model (Optional[str], optional):
                 The recommended LLM model for this evaluation. Defaults to None in which
                 case the given client's default model is used, or the default client's model is used.
-
+            include_xml_prompting (bool, optional): Whether to include XML prompting or whether the user will handle it. Defaults to True.
         Returns:
             EvaluationSpec: The created EvaluationSpec object.
         """
@@ -1084,6 +1085,7 @@ class KnowOrNot:
             evaluation_outcomes=evaluation_outcomes,
             recommended_llm_client_enum=recommended_llm_client_enum,
             recommended_llm_model=recommended_llm_model,
+            include_xml_prompting=include_xml_prompting,
         )
 
     def create_evaluator(

@@ -217,6 +217,7 @@ class EvaluationSpec(BaseModel):
     recommended_llm_model: Optional[str]
     evaluation_outcomes: List[str]
     in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
+    include_xml_prompting: bool = True
 
 
 class EvaluationOutput(BaseModel):
@@ -238,7 +239,8 @@ class EvaluationMetadata(BaseModel):
     evaluation_prompt: Prompt
     tag_name: str
     evaluation_outcomes_list: List[str]
-    in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
+    in_context: List[ContextOptionsEnum]
+    include_xml_prompting: bool
 
 
 class EvaluatedExperimentDocument(BaseModel):
