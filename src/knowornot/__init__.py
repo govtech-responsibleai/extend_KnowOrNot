@@ -1041,9 +1041,9 @@ class KnowOrNot:
             prompt_content (str): The content of the prompt.
             evaluation_outcomes (List[str]): The possible outcomes of the evaluation.
             tag_name (str): The tag associated with the evaluation.
-            in_context (List[Literal["question", "expected_answer", "context"]], optional):
+            in_context (List[Literal["question", "expected_answer", "context", "cited_qa"]], optional):
                 The parts of the prompt to include in the context. Defaults to [
-                    "question", "expected_answer", "context"].
+                    "question", "expected_answer", "context", "cited_qa"].
             recommended_llm_client_enum (Optional[SyncLLMClientEnum], optional):
                 The recommended LLM client enum for this evaluation. Defaults to
                 None, in which case the default client's enum is used.
