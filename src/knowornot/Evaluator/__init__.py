@@ -18,7 +18,7 @@ from ..common.models import (
     LabelTask,
 )
 
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
 import asyncio
 import concurrent.futures
 from tqdm import tqdm
@@ -283,6 +283,10 @@ class Evaluator:
         document: Union[ExperimentOutputDocument, EvaluatedExperimentDocument],
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         path_to_store: Path,
+        skip_function: Callable[
+            [Union[SavedLLMResponse, LLMResponseWithEvaluation], EvaluationMetadata],
+            Optional[EvaluationOutput],
+        ],
     ) -> DocumentEvaluationContext:
         """
         Prepares the evaluation context from a document.
@@ -313,27 +317,43 @@ class Evaluator:
                 if meta.evaluation_name not in existing_eval_names
             ]
 
+            existing_evaluations = {
+                resp.llm_response.identifier: resp.evaluations
+                for resp in document.responses
+            }
+
+            for response in document.responses:
+                for eval_metadata in new_evaluations_metadata:
+                    dummy_eval = skip_function(response, eval_metadata)
+                    if dummy_eval is not None:
+                        existing_evaluations[response.llm_response.identifier].append(
+                            dummy_eval
+                        )
+
             return DocumentEvaluationContext(
                 path_to_store=path_to_store,
                 experiment_metadata=document.experiment_metadata,
                 existing_metadata=list(document.evaluation_metadata),
                 new_evaluations_metadata=new_evaluations_metadata,
                 responses=[resp.llm_response for resp in document.responses],
-                existing_evaluations={
-                    resp.llm_response.identifier: resp.evaluations
-                    for resp in document.responses
-                },
+                existing_evaluations=existing_evaluations,
             )
         else:
+            existing_evaluations = {resp.identifier: [] for resp in document.responses}
+
+            for response in document.responses:
+                for eval_metadata in new_evaluations_metadata:
+                    dummy_eval = skip_function(response, eval_metadata)
+                    if dummy_eval is not None:
+                        existing_evaluations[response.identifier].append(dummy_eval)
+
             return DocumentEvaluationContext(
                 path_to_store=path_to_store,
                 experiment_metadata=document.metadata,
                 existing_metadata=[],
                 new_evaluations_metadata=new_evaluations_metadata,
                 responses=document.responses,
-                existing_evaluations={
-                    resp.identifier: [] for resp in document.responses
-                },
+                existing_evaluations=existing_evaluations,
             )
 
     def evaluate_document(
@@ -341,6 +361,10 @@ class Evaluator:
         document: Union[ExperimentOutputDocument, EvaluatedExperimentDocument],
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         path_to_store: Path,
+        skip_function: Callable[
+            [Union[SavedLLMResponse, LLMResponseWithEvaluation], EvaluationMetadata],
+            Optional[EvaluationOutput],
+        ],
     ) -> EvaluatedExperimentDocument:
         """
         Evaluates a given experiment document and saves the results.
@@ -358,7 +382,9 @@ class Evaluator:
                 perform evaluations with the appropriate client and model.
             path_to_store (Path):
                 The file path where the evaluated experiment document will be saved.
-                The path must end in a `.json` suffix.
+            skip_function (Callable[[Union[SavedLLMResponse, LLMResponseWithEvaluation], EvaluationMetadata], Optional[EvaluationOutput]]):
+                A function that takes a response and evaluation metadata and returns
+                None if the evaluation should be skipped.
 
         Returns:
             EvaluatedExperimentDocument: The document containing the results of the
@@ -366,7 +392,10 @@ class Evaluator:
         """
 
         context = self._prepare_evaluation_context(
-            document, client_registry, path_to_store
+            document=document,
+            client_registry=client_registry,
+            path_to_store=path_to_store,
+            skip_function=skip_function,
         )
 
         experiment_metadata = context.experiment_metadata
@@ -380,16 +409,21 @@ class Evaluator:
             response_id = response.identifier
             evaluation_outputs = list(existing_evaluations.get(response_id, []))
 
+            existing_eval_names = set(
+                eval.evaluation_name for eval in evaluation_outputs
+            )
+
             # Add new evaluations
             for evaluation_kind in new_evaluations_metadata:
-                evaluation_outputs.append(
-                    self._perform_single_evaluation(
-                        client_registry=client_registry,
-                        evaluation_kind=evaluation_kind,
-                        response=response,
-                        on_multiple="last",
+                if evaluation_kind.evaluation_name not in existing_eval_names:
+                    evaluation_outputs.append(
+                        self._perform_single_evaluation(
+                            client_registry=client_registry,
+                            evaluation_kind=evaluation_kind,
+                            response=response,
+                            on_multiple="last",
+                        )
                     )
-                )
 
             evaluated_llm_responses.append(
                 LLMResponseWithEvaluation(
@@ -413,6 +447,10 @@ class Evaluator:
         document: Union[ExperimentOutputDocument, EvaluatedExperimentDocument],
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         path_to_store: Path,
+        skip_function: Callable[
+            [Union[SavedLLMResponse, LLMResponseWithEvaluation], EvaluationMetadata],
+            Optional[EvaluationOutput],
+        ],
         max_workers: int = 8,
     ) -> EvaluatedExperimentDocument:
         """
@@ -441,7 +479,10 @@ class Evaluator:
             EvaluatedExperimentDocument: The evaluated experiment document.
         """
         context = self._prepare_evaluation_context(
-            document, client_registry, path_to_store
+            document=document,
+            client_registry=client_registry,
+            path_to_store=path_to_store,
+            skip_function=skip_function,
         )
 
         experiment_metadata = context.experiment_metadata
@@ -515,26 +556,49 @@ class Evaluator:
         total_tasks = 0
 
         # Initialize evaluation results storage with the right structure
-        evaluations_by_response = {}
+        evaluations_by_response: Dict[int, List[Optional[EvaluationOutput]]] = {}
         for idx, response in enumerate(responses):
             response_id = response.identifier
             # Start with existing evaluations if any
-            evaluations_by_response[idx] = list(
+
+            known_evals_for_this_response: List[EvaluationOutput] = list(
                 existing_evaluations.get(response_id, [])
             )
 
-            # Create a placeholder for each new evaluation to be added
-            initial_eval_count = len(evaluations_by_response[idx])
-            evaluations_by_response[idx].extend([None] * len(new_evaluations_metadata))
+            all_evaluation_slots: List[Optional[EvaluationOutput]] = [None] * len(
+                new_evaluations_metadata + existing_metadata
+            )
+            set_of_known_eval_names = {
+                e.evaluation_name for e in known_evals_for_this_response
+            }
+
+            for eval_idx, eval_metadata in enumerate(
+                existing_metadata + new_evaluations_metadata
+            ):
+                if eval_metadata.evaluation_name in set_of_known_eval_names:
+                    correct_evaluaton: Optional[EvaluationOutput] = None
+                    for eval in known_evals_for_this_response:
+                        if eval.evaluation_name == eval_metadata.evaluation_name:
+                            correct_evaluaton = eval
+
+                    assert correct_evaluaton is not None, (
+                        f"Could not find evaluation {eval_metadata.evaluation_name} in {evaluations_by_response[idx]} but it was expected to be there because it was in {existing_metadata + new_evaluations_metadata}"
+                    )
+                    all_evaluation_slots[eval_idx] = correct_evaluaton
+
+            evaluations_by_response[idx] = all_evaluation_slots
 
             # Create tasks for each new evaluation
-            for eval_idx, evaluation_kind in enumerate(new_evaluations_metadata):
-                tasks.append(
-                    process_evaluation(
-                        idx, response, initial_eval_count + eval_idx, evaluation_kind
-                    )
+            for eval_idx, (eval_slot, eval_metadata) in enumerate(
+                zip(
+                    all_evaluation_slots, (existing_metadata + new_evaluations_metadata)
                 )
-                total_tasks += 1
+            ):
+                if eval_slot is None:
+                    tasks.append(
+                        process_evaluation(idx, response, eval_idx, eval_metadata)
+                    )
+                    total_tasks += 1
 
         # Process all evaluations concurrently with a progress bar
         self.logger.info(f"Processing {total_tasks} evaluations")
@@ -553,8 +617,13 @@ class Evaluator:
 
         # Create the final structure, maintaining both response and evaluation order
         for idx, response in enumerate(responses):
+            completed_evaluations_list: List[EvaluationOutput] = [
+                e for e in evaluations_by_response[idx] if e is not None
+            ]
+
+            assert len(completed_evaluations_list) == len(evaluations_by_response[idx])
             evaluated_llm_responses[idx] = LLMResponseWithEvaluation(
-                llm_response=response, evaluations=evaluations_by_response[idx]
+                llm_response=response, evaluations=completed_evaluations_list
             )
 
         # Verify that all evaluations are properly placed
