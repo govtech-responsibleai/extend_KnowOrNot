@@ -5,6 +5,7 @@ from ..SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 import logging
 from ..common.models import (
     ContextOptionsEnum,
+    DocumentEvaluationContext,
     ExperimentOutputDocument,
     EvaluatedExperimentDocument,
     EvaluationMetadata,
@@ -71,7 +72,7 @@ class Evaluator:
         if ContextOptionsEnum.CITED_QA in evaluation_metadata.in_context:
             output += f"\nCited QA: {response.cited_QA}"
 
-        if evaluation_metadata.include_xml_prompting:
+        if evaluation_metadata.use_default_xml_prompting:
             output += f"""Your task is to decide what the value is for the label {evaluation_metadata.tag_name}.
 
             Think step by step and think out loud. Then in the end classify it according to what you think is the best output for this task.
@@ -119,7 +120,7 @@ class Evaluator:
                 tag_name=spec.tag_name,
                 evaluation_outcomes_list=spec.evaluation_outcomes,
                 in_context=spec.in_context,
-                include_xml_prompting=spec.include_xml_prompting,
+                use_default_xml_prompting=spec.use_default_xml_prompting,
             )
 
             output.append(metadata)
@@ -145,49 +146,80 @@ class Evaluator:
 
         return evaluation_output
 
-    def evaluate_document(
+    def _prepare_evaluation_context(
         self,
         document: Union[ExperimentOutputDocument, EvaluatedExperimentDocument],
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         path_to_store: Path,
-    ) -> EvaluatedExperimentDocument:
+    ) -> DocumentEvaluationContext:
+        """
+        Prepares the evaluation context from a document.
+
+        This extracts all necessary information from the document and determines
+        which evaluations need to be run.
+
+        Args:
+            document: The document to evaluate
+            client_registry: Registry of available LLM clients
+            path_to_store: Path where the output document will be saved
+
+        Returns:
+            DocumentEvaluationContext containing all necessary information for evaluation
+        """
         metadata_items = self._create_metadata_list(
             client_registry=client_registry, path_to_store=path_to_store
         )
 
-        # Initialize variables based on document type
         if isinstance(document, EvaluatedExperimentDocument):
-            # Extract existing evaluation names to avoid duplication
             existing_eval_names = {
                 meta.evaluation_name for meta in document.evaluation_metadata
             }
-            # Filter out evaluations we already have
+
             metadata_items = [
                 meta
                 for meta in metadata_items
                 if meta.evaluation_name not in existing_eval_names
             ]
 
-            # If we have no new evaluations to add, return the original document
-            if not metadata_items:
-                return document
-
-            # Set up initial state from existing document
-            experiment_metadata = document.experiment_metadata
-            existing_metadata = list(document.evaluation_metadata)
-            responses = [resp.llm_response for resp in document.responses]
-            existing_evaluations = {
-                resp.llm_response.identifier: resp.evaluations
-                for resp in document.responses
-            }
+            return DocumentEvaluationContext(
+                path_to_store=path_to_store,
+                experiment_metadata=document.experiment_metadata,
+                existing_metadata=list(document.evaluation_metadata),
+                metadata_items=metadata_items,
+                responses=[resp.llm_response for resp in document.responses],
+                existing_evaluations={
+                    resp.llm_response.identifier: resp.evaluations
+                    for resp in document.responses
+                },
+            )
         else:
-            # Set up initial state for unevaluated document
-            experiment_metadata = document.metadata
-            existing_metadata = []
-            responses = document.responses
-            existing_evaluations = {resp.identifier: [] for resp in document.responses}
+            return DocumentEvaluationContext(
+                path_to_store=path_to_store,
+                experiment_metadata=document.metadata,
+                existing_metadata=[],
+                metadata_items=metadata_items,
+                responses=document.responses,
+                existing_evaluations={
+                    resp.identifier: [] for resp in document.responses
+                },
+            )
 
-        # Process evaluations for all responses
+    def evaluate_document(
+        self,
+        document: Union[ExperimentOutputDocument, EvaluatedExperimentDocument],
+        client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
+        path_to_store: Path,
+    ) -> EvaluatedExperimentDocument:
+        context = self._prepare_evaluation_context(
+            document, client_registry, path_to_store
+        )
+
+        experiment_metadata = context.experiment_metadata
+        metadata_items = context.metadata_items
+        existing_metadata = context.existing_metadata
+        responses = context.responses
+        existing_evaluations = context.existing_evaluations
+
         evaluated_llm_responses = []
         for response in responses:
             response_id = response.identifier
@@ -239,42 +271,15 @@ class Evaluator:
         path_to_store: Path,
         max_workers: int = 8,
     ) -> EvaluatedExperimentDocument:
-        metadata_items = self._create_metadata_list(
-            client_registry=client_registry, path_to_store=path_to_store
+        context = self._prepare_evaluation_context(
+            document, client_registry, path_to_store
         )
 
-        # Initialize variables based on document type
-        if isinstance(document, EvaluatedExperimentDocument):
-            # Extract existing evaluation names to avoid duplication
-            existing_eval_names = {
-                meta.evaluation_name for meta in document.evaluation_metadata
-            }
-            # Filter out evaluations we already have
-            metadata_items = [
-                meta
-                for meta in metadata_items
-                if meta.evaluation_name not in existing_eval_names
-            ]
-
-            # If we have no new evaluations to add, return the original document
-            if not metadata_items:
-                return document
-
-            # Set up initial state from existing document
-            experiment_metadata = document.experiment_metadata
-            existing_metadata = list(document.evaluation_metadata)
-            responses = [resp.llm_response for resp in document.responses]
-            existing_evaluations = {
-                resp.llm_response.identifier: resp.evaluations
-                for resp in document.responses
-            }
-        else:
-            # Set up initial state for unevaluated document
-            experiment_metadata = document.metadata
-            existing_metadata = []
-            responses = document.responses
-            existing_evaluations = {resp.identifier: [] for resp in document.responses}
-
+        experiment_metadata = context.experiment_metadata
+        metadata_items = context.metadata_items
+        existing_metadata = context.existing_metadata
+        responses = context.responses
+        existing_evaluations = context.existing_evaluations
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
         loop = asyncio.get_event_loop()
 
@@ -421,6 +426,8 @@ class Evaluator:
         tag_name: Optional[str] = None,
         recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
         recommended_llm_model: Optional[str] = None,
+        use_default_xml_prompting: bool = True,
+        additional_tags: List[str] = [],
     ) -> EvaluationSpec:
         """
         Creates an EvaluationSpec object based on the provided parameters.
@@ -432,7 +439,8 @@ class Evaluator:
             tag_name (Optional[str], optional): The specific XML tag name to use for the evaluation output. Defaults to the evaluation name.
             recommended_llm_client_enum (Optional[SyncLLMClientEnum], optional): The recommended LLM client enum for this evaluation. Defaults to None.
             recommended_llm_model (Optional[str], optional): The recommended LLM model for this evaluation. Defaults to None.
-
+            use_default_xml_prompting (bool, optional): Whether to include XML prompting in the evaluation (or use your own custom XML prompting). Defaults to True.
+            additional_tags (List[str], optional): Additional tags to add to the evaluation and extract using XML. Defaults to [].
         Returns:
             EvaluationSpec: The created EvaluationSpec object.
         """
@@ -449,6 +457,8 @@ class Evaluator:
             recommended_llm_model=recommended_llm_model,
             evaluation_outcomes=evaluation_outcomes,
             in_context=label.content_in_context,
+            use_default_xml_prompting=use_default_xml_prompting,
+            additional_tags=additional_tags,
         )
 
     async def evaluate_and_compare_to_human_labels_async(
@@ -514,7 +524,7 @@ class Evaluator:
             tag_name=evaluation_spec.tag_name,
             evaluation_outcomes_list=evaluation_spec.evaluation_outcomes,
             in_context=evaluation_spec.in_context,
-            include_xml_prompting=evaluation_spec.include_xml_prompting,
+            use_default_xml_prompting=evaluation_spec.use_default_xml_prompting,
         )
 
         if not self.evaluation_dict:
