@@ -216,7 +216,7 @@ class EvaluationSpec(BaseModel):
     recommended_llm_client_enum: Optional[SyncLLMClientEnum]
     recommended_llm_model: Optional[str]
     evaluation_outcomes: List[str]
-    in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
+    in_context: List[ContextOptionsEnum]
     use_default_xml_prompting: bool
     additional_tags: Optional[List[str]]
 
@@ -226,7 +226,7 @@ class EvaluationOutput(BaseModel):
     evaluation_timestamp: datetime
     evaluation_name: str
     evaluation_outcome: str
-    additional_tags_info: Dict[str, str] = Field(default_factory=dict)
+    additional_tags_info: Dict[str, List[str]]
 
 
 class LLMResponseWithEvaluation(BaseModel):
@@ -243,6 +243,7 @@ class EvaluationMetadata(BaseModel):
     evaluation_outcomes_list: List[str]
     in_context: List[ContextOptionsEnum]
     use_default_xml_prompting: bool
+    additional_tags: Optional[List[str]]
 
 
 class DocumentEvaluationContext(BaseModel):
@@ -258,7 +259,7 @@ class DocumentEvaluationContext(BaseModel):
 
     existing_metadata: List[EvaluationMetadata] = Field(default_factory=list)
 
-    metadata_items: List[EvaluationMetadata] = Field(default_factory=list)
+    new_evaluations_metadata: List[EvaluationMetadata] = Field(default_factory=list)
 
     responses: List[SavedLLMResponse] = Field(default_factory=list)
 
@@ -269,7 +270,7 @@ class DocumentEvaluationContext(BaseModel):
     @property
     def has_evaluations_to_run(self) -> bool:
         """Returns True if there are evaluations to run."""
-        return len(self.metadata_items) > 0
+        return len(self.new_evaluations_metadata) > 0
 
 
 class EvaluatedExperimentDocument(BaseModel):

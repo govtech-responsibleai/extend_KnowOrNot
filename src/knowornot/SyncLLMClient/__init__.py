@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Optional, Type, TypeVar, Union, overload, Literal
+from typing import Dict, List, Optional, Type, TypeVar, Union, overload, Literal
 import re
 
 from pydantic import BaseModel
@@ -249,6 +249,71 @@ class SyncLLMClient(ABC):
 
         # Return result based on on_multiple
         return result if on_multiple == "list" else result[0]
+
+    def prompt_and_extract_tags(
+        self,
+        prompt: Union[str, List[Message]],
+        validated_tags: Dict[str, List[str]],
+        free_tags: Optional[List[str]] = None,
+        ai_model: Optional[str] = None,
+    ) -> Dict[str, List[str]]:
+        """Prompts the LLM and extracts values from XML tags, with option for validation against allowed lists.
+
+        Args:
+            prompt: The input prompt to send to the LLM. Can be a string or list of Message objects.
+            validated_tags: Dictionary mapping tag names to their allowed values. These tags must have
+                           values in the specified list.
+            free_tags: List of tag names that can contain any content (no validation).
+            ai_model: The name of the AI model to use. If None, uses the default model.
+
+        Returns:
+            Dictionary mapping tag names to lists of their extracted values.
+
+        Raises:
+            ValueError: If validation fails, or if any required tags are missing from the response.
+        """
+        if free_tags is None:
+            free_tags = []
+
+        for tag_name, allowed_values in validated_tags.items():
+            if not isinstance(allowed_values, list):
+                raise ValueError(f"Allowed values for {tag_name} must be a list")
+            if not allowed_values:
+                raise ValueError(f"Allowed values list for {tag_name} cannot be empty")
+
+        all_tags = list(validated_tags.keys()) + free_tags
+
+        if not all_tags:
+            raise ValueError("At least one tag (validated or free) must be specified")
+
+        response = self.prompt(prompt=prompt, ai_model=ai_model)
+
+        results = {}
+
+        for tag_name in all_tags:
+            pattern = rf"<{tag_name}>(.*?)</{tag_name}>"
+            matches: List[str] = re.findall(pattern, response, re.DOTALL)
+
+            if not matches:
+                raise ValueError(f"No <{tag_name}> tags found in LLM response")
+
+            if tag_name in validated_tags:
+                allowed_values = validated_tags[tag_name]
+                validated_values = []
+
+                for value in matches:
+                    value = value.strip()
+                    if value not in allowed_values:
+                        raise ValueError(
+                            f"Value '{value}' from tag <{tag_name}> is not in the allowed list: {allowed_values}"
+                        )
+                    validated_values.append(value)
+
+                results[tag_name] = validated_values
+            else:
+                results[tag_name] = [match.strip() for match in matches]
+
+        return results
 
     @property
     @abstractmethod
