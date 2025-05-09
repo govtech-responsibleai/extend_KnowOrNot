@@ -1029,6 +1029,8 @@ class KnowOrNot:
         ],
         recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
         recommended_llm_model: Optional[str] = None,
+        use_default_xml_prompting: bool = True,
+        additional_tags: List[str] = [],
     ) -> EvaluationSpec:
         """
         Creates an EvaluationSpec object based on the provided parameters.
@@ -1039,16 +1041,17 @@ class KnowOrNot:
             prompt_content (str): The content of the prompt.
             evaluation_outcomes (List[str]): The possible outcomes of the evaluation.
             tag_name (str): The tag associated with the evaluation.
-            in_context (List[Literal["question", "expected_answer", "context"]], optional):
+            in_context (List[Literal["question", "expected_answer", "context", "cited_qa"]], optional):
                 The parts of the prompt to include in the context. Defaults to [
-                    "question", "expected_answer", "context"].
+                    "question", "expected_answer", "context", "cited_qa"].
             recommended_llm_client_enum (Optional[SyncLLMClientEnum], optional):
                 The recommended LLM client enum for this evaluation. Defaults to
                 None, in which case the default client's enum is used.
             recommended_llm_model (Optional[str], optional):
                 The recommended LLM model for this evaluation. Defaults to None in which
                 case the given client's default model is used, or the default client's model is used.
-
+            use_default_xml_prompting (bool, optional): Whether to include XML prompting or whether the user will handle it. Defaults to True.
+            additional_tags (List[str], optional): Additional XML tags to add to the evaluation and extract and save. Defaults to [].
         Returns:
             EvaluationSpec: The created EvaluationSpec object.
         """
@@ -1084,6 +1087,8 @@ class KnowOrNot:
             evaluation_outcomes=evaluation_outcomes,
             recommended_llm_client_enum=recommended_llm_client_enum,
             recommended_llm_model=recommended_llm_model,
+            use_default_xml_prompting=use_default_xml_prompting,
+            additional_tags=additional_tags,
         )
 
     def create_evaluator(

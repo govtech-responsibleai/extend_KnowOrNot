@@ -216,7 +216,9 @@ class EvaluationSpec(BaseModel):
     recommended_llm_client_enum: Optional[SyncLLMClientEnum]
     recommended_llm_model: Optional[str]
     evaluation_outcomes: List[str]
-    in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
+    in_context: List[ContextOptionsEnum]
+    use_default_xml_prompting: bool
+    additional_tags: Optional[List[str]]
 
 
 class EvaluationOutput(BaseModel):
@@ -224,6 +226,7 @@ class EvaluationOutput(BaseModel):
     evaluation_timestamp: datetime
     evaluation_name: str
     evaluation_outcome: str
+    additional_tags_info: Dict[str, List[str]]
 
 
 class LLMResponseWithEvaluation(BaseModel):
@@ -238,7 +241,36 @@ class EvaluationMetadata(BaseModel):
     evaluation_prompt: Prompt
     tag_name: str
     evaluation_outcomes_list: List[str]
-    in_context: List[ContextOptionsEnum] = list(ContextOptionsEnum)
+    in_context: List[ContextOptionsEnum]
+    use_default_xml_prompting: bool
+    additional_tags: Optional[List[str]]
+
+
+class DocumentEvaluationContext(BaseModel):
+    """
+    Contains all necessary context for evaluating a document.
+    This encapsulates the shared state needed by both synchronous and asynchronous
+    evaluation methods.
+    """
+
+    path_to_store: Path
+
+    experiment_metadata: ExperimentMetadata
+
+    existing_metadata: List[EvaluationMetadata] = Field(default_factory=list)
+
+    new_evaluations_metadata: List[EvaluationMetadata] = Field(default_factory=list)
+
+    responses: List[SavedLLMResponse] = Field(default_factory=list)
+
+    existing_evaluations: Dict[str, List[EvaluationOutput]] = Field(
+        default_factory=dict
+    )
+
+    @property
+    def has_evaluations_to_run(self) -> bool:
+        """Returns True if there are evaluations to run."""
+        return len(self.new_evaluations_metadata) > 0
 
 
 class EvaluatedExperimentDocument(BaseModel):

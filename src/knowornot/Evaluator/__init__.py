@@ -5,6 +5,7 @@ from ..SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 import logging
 from ..common.models import (
     ContextOptionsEnum,
+    DocumentEvaluationContext,
     ExperimentOutputDocument,
     EvaluatedExperimentDocument,
     EvaluationMetadata,
@@ -17,7 +18,7 @@ from ..common.models import (
     LabelTask,
 )
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 import asyncio
 import concurrent.futures
 from tqdm import tqdm
@@ -41,6 +42,22 @@ class Evaluator:
         self.logger.info("Initializing evaluator")
 
     def add_evaluation_spec(self, evaluation_spec: EvaluationSpec) -> None:
+        """
+        Adds a new evaluation specification to the evaluator's dictionary.
+
+        This method stores the given `EvaluationSpec` in the evaluator's internal dictionary
+        for future evaluation tasks. It ensures that each evaluation specification is unique
+        by checking the name of the `EvaluationSpec`. If a specification with the same name
+        already exists in the dictionary, a `ValueError` is raised.
+
+        Args:
+            evaluation_spec (EvaluationSpec): The evaluation specification to add.
+
+        Raises:
+            ValueError: If an evaluation specification with the same name already exists
+            in the evaluator's dictionary.
+        """
+
         if not self.evaluation_dict:
             self.evaluation_dict = {}
 
@@ -53,6 +70,17 @@ class Evaluator:
     def _create_context(
         self, evaluation_metadata: EvaluationMetadata, response: SavedLLMResponse
     ) -> str:
+        """
+        Construct the prompt to be given to the evaluator LLM.
+
+        This adds the model's answer, and if requested, the question, expected answer, context, and cited QA from the original experiment input.
+
+        If the EvaluationSpec specifies default XML prompting, this is also added to the prompt.
+
+        :param evaluation_metadata: The metadata for the evaluation being performed
+        :param response: The response to be evaluated
+        :return: The constructed prompt
+        """
         output = evaluation_metadata.evaluation_prompt.content
 
         output += f"\nThe model's answer was {response.llm_response.response}"
@@ -71,12 +99,13 @@ class Evaluator:
         if ContextOptionsEnum.CITED_QA in evaluation_metadata.in_context:
             output += f"\nCited QA: {response.cited_QA}"
 
-        output += f"""Your task is to decide what the value is for the label {evaluation_metadata.tag_name}.
+        if evaluation_metadata.use_default_xml_prompting:
+            output += f"""Your task is to decide what the value is for the label {evaluation_metadata.tag_name}.
 
-        Think step by step and think out loud. Then in the end classify it according to what you think is the best output for this task.
+            Think step by step and think out loud. Then in the end classify it according to what you think is the best output for this task.
 
-        Give an XML tag <{evaluation_metadata.tag_name}> </{evaluation_metadata.tag_name}> with ONLY one of the following values: {", ".join(evaluation_metadata.evaluation_outcomes_list)}. This is compulsory and the answer will not parsed otherwise.
-        """
+            Give an XML tag <{evaluation_metadata.tag_name}> </{evaluation_metadata.tag_name}> with ONLY one of the following values: {", ".join(evaluation_metadata.evaluation_outcomes_list)}. This is compulsory and the answer will not parsed otherwise.
+            """
 
         return output
 
@@ -85,6 +114,38 @@ class Evaluator:
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         path_to_store: Path,
     ) -> List[EvaluationMetadata]:
+        """
+        Creates a list of EvaluationMetadata objects based on the evaluation specifications
+        stored in `self.evaluation_dict` and the provided client registry.
+
+        The method iterates through each evaluation spec in `self.evaluation_dict` and
+        creates an EvaluationMetadata object using the following rules:
+        - If the evaluation spec does not specify a model, the default model from the
+          client registry is used.
+        - If the evaluation spec does not specify a client, the default client from the
+          client registry is used.
+        - The evaluation name is the same as the key in `self.evaluation_dict`.
+        - The evaluation prompt is the same as the evaluation prompt in the evaluation spec.
+        - The tag_name is the same as the tag_name in the evaluation spec.
+        - The evaluation outcomes list is the same as the evaluation outcomes list in the
+          evaluation spec.
+        - The in_context list is the same as the in_context list in the evaluation spec.
+        - The use_default_xml_prompting flag is the same as the use_default_xml_prompting
+          flag in the evaluation spec.
+        - The additional_tags list is the same as the additional_tags list in the
+          evaluation spec.
+
+        The method raises a ValueError if the path does not end with .json or if the
+        evaluation dictionary is empty. It also raises a ValueError if the client registry
+        does not contain a client for the specified evaluation client enum.
+
+        Args:
+            client_registry: A dictionary mapping client enums to their corresponding SyncLLMClient instances.
+            path_to_store: The path to the file where the evaluated experiment document will be saved.
+
+        Returns:
+            A list of EvaluationMetadata objects.
+        """
         output: List[EvaluationMetadata] = []
         if not path_to_store.suffix == ".json":
             raise ValueError(f"The path must end with .json. Got: {path_to_store}")
@@ -117,30 +178,163 @@ class Evaluator:
                 evaluation_prompt=spec.prompt,
                 tag_name=spec.tag_name,
                 evaluation_outcomes_list=spec.evaluation_outcomes,
+                in_context=spec.in_context,
+                use_default_xml_prompting=spec.use_default_xml_prompting,
+                additional_tags=spec.additional_tags,
             )
 
             output.append(metadata)
 
         return output
 
-    def _create_single_evaluation_output(
+    def _perform_single_evaluation(
         self,
-        evaluation_raw: str,
+        client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         evaluation_kind: EvaluationMetadata,
         response: SavedLLMResponse,
+        on_multiple: Literal["error", "first", "last"],
     ) -> EvaluationOutput:
+        """
+        Perform a single evaluation using the specified evaluation metadata and LLM response.
+
+        This method constructs the evaluation context using the given metadata and response
+        and then uses the appropriate LLM client to extract evaluation outcomes based on the
+        provided tags. It handles multiple outcomes according to the specified `on_multiple`
+        behavior and constructs an `EvaluationOutput` with the result.
+
+        Args:
+            client_registry (Dict[SyncLLMClientEnum, SyncLLMClient]): A dictionary mapping
+                client enums to their corresponding SyncLLMClient instances.
+            evaluation_kind (EvaluationMetadata): Metadata defining the evaluation criteria,
+                including client, model, prompt, and expected tags.
+            response (SavedLLMResponse): The response from the LLM to be evaluated.
+            on_multiple (Literal["error", "first", "last"]): Defines how to handle multiple
+                results for the tag name in the output. "error" raises an exception, "first" selects the first outcome, and
+                "last" selects the last outcome.
+
+        Returns:
+            EvaluationOutput: An object containing the evaluation details, including the
+            evaluation name, outcome, timestamp, unique ID, and any additional extracted tags.
+
+        Raises:
+            ValueError: If no evaluation outcome is found or if multiple outcomes are found
+                and `on_multiple` is set to "error".
+        """
+
+        evaluator_client = client_registry[evaluation_kind.evaluator_client_enum]
+
+        context = self._create_context(evaluation_kind, response)
+
+        evaluation_dict = evaluator_client.prompt_and_extract_tags(
+            prompt=context,
+            ai_model=evaluation_kind.evaluator_model,
+            validated_tags={
+                evaluation_kind.tag_name: evaluation_kind.evaluation_outcomes_list
+            },
+            free_tags=evaluation_kind.additional_tags,
+        )
+
+        if evaluation_kind.tag_name not in evaluation_dict:
+            raise ValueError(
+                f"No evaluation outcome found for {evaluation_kind.tag_name} in {evaluation_kind.evaluator_model}"
+            )
+
+        if len(evaluation_dict[evaluation_kind.tag_name]) == 0:
+            raise ValueError(
+                f"No evaluation outcome found for {evaluation_kind.tag_name} in {evaluation_kind.evaluator_model}"
+            )
+
+        if len(evaluation_dict[evaluation_kind.tag_name]) > 1:
+            if on_multiple == "error":
+                raise ValueError(
+                    f"Multiple evaluation outcomes found for {evaluation_kind.tag_name} in {evaluation_kind.evaluator_model}"
+                )
+            elif on_multiple == "first":
+                evaluation_dict[evaluation_kind.tag_name] = [
+                    evaluation_dict[evaluation_kind.tag_name][0]
+                ]
+            elif on_multiple == "last":
+                evaluation_dict[evaluation_kind.tag_name] = [
+                    evaluation_dict[evaluation_kind.tag_name][-1]
+                ]
+
+        evaluation_raw = evaluation_dict[evaluation_kind.tag_name][0]
+
         evaluation_timestamp = datetime.now()
         evaluation_timestamp_str = evaluation_timestamp.strftime("%Y-%m-%d %H:%M:%S")
         evaluation_id = f"{evaluation_kind.evaluation_name}_{evaluation_timestamp_str}_{response.identifier}_{evaluation_kind.evaluator_model}"
+
+        free_tags = {
+            k: v for k, v in evaluation_dict.items() if k != evaluation_kind.tag_name
+        }
 
         evaluation_output = EvaluationOutput(
             evaluation_name=evaluation_kind.evaluation_name,
             evaluation_outcome=evaluation_raw,
             evaluation_timestamp=evaluation_timestamp,
             evaluation_id=evaluation_id,
+            additional_tags_info=free_tags,
         )
 
         return evaluation_output
+
+    def _prepare_evaluation_context(
+        self,
+        document: Union[ExperimentOutputDocument, EvaluatedExperimentDocument],
+        client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
+        path_to_store: Path,
+    ) -> DocumentEvaluationContext:
+        """
+        Prepares the evaluation context from a document.
+
+        This extracts all necessary information from the document and determines
+        which evaluations need to be run.
+
+        Args:
+            document: The document to evaluate
+            client_registry: Registry of available LLM clients
+            path_to_store: Path where the output document will be saved
+
+        Returns:
+            DocumentEvaluationContext containing all necessary information for evaluation
+        """
+        new_evaluations_metadata = self._create_metadata_list(
+            client_registry=client_registry, path_to_store=path_to_store
+        )
+
+        if isinstance(document, EvaluatedExperimentDocument):
+            existing_eval_names = {
+                meta.evaluation_name for meta in document.evaluation_metadata
+            }
+
+            new_evaluations_metadata = [
+                meta
+                for meta in new_evaluations_metadata
+                if meta.evaluation_name not in existing_eval_names
+            ]
+
+            return DocumentEvaluationContext(
+                path_to_store=path_to_store,
+                experiment_metadata=document.experiment_metadata,
+                existing_metadata=list(document.evaluation_metadata),
+                new_evaluations_metadata=new_evaluations_metadata,
+                responses=[resp.llm_response for resp in document.responses],
+                existing_evaluations={
+                    resp.llm_response.identifier: resp.evaluations
+                    for resp in document.responses
+                },
+            )
+        else:
+            return DocumentEvaluationContext(
+                path_to_store=path_to_store,
+                experiment_metadata=document.metadata,
+                existing_metadata=[],
+                new_evaluations_metadata=new_evaluations_metadata,
+                responses=document.responses,
+                existing_evaluations={
+                    resp.identifier: [] for resp in document.responses
+                },
+            )
 
     def evaluate_document(
         self,
@@ -148,67 +342,52 @@ class Evaluator:
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         path_to_store: Path,
     ) -> EvaluatedExperimentDocument:
-        metadata_items = self._create_metadata_list(
-            client_registry=client_registry, path_to_store=path_to_store
+        """
+        Evaluates a given experiment document and saves the results.
+
+        This method processes an existing experiment document, performs evaluations
+        based on provided specifications, and saves the annotated results as a new
+        EvaluatedExperimentDocument in JSON format at the specified path.
+
+        Args:
+            document (Union[ExperimentOutputDocument, EvaluatedExperimentDocument]):
+                The experiment document to evaluate. Can be either a new experiment
+                output document or an already evaluated one.
+            client_registry (Dict[SyncLLMClientEnum, SyncLLMClient]):
+                A mapping of SyncLLMClientEnum to SyncLLMClient instances, used to
+                perform evaluations with the appropriate client and model.
+            path_to_store (Path):
+                The file path where the evaluated experiment document will be saved.
+                The path must end in a `.json` suffix.
+
+        Returns:
+            EvaluatedExperimentDocument: The document containing the results of the
+            evaluations, including metadata and the evaluated responses.
+        """
+
+        context = self._prepare_evaluation_context(
+            document, client_registry, path_to_store
         )
 
-        # Initialize variables based on document type
-        if isinstance(document, EvaluatedExperimentDocument):
-            # Extract existing evaluation names to avoid duplication
-            existing_eval_names = {
-                meta.evaluation_name for meta in document.evaluation_metadata
-            }
-            # Filter out evaluations we already have
-            metadata_items = [
-                meta
-                for meta in metadata_items
-                if meta.evaluation_name not in existing_eval_names
-            ]
+        experiment_metadata = context.experiment_metadata
+        new_evaluations_metadata = context.new_evaluations_metadata
+        existing_metadata = context.existing_metadata
+        responses = context.responses
+        existing_evaluations = context.existing_evaluations
 
-            # If we have no new evaluations to add, return the original document
-            if not metadata_items:
-                return document
-
-            # Set up initial state from existing document
-            experiment_metadata = document.experiment_metadata
-            existing_metadata = list(document.evaluation_metadata)
-            responses = [resp.llm_response for resp in document.responses]
-            existing_evaluations = {
-                resp.llm_response.identifier: resp.evaluations
-                for resp in document.responses
-            }
-        else:
-            # Set up initial state for unevaluated document
-            experiment_metadata = document.metadata
-            existing_metadata = []
-            responses = document.responses
-            existing_evaluations = {resp.identifier: [] for resp in document.responses}
-
-        # Process evaluations for all responses
         evaluated_llm_responses = []
         for response in responses:
             response_id = response.identifier
             evaluation_outputs = list(existing_evaluations.get(response_id, []))
 
             # Add new evaluations
-            for evaluation_kind in metadata_items:
-                evaluator_client = client_registry[
-                    evaluation_kind.evaluator_client_enum
-                ]
-                context = self._create_context(evaluation_kind, response)
-                evaluation_raw = evaluator_client.prompt_and_extract_tag(
-                    prompt=context,
-                    ai_model=evaluation_kind.evaluator_model,
-                    tag_name=evaluation_kind.tag_name,
-                    allowed_list=evaluation_kind.evaluation_outcomes_list,
-                    on_multiple="last",
-                )
-
+            for evaluation_kind in new_evaluations_metadata:
                 evaluation_outputs.append(
-                    self._create_single_evaluation_output(
-                        evaluation_raw=evaluation_raw,
+                    self._perform_single_evaluation(
+                        client_registry=client_registry,
                         evaluation_kind=evaluation_kind,
                         response=response,
+                        on_multiple="last",
                     )
                 )
 
@@ -222,7 +401,7 @@ class Evaluator:
         output = EvaluatedExperimentDocument(
             path_to_store=path_to_store,
             experiment_metadata=experiment_metadata,
-            evaluation_metadata=existing_metadata + metadata_items,
+            evaluation_metadata=existing_metadata + new_evaluations_metadata,
             responses=evaluated_llm_responses,
         )
 
@@ -236,42 +415,40 @@ class Evaluator:
         path_to_store: Path,
         max_workers: int = 8,
     ) -> EvaluatedExperimentDocument:
-        metadata_items = self._create_metadata_list(
-            client_registry=client_registry, path_to_store=path_to_store
+        """
+        Asynchronously evaluates a completed experiment using the configured evaluation kinds.
+
+        This function creates a new EvaluatedExperimentDocument JSON file at the specified
+        path_to_store, containing the experiment results annotated with all evaluation outcomes.
+        The parent directory for the output file must exist or be creatable.
+
+        The method first prepares the context for evaluation by extracting all necessary
+        information from the document and determining which evaluations need to be run.
+        Then, it creates tasks for all response+evaluation combinations and processes them
+        concurrently with a progress bar.
+
+        Args:
+            document (Union[ExperimentOutputDocument, EvaluatedExperimentDocument]):
+                The completed experiment document to evaluate.
+            client_registry (Dict[SyncLLMClientEnum, SyncLLMClient]):
+                A dictionary mapping SyncLLMClientEnum to SyncLLMClient instances.
+            path_to_store (Path):
+                The path to save the evaluated experiment document.
+            max_workers (int):
+                The maximum number of threads to use for concurrent evaluation. Defaults to 8.
+
+        Returns:
+            EvaluatedExperimentDocument: The evaluated experiment document.
+        """
+        context = self._prepare_evaluation_context(
+            document, client_registry, path_to_store
         )
 
-        # Initialize variables based on document type
-        if isinstance(document, EvaluatedExperimentDocument):
-            # Extract existing evaluation names to avoid duplication
-            existing_eval_names = {
-                meta.evaluation_name for meta in document.evaluation_metadata
-            }
-            # Filter out evaluations we already have
-            metadata_items = [
-                meta
-                for meta in metadata_items
-                if meta.evaluation_name not in existing_eval_names
-            ]
-
-            # If we have no new evaluations to add, return the original document
-            if not metadata_items:
-                return document
-
-            # Set up initial state from existing document
-            experiment_metadata = document.experiment_metadata
-            existing_metadata = list(document.evaluation_metadata)
-            responses = [resp.llm_response for resp in document.responses]
-            existing_evaluations = {
-                resp.llm_response.identifier: resp.evaluations
-                for resp in document.responses
-            }
-        else:
-            # Set up initial state for unevaluated document
-            experiment_metadata = document.metadata
-            existing_metadata = []
-            responses = document.responses
-            existing_evaluations = {resp.identifier: [] for resp in document.responses}
-
+        experiment_metadata = context.experiment_metadata
+        new_evaluations_metadata = context.new_evaluations_metadata
+        existing_metadata = context.existing_metadata
+        responses = context.responses
+        existing_evaluations = context.existing_evaluations
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
         loop = asyncio.get_event_loop()
 
@@ -284,31 +461,40 @@ class Evaluator:
             response: SavedLLMResponse,
             evaluation_idx: int,
             evaluation_kind: EvaluationMetadata,
-        ) -> Tuple[int, int, SavedLLMResponse, EvaluationMetadata, str]:
-            evaluator_client = client_registry[evaluation_kind.evaluator_client_enum]
-            context = self._create_context(evaluation_kind, response)
-
+        ) -> Tuple[int, int, EvaluationOutput]:
             # Run the synchronous API call in a thread
+            """
+            Evaluates a single sample using the specified evaluation kind.
+
+            This function performs up to max_tries attempts to evaluate the sample. If
+            all attempts fail, an error is logged and the function raises the last
+            exception encountered.
+
+            Args:
+                response_idx: The index of the response in the list of responses
+                    provided in the document.
+                response: The response to evaluate.
+                evaluation_idx: The index of the evaluation kind in the list of
+                    evaluation kinds provided in the document.
+                evaluation_kind: The evaluation kind to use for evaluation.
+
+            Returns:
+                A tuple containing the response index, evaluation index, and the
+                evaluation output.
+            """
             max_tries = 3
             for attempt in range(max_tries):
                 try:
-                    evaluation_raw = await loop.run_in_executor(
+                    evaluation_output = await loop.run_in_executor(
                         executor,
-                        lambda: evaluator_client.prompt_and_extract_tag(
-                            prompt=context,
-                            ai_model=evaluation_kind.evaluator_model,
-                            tag_name=evaluation_kind.tag_name,
-                            allowed_list=evaluation_kind.evaluation_outcomes_list,
+                        lambda: self._perform_single_evaluation(
+                            client_registry=client_registry,
+                            evaluation_kind=evaluation_kind,
+                            response=response,
                             on_multiple="last",
                         ),
                     )
-                    return (
-                        response_idx,
-                        evaluation_idx,
-                        response,
-                        evaluation_kind,
-                        evaluation_raw,
-                    )
+                    return (response_idx, evaluation_idx, evaluation_output)
                 except Exception as e:
                     if attempt == max_tries - 1:
                         self.logger.error(
@@ -339,10 +525,10 @@ class Evaluator:
 
             # Create a placeholder for each new evaluation to be added
             initial_eval_count = len(evaluations_by_response[idx])
-            evaluations_by_response[idx].extend([None] * len(metadata_items))
+            evaluations_by_response[idx].extend([None] * len(new_evaluations_metadata))
 
             # Create tasks for each new evaluation
-            for eval_idx, evaluation_kind in enumerate(metadata_items):
+            for eval_idx, evaluation_kind in enumerate(new_evaluations_metadata):
                 tasks.append(
                     process_evaluation(
                         idx, response, initial_eval_count + eval_idx, evaluation_kind
@@ -355,21 +541,8 @@ class Evaluator:
         pbar = tqdm(total=total_tasks, desc="Processing evaluations")
 
         for coro in asyncio.as_completed(tasks):
-            (
-                response_idx,
-                eval_idx,
-                response,
-                evaluation_kind,
-                evaluation_raw,
-            ) = await coro
+            response_idx, eval_idx, evaluation_output = await coro
 
-            evaluation_output = self._create_single_evaluation_output(
-                evaluation_raw=evaluation_raw,
-                evaluation_kind=evaluation_kind,
-                response=response,
-            )
-
-            # Store the evaluation at its correct position in the response's evaluation list
             evaluations_by_response[response_idx][eval_idx] = evaluation_output
             pbar.update(1)
 
@@ -394,15 +567,11 @@ class Evaluator:
         confirmed_llm_responses = [
             resp for resp in evaluated_llm_responses if resp is not None
         ]
-        for resp_idx, resp in enumerate(confirmed_llm_responses):
-            assert all(eval_result is not None for eval_result in resp.evaluations), (
-                f"Missing evaluations for response at index {resp_idx}"
-            )
 
         output = EvaluatedExperimentDocument(
             path_to_store=path_to_store,
             experiment_metadata=experiment_metadata,
-            evaluation_metadata=existing_metadata + metadata_items,
+            evaluation_metadata=existing_metadata + new_evaluations_metadata,
             responses=confirmed_llm_responses,
         )
 
@@ -418,6 +587,8 @@ class Evaluator:
         tag_name: Optional[str] = None,
         recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
         recommended_llm_model: Optional[str] = None,
+        use_default_xml_prompting: bool = True,
+        additional_tags: List[str] = [],
     ) -> EvaluationSpec:
         """
         Creates an EvaluationSpec object based on the provided parameters.
@@ -429,7 +600,8 @@ class Evaluator:
             tag_name (Optional[str], optional): The specific XML tag name to use for the evaluation output. Defaults to the evaluation name.
             recommended_llm_client_enum (Optional[SyncLLMClientEnum], optional): The recommended LLM client enum for this evaluation. Defaults to None.
             recommended_llm_model (Optional[str], optional): The recommended LLM model for this evaluation. Defaults to None.
-
+            use_default_xml_prompting (bool, optional): Whether to include XML prompting in the evaluation (or use your own custom XML prompting). Defaults to True.
+            additional_tags (List[str], optional): Additional tags to add to the evaluation and extract using XML. Defaults to [].
         Returns:
             EvaluationSpec: The created EvaluationSpec object.
         """
@@ -446,6 +618,8 @@ class Evaluator:
             recommended_llm_model=recommended_llm_model,
             evaluation_outcomes=evaluation_outcomes,
             in_context=label.content_in_context,
+            use_default_xml_prompting=use_default_xml_prompting,
+            additional_tags=additional_tags,
         )
 
     async def evaluate_and_compare_to_human_labels_async(
@@ -461,6 +635,24 @@ class Evaluator:
         recommended_llm_model: Optional[str] = None,
         max_workers: int = 8,
     ) -> Dict:
+        """
+        Evaluates a model against human labels for a given task and comparison set of annotators.
+
+        Args:
+            client_registry (Dict[SyncLLMClientEnum, SyncLLMClient]): A dictionary mapping SyncLLMClientEnum to SyncLLMClient objects.
+            labelled_samples (List[LabeledDataSample]): A list of labelled data samples.
+            task_name (str): The name of the task to evaluate.
+            annotators_to_compare (List[str]): A list of annotator IDs to compare the model against.
+            prompt (str): The prompt to use for evaluation.
+            prompt_id (str): The ID of the prompt to use for evaluation.
+            output_path (Optional[Path], optional): The file path to save the evaluation results JSON file to. Defaults to None.
+            recommended_llm_client_enum (Optional[SyncLLMClientEnum], optional): The recommended LLM client enum to use for evaluation. Defaults to None.
+            recommended_llm_model (Optional[str], optional): The recommended LLM model to use for evaluation. Defaults to None.
+            max_workers (int, optional): The maximum number of threads to use for concurrent evaluation. Defaults to 8.
+
+        Returns:
+            Dict: A dictionary containing the evaluation results and comparison statistics.
+        """
         label_tasks: List[LabelTask] = []
 
         # Find all label tasks with that name
@@ -511,6 +703,8 @@ class Evaluator:
             tag_name=evaluation_spec.tag_name,
             evaluation_outcomes_list=evaluation_spec.evaluation_outcomes,
             in_context=evaluation_spec.in_context,
+            use_default_xml_prompting=evaluation_spec.use_default_xml_prompting,
+            additional_tags=evaluation_spec.additional_tags,
         )
 
         if not self.evaluation_dict:
