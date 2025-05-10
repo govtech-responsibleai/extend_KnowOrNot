@@ -8,6 +8,8 @@ from .SyncLLMClient.openai_client import SyncOpenAIClient
 from .QuestionExtractor.models import FilterMethod
 from .common.models import (
     EvaluatedExperimentDocument,
+    EvaluationMetadata,
+    EvaluationOutput,
     ExperimentInputDocument,
     ExperimentOutputDocument,
     ContextOptionsEnum,
@@ -1121,7 +1123,30 @@ class KnowOrNot:
         self,
         experiment_output: Union[EvaluatedExperimentDocument, ExperimentOutputDocument],
         path_to_store: Path,
+        skip_function: Callable[
+            [Union[SavedLLMResponse, LLMResponseWithEvaluation], EvaluationMetadata],
+            Optional[EvaluationOutput],
+        ] = lambda x, y: None,
     ) -> EvaluatedExperimentDocument:
+        """
+        Evaluates a completed experiment using the configured evaluation kinds.
+
+        This method takes an `ExperimentOutputDocument` (the output from `run_experiment_sync`) and applies each evaluation metric defined by the `EvaluationSpec`s provided to `create_evaluator` to every LLM response in the document.
+
+        Args:
+            experiment_output (Union[ExperimentOutputDocument, EvaluatedExperimentDocument]):
+                The completed experiment document to evaluate.
+            path_to_store (Path):
+                The path to save the evaluated experiment document.
+            skip_function (Callable[[Union[SavedLLMResponse, LLMResponseWithEvaluation], EvaluationMetadata], Optional[EvaluationOutput]]):
+                A function that takes a response and evaluation metadata and returns None if the evaluation should be skipped.
+
+        Returns:
+            EvaluatedExperimentDocument: The evaluated experiment document.
+
+        Raises:
+            ValueError: If no evaluator is configured.
+        """
         if not self.evaluator:
             raise ValueError(
                 "You must create an evaluator with create_evaluator before evaluating an experiment"
@@ -1131,12 +1156,17 @@ class KnowOrNot:
             document=experiment_output,
             client_registry=self.client_registry,
             path_to_store=path_to_store,
+            skip_function=skip_function,
         )
 
     async def evaluate_experiment_async(
         self,
         experiment_output: Union[EvaluatedExperimentDocument, ExperimentOutputDocument],
         path_to_store: Path,
+        skip_function: Callable[
+            [Union[SavedLLMResponse, LLMResponseWithEvaluation], EvaluationMetadata],
+            Optional[EvaluationOutput],
+        ] = lambda x, y: None,
     ) -> EvaluatedExperimentDocument:
         if not self.evaluator:
             raise ValueError(
@@ -1147,6 +1177,7 @@ class KnowOrNot:
             document=experiment_output,
             client_registry=self.client_registry,
             path_to_store=path_to_store,
+            skip_function=skip_function,
         )
 
     def create_samples_to_label(
