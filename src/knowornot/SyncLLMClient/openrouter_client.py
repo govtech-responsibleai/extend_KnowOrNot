@@ -156,7 +156,9 @@ class SyncOpenRouterClient(SyncLLMClient):
 
         if self.instructor_client is None:
             # If instructor client is not available, use OpenAI client
-            raise ValueError(f"Structured responses not supported for {model_used}")
+            raise ValueError(
+                f"Structured responses not supported for {model_used}. If you want to change it please initalise a new openrouter model with can_use_instructor=True"
+            )
         try:
             # For structured responses, we don't want to use tools as instructor handles the response format
             response = self.instructor_client.chat.completions.create(

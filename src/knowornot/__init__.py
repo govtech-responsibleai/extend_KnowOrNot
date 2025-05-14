@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Callable, Dict, List, Literal, Optional, Sequence, Union, Any
 import logging
 
+from .SyncLLMClient.openrouter_client import SyncOpenRouterClient
+
 from .SyncLLMClient.openai_client import SyncOpenAIClient
 
 from .QuestionExtractor.models import FilterMethod
@@ -25,7 +27,13 @@ from .common.models import (
     SavedLLMResponse,
 )
 from .QuestionExtractor import QuestionExtractor
-from .config import AzureOpenAIConfig, OpenAIConfig, GeminiConfig, Tool
+from .config import (
+    AzureOpenAIConfig,
+    OpenAIConfig,
+    GeminiConfig,
+    Tool,
+    OpenRouterConfig,
+)
 from .SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
 from .SyncLLMClient.azure_client import SyncAzureOpenAIClient
 from .SyncLLMClient.gemini_client import SyncGeminiClient
@@ -483,6 +491,50 @@ class KnowOrNot:
         self.register_client(client=gemini_sync_client, make_default=True)
 
         return
+
+    def add_openrouter(
+        self,
+        openrouter_api_key: Optional[str] = None,
+        default_model: Optional[str] = None,
+        can_use_instructor: bool = False,
+    ) -> None:
+        """
+        Registers a SyncOpenRouterClient with the client registry. Unlike all other models it is not the default due to lack of support for embeddings, tools and mixed support for instructor
+
+        The user can only use this client for evaluations as instructor support is mixed for openrouter.
+
+        Args:
+            openrouter_api_key (Optional[str]): The OpenRouter API key. If not provided, it will be taken from the environment variable OPENROUTER_API_KEY.
+            default_model (Optional[str]): The default model to use for evaluations. If not provided, it will be taken from the environment variable OPENROUTER_DEFAULT_MODEL.
+            can_use_instructor (bool): Whether to enable instructor support. Defaults to False as model models cannot use instructir
+        """
+
+        if not openrouter_api_key:
+            openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+            if not openrouter_api_key:
+                raise EnvironmentError(
+                    "OPENROUTER_API_KEY is not set and openrouter_api_key is not provided"
+                )
+        if not default_model:
+            default_model = os.environ.get("OPENROUTER_DEFAULT_MODEL")
+            if not default_model:
+                raise EnvironmentError(
+                    "OPENROUTER_DEFAULT_MODEL is not set and default_model is not provided"
+                )
+
+        logger = logging.getLogger(__name__)
+
+        openrouter_config = OpenRouterConfig(
+            api_key=openrouter_api_key,
+            default_model=default_model,
+            logger=logger,
+            can_use_instructor=can_use_instructor,
+            default_embedding_model="",
+        )
+
+        openrouter_sync_client = SyncOpenRouterClient(config=openrouter_config)
+
+        self.register_client(client=openrouter_sync_client, make_default=False)
 
     def create_questions(
         self,
