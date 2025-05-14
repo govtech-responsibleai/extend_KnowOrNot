@@ -20,6 +20,7 @@ class SyncLLMClientEnum(Enum):
     AZURE_OPENAI = "AZURE_OPENAI"
     GEMINI = "GEMINI"
     OPENAI = "OPENAI"
+    OPENROUTER = "OPENROUTER"
 
 
 class SyncLLMClient(ABC):
