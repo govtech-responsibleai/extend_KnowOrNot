@@ -106,8 +106,8 @@ def run_knowornot_pipeline(text_files: List[Path]):
 if __name__ == "__main__":
     # Replace with your actual text files
     my_text_files = [
-        Path("document1.txt"),
-        Path("document2.txt"),
+        Path("usage/space_1.txt"),
+        Path("usage/space_2.txt"),
         # Add more paths as needed
     ]
 
