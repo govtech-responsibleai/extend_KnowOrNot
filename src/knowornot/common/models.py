@@ -218,7 +218,7 @@ class EvaluationSpec(BaseModel):
     evaluation_outcomes: List[str]
     in_context: List[ContextOptionsEnum]
     use_default_xml_prompting: bool
-    additional_tags: Optional[List[str]]
+    additional_tags: Optional[List[str]] = Field(default_factory=list)
 
 
 class EvaluationOutput(BaseModel):
@@ -226,7 +226,7 @@ class EvaluationOutput(BaseModel):
     evaluation_timestamp: datetime
     evaluation_name: str
     evaluation_outcome: str
-    additional_tags_info: Dict[str, List[str]]
+    additional_tags_info: Dict[str, List[str]] = Field(default_factory=dict)
 
 
 class LLMResponseWithEvaluation(BaseModel):
@@ -242,8 +242,8 @@ class EvaluationMetadata(BaseModel):
     tag_name: str
     evaluation_outcomes_list: List[str]
     in_context: List[ContextOptionsEnum]
-    use_default_xml_prompting: bool
-    additional_tags: Optional[List[str]]
+    use_default_xml_prompting: bool = True
+    additional_tags: Optional[List[str]] = Field(default_factory=list)
 
 
 class DocumentEvaluationContext(BaseModel):

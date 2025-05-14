@@ -857,7 +857,12 @@ class KnowOrNot:
                     identifier="basic_llm_prompt",
                     content=PromptManager.basic_llm_prompt,
                 ),
-                "allowed_retrieval_types": ["DIRECT", "LONG_IN_CONTEXT"],
+                "allowed_retrieval_types": [
+                    "DIRECT",
+                    "LONG_IN_CONTEXT",
+                    "BASIC_RAG",
+                    "HYDE_RAG",
+                ],
             },
             {
                 "name": "conservative",
@@ -866,7 +871,6 @@ class KnowOrNot:
                     content=PromptManager.conservative_llm_prompt,
                 ),
                 "allowed_retrieval_types": [
-                    "DIRECT",
                     "BASIC_RAG",
                     "LONG_IN_CONTEXT",
                     "HYDE_RAG",
@@ -879,7 +883,6 @@ class KnowOrNot:
                     content=PromptManager.opinion_llm_prompt,
                 ),
                 "allowed_retrieval_types": [
-                    "DIRECT",
                     "BASIC_RAG",
                     "LONG_IN_CONTEXT",
                     "HYDE_RAG",
