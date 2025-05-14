@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional, List
 from ..SyncLLMClient import SyncLLMClient
 from ..common.models import (
+    AtomicFact,
     QAPairFinal,
     QAPair,
     AtomicFactDocument,
@@ -38,11 +39,9 @@ class QuestionExtractor:
         self.stop_words = set(stopwords.words("english"))
 
     def _construct_text_to_llm(
-        self, context_prompt: str, question_prompt: str, document: AtomicFactDocument
+        self, context_prompt: str, question_prompt: str, fact: AtomicFact
     ) -> str:
-        text_to_llm = (
-            context_prompt + question_prompt + "The document is " + str(document)
-        )
+        text_to_llm = context_prompt + question_prompt + "The fact is " + str(fact)
         return text_to_llm
 
     def _generate_questions_from_document(
@@ -74,19 +73,21 @@ class QuestionExtractor:
         question_prompt_to_use = (
             alternative_question_prompt or self.question_prompt_default
         )
-        text_to_llm = self._construct_text_to_llm(
-            context_prompt=context_prompt,
-            question_prompt=question_prompt_to_use,
-            document=document,
-        )
-        self.logger.debug(f"prompt to llm: {text_to_llm}")
-        question_document = llm_client.get_structured_response(
-            prompt=text_to_llm, response_model=QuestionList, ai_model=ai_model
-        )
-
         output: List[QAPair] = []
-        for qapair in question_document.questions:
-            output.append(QAPair(question=qapair.question, answer=qapair.answer))
+        for idx, fact in enumerate(document.fact_list):
+            text_to_llm = self._construct_text_to_llm(
+                context_prompt=context_prompt,
+                question_prompt=question_prompt_to_use,
+                fact=fact,
+            )
+            self.logger.info(f"Running fact {idx + 1}/{len(document.fact_list)}")
+            self.logger.debug(f"prompt to llm: {text_to_llm}")
+            question_document = llm_client.get_structured_response(
+                prompt=text_to_llm, response_model=QuestionList, ai_model=ai_model
+            )
+
+            for qapair in question_document.questions:
+                output.append(QAPair(question=qapair.question, answer=qapair.answer))
 
         return output
 

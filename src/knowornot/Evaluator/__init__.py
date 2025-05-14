@@ -416,14 +416,29 @@ class Evaluator:
             # Add new evaluations
             for evaluation_kind in new_evaluations_metadata:
                 if evaluation_kind.evaluation_name not in existing_eval_names:
-                    evaluation_outputs.append(
-                        self._perform_single_evaluation(
-                            client_registry=client_registry,
-                            evaluation_kind=evaluation_kind,
-                            response=response,
-                            on_multiple="last",
-                        )
-                    )
+                    max_tries = 3
+                    for attempt in range(max_tries):
+                        try:
+                            evaluation_outputs.append(
+                                self._perform_single_evaluation(
+                                    client_registry=client_registry,
+                                    evaluation_kind=evaluation_kind,
+                                    response=response,
+                                    on_multiple="last",
+                                )
+                            )
+                            break
+                        except Exception as e:
+                            if attempt == max_tries - 1:
+                                self.logger.error(
+                                    f"Failed to evaluate sample {response.identifier} after {max_tries} attempts: {e}"
+                                )
+                                # Return a placeholder or error indicator
+                                raise e
+                            else:
+                                self.logger.warning(
+                                    f"Attempt {attempt + 1} for sample {response.identifier} failed with error {e}, retrying..."
+                                )
 
             evaluated_llm_responses.append(
                 LLMResponseWithEvaluation(

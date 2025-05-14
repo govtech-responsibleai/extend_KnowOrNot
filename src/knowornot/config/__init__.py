@@ -103,6 +103,11 @@ class OpenAIConfig(LLMClientConfig):
             self.logger.info("Not using any project for OpenAI client")
 
 
+class OpenRouterConfig(LLMClientConfig):
+    can_use_instructor: bool = False  # technically can, please override this if your specific openrouter model can!
+    default_embedding_model = ""  # no embedding support on openrouter
+
+
 @dataclass
 class GeminiConfig(LLMClientConfig):
     can_use_instructor: bool = True
