@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import List
 from knowornot import KnowOrNot
+from knowornot.common.models import LabeledDataSample
 from dotenv import load_dotenv
 
 
@@ -160,31 +161,49 @@ async def run_knowornot_pipeline(text_files: List[Path]):
     # calculate metrics (like abstention rate, factuality scores) under different
     # experimental conditions.
     # For human validation, you would use the data labeller:
-    # kon.logger.info("Creating samples for human labeling...")
-    # labeled_samples_path = base_dir / "human_labels_samples.json"
-    # samples_for_labeling = kon.create_samples_to_label(
-    #     experiment_outputs=evaluated_outputs,
-    #     percentage_to_sample=0.1, # Sample 10%
-    #     path_to_store=labeled_samples_path,
-    # )
-    # kon.logger.info(f"Created {len(samples_for_labeling)} samples for human labeling.")
+    kon.logger.info("Creating samples for human labeling...")
+    labeled_samples_path = base_dir / "human_labels_samples.json"
+    samples_for_labeling = kon.create_samples_to_label(
+        experiment_outputs=evaluated_outputs,
+        percentage_to_sample=0.1,  # Sample 10%
+        path_to_store=labeled_samples_path,
+    )
+    kon.logger.info(f"Created {len(samples_for_labeling)} samples for human labeling.")
 
-    # Human annotators would then use a tool/process (not built-in GUI in library)
+    # Human annotators would then use a tool/process
     # to add labels to the JSON file created above (labeled_samples_path).
     # The library provides methods to load these labeled samples and analyze agreement
     # or compare automated evals to human labels:
-    # from knowornot.DataLabeller import DataLabeller # Need to import DataLabeller explicitly for this
-    # loaded_labeled_samples = DataLabeller.load_samples_from_json(labeled_samples_path)
-    # kon.find_inter_annotator_reliability(...)
-    # comparison_results = await kon.evaluate_and_compare_to_human_labels_async(
-    #    labelled_samples=loaded_labeled_samples,
-    #    task_name="AbstentionCheck", # Compare automated 'AbstentionCheck' to human labels for this task
-    #    annotators_to_compare=["annotator1", "annotator2"], # Replace with actual annotator names
-    #    prompt=evaluations[0].prompt.content, # Use the same prompt content
-    #    prompt_id=evaluations[0].prompt.identifier,
-    #    path_to_store=base_dir / "eval_human_comparison.json",
-    #    # Optional: specify client/model for the comparison LLM if needed
-    # )
+
+    # Load labeled samples that have been annotated by humans
+    loaded_labeled_samples = LabeledDataSample.load_list_from_json(labeled_samples_path)
+
+    # Add additional human labels if needed
+    labeled_samples = kon.label_samples(
+        labeled_samples=loaded_labeled_samples,
+        label_name="AbstentionCheck",  # The name of the labeling task
+        possible_values=["Yes", "No"],  # The possible label values
+        path_to_save=base_dir / "human_labeled_data.json",
+        allowed_inputs=[
+            "question",
+            "expected_answer",
+            "context",
+        ],  # Inputs to show to annotators
+    )
+
+    # Compare automated evaluations to human labels
+    await kon.evaluate_and_compare_to_human_labels(
+        labelled_samples=labeled_samples,
+        task_name="AbstentionCheck",  # Compare automated 'AbstentionCheck' to human labels for this task
+        annotators_to_compare=[
+            "annotator1",
+            "annotator2",
+        ],  # Replace with actual annotator names
+        prompt=evaluations[0].prompt.content,  # Use the same prompt content
+        prompt_id=evaluations[0].prompt.identifier,
+        path_to_store=base_dir / "eval_human_comparison.json",
+        # Optional: specify client/model for the comparison LLM if needed
+    )  # will print the results
 
     kon.logger.info("KnowOrNot pipeline completed successfully!")
 

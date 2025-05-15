@@ -1282,6 +1282,30 @@ class KnowOrNot:
             Literal["question", "expected_answer", "context", "cited_qa"]
         ] = ["question", "expected_answer", "context", "cited_qa"],
     ) -> List[LabeledDataSample]:
+        """
+        Labels a list of samples with specified label parameters by getting a human to label them.
+
+        This method takes in a list of unlabelled samples and assigns a labeling task to each sample
+        in the list of LabeledDataSample objects. The task involves specifying a label name,
+        possible values for the label, and defining which inputs are allowed
+        for the task. The samples are then labeled by a human based on these parameters
+        and saved to the specified path.
+
+        Args:
+            labelled_samples (List[LabeledDataSample]): The list of unlabelled samples to be labelled.
+            label_name (str): The name of the label task.
+            possible_values (List[str]): A list of possible label values.
+            path_to_save (Path): The path to save the labeled samples as a JSON file.
+            allowed_inputs (List[Literal["question", "expected_answer", "context", "cited_qa"]], optional): A list of inputs
+                allowed for the labeling task. Defaults to all available options.
+
+        Returns:
+            List[LabeledDataSample]: The list of labeled samples.
+
+        Raises:
+            ValueError: If an invalid context is provided in allowed_inputs.
+        """
+
         allowed_values = []
         for possible_input in allowed_inputs:
             if possible_input == "question":
@@ -1314,6 +1338,16 @@ class KnowOrNot:
     def find_inter_annotator_reliability(
         self, labeled_samples: List[LabeledDataSample], task_name: str
     ) -> None:
+        """
+        Calculates inter-annotator reliability for a labeling task.
+
+        Args:
+            labeled_samples (List[LabeledDataSample]): The list of labeled samples to calculate the agreement for.
+            task_name (str): The name of the label task to calculate the agreement for.
+
+        Returns:
+            None
+        """
         data_labeller = self._get_data_labeller(logger=self.logger)
         output = data_labeller.calculate_inter_annotator_agreement(
             labeled_samples=labeled_samples, task_name=task_name
@@ -1335,6 +1369,22 @@ class KnowOrNot:
         recommended_llm_client_enum: Optional[SyncLLMClientEnum] = None,
         recommended_llm_model: Optional[str] = None,
     ) -> Dict:
+        """
+        Evaluate a model against human labels for a given task and comparison set of annotators.
+
+        Args:
+            labelled_samples (List[LabeledDataSample]): A list of labelled data samples.
+            task_name (str): The name of the task to evaluate.
+            annotators_to_compare (List[str]): A list of annotator IDs to compare the model against.
+            prompt (str): The prompt to use for evaluation.
+            prompt_id (str): The ID of the prompt to use for evaluation.
+            path_to_store (Path): The file path to save the evaluation results JSON file to.
+            recommended_llm_client_enum (Optional[SyncLLMClientEnum], optional): The recommended LLM client enum to use for evaluation. Defaults to None.
+            recommended_llm_model (Optional[str], optional): The recommended LLM model to use for evaluation. Defaults to None.
+
+        Returns:
+            Dict: A dictionary containing the evaluation results and comparison statistics.
+        """
         if recommended_llm_client_enum is not None:
             if recommended_llm_client_enum not in self.client_registry:
                 raise ValueError(
