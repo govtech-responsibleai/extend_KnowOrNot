@@ -4,11 +4,10 @@ KnowOrNot is an open-source framework that enables users to develop their own cu
 
 ## Highlights
 
-Modern LLMs have a tendency to hallucinate - confidently providing incorrect information instead of acknowledging when they don't know something. KnowOrNot provides a systematic approach to:
-
-1. Test if LLMs can identify what they do and don't know
-2. Measure an LLM's propensity to hallucinate vs. abstain
-3. Evaluate different retrieval methods for improving knowledge boundaries
+- Unified, high-level API that streamlines the process of setting up and running robustness benchmark (only a source document is required to get the pipeline running)
+- Modular architecture emphasises extensibility and flexibility, allowing users to easily integrate their own LLM clients and RAG settings
+- Rigorous data modeling design ensures experiment reproducibility, reliability and traceability
+- Comprehensive suite of tools for users to customize their pipelines
 
 ## Installation
 
@@ -42,7 +41,7 @@ uv run python example/quickstart_pipeline.py
 
 ![Flow](assets/images/flow.png)
 
-Refer to [quickstart.md](docs/quickstart.md) for more and the [example/quickstart_pipeline.py] for an end-to-end example flow.
+Refer to [quickstart.md](docs/quickstart.md) for more information and [quickstart_pipeline.py](example/quickstart_pipeline.py) for an end-to-end example flow.
 
 ## Key Features
 
@@ -75,10 +74,15 @@ Refer to [quickstart.md](docs/quickstart.md) for more and the [example/quickstar
 
 ## Architecture
 
-KnowOrNot consists of several integrated components:
+KnowOrNot consists of several integrated components that are key to handling and generating the data artifacts:
 
 1. **FactManager**: Extracts structured facts from documents
 2. **QuestionExtractor**: Generates diverse question-answer pairs
 3. **ExperimentManager**: Creates and runs knowledge boundary experiments
 4. **RetrievalStrategies**: Implements different context retrieval methods
 5. **Evaluator**: Assesses model responses with customizable metrics
+6. **DataLabeller**: Orchestrates human labelling process for validation of LLM evaluations.
+
+## License
+
+This project is licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
