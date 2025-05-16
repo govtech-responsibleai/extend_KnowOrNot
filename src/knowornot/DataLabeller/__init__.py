@@ -226,7 +226,7 @@ class DataLabeller:
         label_task: LabelTask,
         llm_response: SavedLLMResponse,
     ) -> HumanLabel:
-        string_to_print = ""
+        string_to_print = "------------\n"
         for key in label_task.content_in_context:
             if key == ContextOptionsEnum.QUESTION:
                 string_to_print += f"Question: {llm_response.experiment_input.source_context_qa.question}\n"
@@ -245,8 +245,8 @@ class DataLabeller:
             f"The LLM's answer was: \n {llm_response.llm_response.response} \n"
         )
 
-        string_to_print += f"The task is to decide what the value is for the label {label_task.name} \n"
-        string_to_print += "Your options are:\n"
+        string_to_print += f"\nThe task is to decide what the value is for the label {label_task.name}.\n"
+        string_to_print += "Choose an option (enter the number):\n"
         for i, value in enumerate(label_task.values, start=1):
             string_to_print += f"{i}. {value}\n"
 
