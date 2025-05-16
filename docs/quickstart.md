@@ -98,11 +98,11 @@ The starting point for creating our OOKB benchmark is a set of text documents th
 ```python
     # Example usage:
     # Replace with your actual text files.
-    # Example files space_1.txt and space_2.txt can be found in the 'usage/' directory
+    # Example files space_1.txt and space_2.txt can be found in the 'example/' directory
     # of the KnowOrNot GitHub repository: https://github.com/govtech-responsibleai/KnowOrNot
     my_text_files = [
-        Path("usage/space_1.txt"),
-        Path("usage/space_2.txt"),
+        Path("example/space_1.txt"),
+        Path("example/space_2.txt"),
         # Add more paths as needed
     ]
 
@@ -325,4 +325,4 @@ For more detailed information on specific methods, parameters, and advanced usag
 
 ---
 
-The whole script is provided under usage/quickstart.py
+The whole script is provided under example/quickstart.py
