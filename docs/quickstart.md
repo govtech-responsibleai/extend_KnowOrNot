@@ -287,6 +287,36 @@ The library also includes tooling for human validation, which is highly recommen
 
 The `create_samples_to_label` method selects a stratified sample of responses from your experiment results (`evaluated_outputs`) for human annotation. You specify the sampling percentage and a path to save the samples. You would then have human annotators review this saved JSON file (using an external tool or process of your choice) and add their labels according to defined criteria. Once labeled, you can load the human-labeled data and use methods like `find_inter_annotator_reliability` to check consistency between annotators or `evaluate_and_compare_to_human_labels_async` to quantify the agreement between your automated LLM evaluator judgments and the human labels.
 
+```python
+    # Example: Indicate annotator1 and annotator2 for two separate executions of label_samples
+    labeled_samples = kon.label_samples(
+        labeled_samples=loaded_labeled_samples,
+        label_name="AbstentionCheck",  # The name of the labeling task
+        possible_values=["Yes", "No"],  # The possible label values
+        path_to_save=base_dir / "human_labeled_data.json",
+        allowed_inputs=[
+            "question",
+            "expected_answer",
+            "context",
+        ],  # Inputs to show to annotators
+    )
+
+    # Example: Compare automated evaluations to human labels
+    await kon.evaluate_and_compare_to_human_labels(
+        labelled_samples=labeled_samples,
+        task_name="AbstentionCheck",  # Compare automated 'AbstentionCheck' to human labels for this task
+        annotators_to_compare=[
+            "annotator1",
+            "annotator2",
+        ],  # Replace with actual annotator names
+        prompt=evaluations[0].prompt.content,  # Use the same prompt content
+        prompt_id=evaluations[0].prompt.identifier,
+        path_to_store=base_dir / "eval_human_comparison.json",
+        # Optional: specify client/model for the comparison LLM if needed
+    )  # will print the results
+
+```
+
 ### Conclusion
 
 This guide demonstrates how the `KnowOrNot` library provides a structured, programmable pipeline to conduct OOKB robustness evaluations for RAG systems. From preparing source data and automatically generating diverse questions to designing and running controlled experiments that simulate OOKB scenarios under various conditions, and finally to automating the evaluation of responses with support for human validation, the library aims to make rigorous benchmarking more accessible and reproducible. The use of structured data models throughout ensures traceability and facilitates analysis. By adapting the input source files, LLM client configurations, prompts, retrieval parameters, and evaluation criteria, you can customize the benchmark to your specific application and gain valuable insights into your LLM's behavior.
