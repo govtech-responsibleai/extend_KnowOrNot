@@ -1,8 +1,8 @@
 # KnowOrNot
 
-KnowOrNot is a framework for evaluating whether large language models (LLMs) can properly recognize the boundaries of their knowledge and abstain from answering when they don't know the answer.
+KnowOrNot is an open-source framework that enables users to develop their own customized evaluation data and pipelines for evaluating out-of-knowledge base robustness, i.e. whether large language models (LLMs) can properly recognize the boundaries of their knowledge and abstain from answering when they don't know the answer.
 
-## Overview
+## Highlights
 
 Modern LLMs have a tendency to hallucinate - confidently providing incorrect information instead of acknowledging when they don't know something. KnowOrNot provides a systematic approach to:
 
@@ -12,19 +12,49 @@ Modern LLMs have a tendency to hallucinate - confidently providing incorrect inf
 
 ## Installation
 
+1. Create and activate a virtual environment.
+
 ```bash
-pip install knowornot # in this case - do uv add ../KnoworNot
+python3 -m venv knowornot
+source knowornot/bin/activate
 ```
+
+2. Download the source code and enter the created source directory.
+```bash
+git clone git@github.com:govtech-responsibleai/KnowOrNot.git
+cd knowornot
+```
+
+3. Install the library
+```bash
+uv pip install .
+```
+
+4. Set up environment variables in a `.env` file, depending on the LLM provider of choice.
 
 ## Quick Start
 
-Refer to docs/quickstart.md for more
+![Flow](assets/images/flow.png)
+
+Refer to [quickstart.md](docs/quickstart.md) for more and the [example/quickstart_pipeline.py] for an end-to-end example flow.
 
 ## Key Features
 
+![Features](assets/images/features.png)
+
+### LLM Provider
+- **OpenAI**: use `add_openai()` method
+- **Gemini API**: use `add_gemini()` method
+- **Azure**: use `add_azure()` method
+- **OpenRouter**: use `add_openrouter()` method
+
+### Processing of LLM responses
+- **Asynchronous**: use `run_experiment_async`, `evaluate_experiment_async` method
+- **Synchronous**: use `run_experiment`, `evaluate_experiment` method
+
 ### Experiment Types
-- **Removal**: Remove a fact from the model's context and test if it can still answer correctly (measures memorization)
-- **Synthetic**: Create questions the model shouldn't know based on provided context (tests abstention capability)
+- **Leave-one-out**: Remove a fact from the model's context and test if it can still answer correctly (measures memorization)
+- **Random (Synthetic)**: Create questions the model shouldn't know based on provided context (tests abstention capability)
 
 ### Retrieval Strategies
 - **DIRECT**: No context provided - tests raw model knowledge

@@ -114,8 +114,8 @@ def run_simple_direct_test(text_files: List[Path]):
 if __name__ == "__main__":
     # Use the space exploration text files
     test_files = [
-        Path("usage/space_1.txt"),
-        Path("usage/space_2.txt"),
+        Path("example/space_1.txt"),
+        Path("example/space_2.txt"),
     ]
 
     run_simple_direct_test(test_files)

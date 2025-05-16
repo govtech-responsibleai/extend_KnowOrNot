@@ -191,14 +191,16 @@ async def run_knowornot_pipeline(text_files: List[Path]):
         ],  # Inputs to show to annotators
     )
 
+    # Extract from [LabeledDataSample] in example as it refers to CLI response during label_samples
+    labeller_id = labeled_samples[0].human_labels[0].labeller_id
+
     # Compare automated evaluations to human labels
     await kon.evaluate_and_compare_to_human_labels(
         labelled_samples=labeled_samples,
         task_name="AbstentionCheck",  # Compare automated 'AbstentionCheck' to human labels for this task
         annotators_to_compare=[
-            "annotator1",
-            "annotator2",
-        ],  # Replace with actual annotator names
+            labeller_id
+        ],  # Replace with actual annotator names used in CLI response
         prompt=evaluations[0].prompt.content,  # Use the same prompt content
         prompt_id=evaluations[0].prompt.identifier,
         path_to_store=base_dir / "eval_human_comparison.json",
@@ -211,11 +213,11 @@ async def run_knowornot_pipeline(text_files: List[Path]):
 # Example usage:
 if __name__ == "__main__":
     # Replace with your actual text files.
-    # Example files space_1.txt and space_2.txt can be found in the 'usage/' directory
+    # Example files space_1.txt and space_2.txt can be found in the 'example/' directory
     # of the KnowOrNot GitHub repository: https://github.com/govtech-responsibleai/KnowOrNot
     my_text_files = [
-        Path("usage/space_1.txt"),
-        Path("usage/space_2.txt"),
+        Path("example/space_1.txt"),
+        Path("example/space_2.txt"),
         # Add more paths as needed
     ]
 
