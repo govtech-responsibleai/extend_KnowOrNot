@@ -12,11 +12,12 @@ Modern LLMs have a tendency to hallucinate - confidently providing incorrect inf
 
 ## Installation
 
-1. Create and activate a virtual environment.
+1. Create and activate a virtual environment. Install uv.
 
 ```bash
 python3 -m venv knowornot
 source knowornot/bin/activate
+pip install uv
 ```
 
 2. Download the source code and enter the created source directory.
@@ -30,7 +31,12 @@ cd knowornot
 uv pip install .
 ```
 
-4. Set up environment variables in a `.env` file, depending on the LLM provider of choice.
+4. Set up environment variables in a `.env` file, depending on the LLM provider of choice. The sample script `example/quickstart_pipeline.py` depends on OpenAI and would require OpenAI environment variables. Refer to `env.example` for an example.
+
+5. Run a sample evaluation pipeline.
+```bash
+uv run python example/quickstart_pipeline.py
+```
 
 ## Quick Start
 
