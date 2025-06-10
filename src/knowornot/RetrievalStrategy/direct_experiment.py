@@ -1,23 +1,12 @@
-import numpy as np
-
-from . import BaseRetrievalStrategy, RetrievalType
-from ..SyncLLMClient import SyncLLMClient
-from typing import List, Optional
+from . import BaseRetrievalStrategy, RetrievalType, RetrievalStrategyConfig
 from ..common.models import QAPairFinal, QAWithContext
-import logging
+from typing import List
+import numpy as np
 
 
 class DirectRetrievalStrategy(BaseRetrievalStrategy):
-    def __init__(
-        self, default_client: SyncLLMClient, logger: logging.Logger, closest_k: int = 5
-    ):
-        super().__init__(
-            default_client=default_client, logger=logger, closest_k=closest_k
-        )
-
-    @property
-    def experiment_type(self):
-        return RetrievalType.DIRECT
+    def __init__(self, config: RetrievalStrategyConfig):
+        super().__init__(config)
 
     def _create_single_removal_experiment(
         self,
@@ -25,10 +14,8 @@ class DirectRetrievalStrategy(BaseRetrievalStrategy):
         removed_index: int,
         remaining_qa: List[QAPairFinal],
         embeddings: np.ndarray,
-        alterative_prompt: Optional[str] = None,
-        alternative_llm_client: Optional[SyncLLMClient] = None,
-        ai_model: Optional[str] = None,
     ) -> QAWithContext:
+        """Creates a direct removal experiment with no context."""
         return QAWithContext(
             identifier=question_to_ask.identifier,
             question=question_to_ask.question,
@@ -41,13 +28,15 @@ class DirectRetrievalStrategy(BaseRetrievalStrategy):
         question_to_ask: QAPairFinal,
         question_list: List[QAPairFinal],
         embeddings: np.ndarray,
-        alternative_prompt: Optional[str] = None,
-        alternative_llm_client: Optional[SyncLLMClient] = None,
-        ai_model: Optional[str] = None,
     ) -> QAWithContext:
+        """Creates a direct synthetic experiment with no context."""
         return QAWithContext(
             identifier=question_to_ask.identifier,
             question=question_to_ask.question,
             expected_answer="",
             context_questions=None,
         )
+
+    @property
+    def experiment_type(self):
+        return RetrievalType.DIRECT

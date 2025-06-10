@@ -13,14 +13,16 @@ from ..common.models import (
     ExperimentMetadata,
 )
 from ..SyncLLMClient import SyncLLMClient, SyncLLMClientEnum
-from ..RetrievalStrategy import RetrievalType, BaseRetrievalStrategy
+from ..RetrievalStrategy import (
+    RetrievalType,
+    BaseRetrievalStrategy,
+    RetrievalStrategyConfig,
+)
 from ..RetrievalStrategy.direct_experiment import DirectRetrievalStrategy
 from ..RetrievalStrategy.basic_rag import BasicRAGStrategy
 from ..RetrievalStrategy.long_in_context import LongInContextStrategy
 from ..RetrievalStrategy.hyde_rag import HydeRAGStrategy
-from .models import (
-    ExperimentParams,
-)
+from .models import ExperimentParams
 from typing import Dict, List, Optional
 import logging
 import concurrent.futures
@@ -30,37 +32,49 @@ from tqdm import tqdm
 class ExperimentManager:
     def __init__(
         self,
-        default_client: SyncLLMClient,
         logger: logging.Logger,
         hypothetical_answer_prompt: str,
     ):
-        self.default_client = default_client
         self.logger = logger
+        self.hypothetical_answer_prompt = hypothetical_answer_prompt
 
-        self.retrieval_strategies: Dict[RetrievalType, BaseRetrievalStrategy] = {
-            RetrievalType.DIRECT: DirectRetrievalStrategy(
-                default_client=default_client, logger=logger
-            ),
-            RetrievalType.BASIC_RAG: BasicRAGStrategy(
-                default_client=default_client, logger=logger
-            ),
-            RetrievalType.LONG_IN_CONTEXT: LongInContextStrategy(
-                default_client=default_client, logger=logger
-            ),
-            RetrievalType.HYDE_RAG: HydeRAGStrategy(
-                default_client=default_client,
-                logger=logger,
-                hypothetical_answer_prompt=hypothetical_answer_prompt,
-            ),
-        }
+    def get_retrieval_strategy(
+        self,
+        retrieval_type: RetrievalType,
+        embedding_client: SyncLLMClient,
+        embedding_model: str,
+        ai_model_for_hyde: str,
+        hyde_client: Optional[SyncLLMClient] = None,
+    ) -> BaseRetrievalStrategy:
+        """Create a retrieval strategy with the specified embedding client."""
+        # Create config for all strategies
+        config = RetrievalStrategyConfig(
+            embedding_client=embedding_client,
+            embedding_model=embedding_model,
+            logger=self.logger,
+        )
 
-    def get_retrieval_strategy(self, retrieval_type: RetrievalType):
-        try:
-            return self.retrieval_strategies[retrieval_type]
-        except KeyError as e:
-            raise KeyError(f"Retrieval type {retrieval_type} is not registered") from e
+        # Return strategy based on type
+        if retrieval_type == RetrievalType.DIRECT:
+            return DirectRetrievalStrategy(config)
+        elif retrieval_type == RetrievalType.BASIC_RAG:
+            return BasicRAGStrategy(config)
+        elif retrieval_type == RetrievalType.LONG_IN_CONTEXT:
+            return LongInContextStrategy(config)
+        elif retrieval_type == RetrievalType.HYDE_RAG:
+            if hyde_client is None:
+                raise ValueError("HYDE strategy requires hyde_client")
+            return HydeRAGStrategy(
+                config=config,
+                hyde_client=hyde_client,
+                hypothetical_answer_prompt=self.hypothetical_answer_prompt,
+                ai_model_for_hyde=ai_model_for_hyde,
+            )
+        else:
+            raise KeyError(f"Retrieval type {retrieval_type} is not registered")
 
     def _create_context_string(self, qa_pairs: Optional[List[QAPairFinal]]) -> str:
+        """Convert QA pairs to a formatted context string."""
         if not qa_pairs:
             return ""
 
@@ -69,7 +83,6 @@ class ExperimentManager:
             context_string += (
                 f"Question {idx}: {qa_pair.question}\nAnswer {idx}: {qa_pair.answer}\n"
             )
-
         return context_string
 
     def _process_QA_response(
@@ -80,9 +93,9 @@ class ExperimentManager:
         idx: int,
     ) -> SavedLLMResponse:
         """
-        Process a QA response and create a SavedLLMResponse object
+        Process a QA response and create a SavedLLMResponse object.
 
-        Returns a SavedLLMResponse object with citation=None if the response processing fails due to citation errors
+        Returns a SavedLLMResponse object with citation=None if the response processing fails due to citation errors.
 
         Args:
             QA_response: The response from the LLM
@@ -132,6 +145,7 @@ class ExperimentManager:
     def convert_qa_with_context_to_individual_experiment_inputs(
         self, system_prompt: str, qa_with_context_list: List[QAWithContext]
     ) -> List[IndividualExperimentInput]:
+        """Convert QAWithContext objects to IndividualExperimentInput objects."""
         individual_experiment_inputs = []
         for qa_with_context in qa_with_context_list:
             if qa_with_context.context_questions is None:
@@ -156,36 +170,32 @@ class ExperimentManager:
     def create_experiment(
         self, experiment_params: ExperimentParams
     ) -> ExperimentInputDocument:
-        retrival_strategy = self.get_retrieval_strategy(
-            experiment_params.retrieval_type
+        """Create an experiment input document from experiment parameters."""
+        # Get retrieval strategy with correct parameters
+        retrieval_strategy = self.get_retrieval_strategy(
+            retrieval_type=experiment_params.retrieval_type,
+            embedding_client=experiment_params.embedding_client,
+            hyde_client=experiment_params.hyde_client,
+            embedding_model=experiment_params.embedding_model,
+            ai_model_for_hyde=experiment_params.ai_model_for_hyde,
         )
 
+        # Create experiments based on type
         if experiment_params.experiment_type == ExperimentType.REMOVAL:
-            qas_with_context = retrival_strategy.create_removal_experiments(
-                question_list=experiment_params.questions,
-                alternative_prompt=experiment_params.alternative_prompt_for_hyde.content
-                if experiment_params.alternative_prompt_for_hyde
-                else None,
-                alternative_llm_client=experiment_params.alternative_llm_client_for_hyde,
-                ai_model=experiment_params.ai_model_for_hyde,
+            qas_with_context = retrieval_strategy.create_removal_experiments(
+                question_list=experiment_params.questions
             )
-
         elif experiment_params.experiment_type == ExperimentType.SYNTHETIC:
-            qas_with_context = retrival_strategy.create_synthetic_experiments(
+            qas_with_context = retrieval_strategy.create_synthetic_experiments(
                 synthetic_questions=experiment_params.questions,
                 context_questions=experiment_params.questions,
-                alternative_prompt=experiment_params.alternative_prompt_for_hyde.content
-                if experiment_params.alternative_prompt_for_hyde
-                else None,
-                alternative_llm_client=experiment_params.alternative_llm_client_for_hyde,
-                ai_model=experiment_params.ai_model_for_hyde,
             )
-
         else:
             raise ValueError(
                 f"Unknown experiment type {experiment_params.experiment_type}"
             )
 
+        # Convert to individual experiment inputs
         individual_experiment_inputs = (
             self.convert_qa_with_context_to_individual_experiment_inputs(
                 system_prompt=experiment_params.system_prompt.content,
@@ -193,6 +203,7 @@ class ExperimentManager:
             )
         )
 
+        # Create metadata
         metadata = ExperimentMetadata(
             experiment_type=experiment_params.experiment_type,
             retrieval_type=experiment_params.retrieval_type,
@@ -200,7 +211,7 @@ class ExperimentManager:
             system_prompt=experiment_params.system_prompt,
             input_path=experiment_params.input_path,
             output_path=experiment_params.output_path,
-            client_enum=experiment_params.llm_client_enum,
+            client_enum=experiment_params.llm_client_enum_experiment,
             ai_model_used=experiment_params.ai_model_for_experiment,
             knowledge_base_identifier=experiment_params.knowledge_base_identifier,
         )
@@ -215,6 +226,7 @@ class ExperimentManager:
         experiment: ExperimentInputDocument,
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
     ) -> ExperimentOutputDocument:
+        """Run an experiment synchronously."""
         client_enum = experiment.metadata.client_enum
         sync_client = client_registry[client_enum]
 
@@ -255,6 +267,7 @@ class ExperimentManager:
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         max_workers: int = 8,
     ) -> ExperimentOutputDocument:
+        """Run an experiment asynchronously."""
         client_enum = experiment.metadata.client_enum
         sync_client = client_registry[client_enum]
 
@@ -332,6 +345,7 @@ class ExperimentManager:
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
         max_workers: int = 8,
     ) -> List[ExperimentOutputDocument]:
+        """Run multiple experiments asynchronously."""
         self.logger.info(
             f"Starting to run {len(experiments)} experiments with {max_workers} workers"
         )

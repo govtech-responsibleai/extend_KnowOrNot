@@ -61,6 +61,7 @@ class LLMClientConfig(ABC):
     default_model: str
     default_embedding_model: str
     can_use_instructor: bool = False
+    can_use_embeddings: bool = True
     can_use_tools: bool = False
     tools: Optional[List[Tool]] = None
 
@@ -106,6 +107,7 @@ class OpenAIConfig(LLMClientConfig):
 class OpenRouterConfig(LLMClientConfig):
     can_use_instructor: bool = False  # technically can, please override this if your specific openrouter model can!
     default_embedding_model = ""  # no embedding support on openrouter
+    can_use_embeddings = False  # no embedding support on openrouter
 
 
 @dataclass

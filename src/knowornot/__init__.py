@@ -221,7 +221,7 @@ class KnowOrNot:
         )
 
         self.experiment_manager = ExperimentManager(
-            default_client=client, logger=self.logger, hypothetical_answer_prompt=prompt
+            logger=self.logger, hypothetical_answer_prompt=prompt
         )
 
         return self.experiment_manager
@@ -733,70 +733,57 @@ class KnowOrNot:
         retrieval_type: Literal["DIRECT", "BASIC_RAG", "LONG_IN_CONTEXT", "HYDE_RAG"],
         input_store_path: Path,
         output_store_path: Path,
-        alternative_llm_client: Optional[SyncLLMClient] = None,
-        ai_model_to_use: Optional[str] = None,
-        alternative_prompt_for_hyde: Optional[Prompt] = None,
-        alternative_llm_client_for_hyde: Optional[SyncLLMClient] = None,
+        embedding_client: Optional[SyncLLMClient] = None,
+        generation_client: Optional[SyncLLMClient] = None,
+        hyde_client: Optional[SyncLLMClient] = None,
+        ai_model_for_experiment: Optional[str] = None,
+        embedding_model: Optional[str] = None,
+        hyde_prompt: Optional[Prompt] = None,
         ai_model_for_hyde: Optional[str] = None,
     ) -> ExperimentInputDocument:
         """Creates an experiment input document based on the provided parameters.
 
-        This function generates an `ExperimentInputDocument` by orchestrating the
-        necessary components, including loading the question document,
-        validating input parameters, and configuring the experiment manager.
-        It supports different experiment types (removal, synthetic) and retrieval
-        strategies (DIRECT, BASIC_RAG, LONG_IN_CONTEXT, HYDE_RAG).
-
         Args:
-            question_document (Union[Path, QuestionDocument]): The question document
-                to use for the experiment. It can be a Path to a JSON file or an
-                already loaded QuestionDocument object.
+            question_document (Union[Path, QuestionDocument]): The question document to use for the experiment.
             system_prompt (Prompt): The system prompt to be used for the experiment.
-                This prompt sets the context for the LLM during experiment execution.
-            experiment_type (Literal["removal", "synthetic"]): The type of
-                experiment to create. "removal" removes questions from the context,
-                while "synthetic" uses generated questions.
-            retrieval_type (Literal["DIRECT", "BASIC_RAG", "LONG_IN_CONTEXT", "HYDE_RAG"]):
-                The retrieval strategy to use for the experiment. Determines how
-                context is retrieved for the questions.
-            input_store_path (Path): The path to store the generated
-                ExperimentInputDocument as a JSON file.
-            output_store_path (Path): The path to store the experiment output
-                document.
-            alternative_llm_client (Optional[SyncLLMClient]): An optional alternative
-                LLM client to use for the core experiment. If not provided, the
-                default LLM client will be used.
-            ai_model_to_use (Optional[str]): An optional AI model to use for the core
-                experiment. If not provided, the default model from the chosen LLM
-                client will be used.
-            alternative_prompt_for_hyde (Optional[Prompt]): An optional alternative
-                prompt for the HYDE_RAG retrieval strategy.
-            alternative_llm_client_for_hyde (Optional[SyncLLMClient]): An optional
-                alternative LLM client to use for the HYDE_RAG retrieval strategy.
-            ai_model_for_hyde (Optional[str]): An optional AI model to use for the
-                HYDE_RAG retrieval strategy.
+            experiment_type (Literal["removal", "synthetic"]): The type of experiment to create.
+            retrieval_type (Literal["DIRECT", "BASIC_RAG", "LONG_IN_CONTEXT", "HYDE_RAG"]): The retrieval strategy to use.
+            input_store_path (Path): The path to store the generated ExperimentInputDocument as a JSON file.
+            output_store_path (Path): The path to store the experiment output document.
+            embedding_client (Optional[SyncLLMClient]): Client to use for embeddings. If not provided, uses default.
+            generation_client (Optional[SyncLLMClient]): Client to use for LLM generation. If not provided, uses default.
+            hyde_client (Optional[SyncLLMClient]): Client to use for HYDE strategy. If not provided for HYDE_RAG, uses default.
+            ai_model_for_experiment (Optional[str]): AI model for generation. If not provided, uses client's default.
+            embedding_model (Optional[str]): Embedding model to use. If not provided, uses embedding client's default.
+            hyde_prompt (Optional[Prompt]): Prompt for HYDE strategy. If not provided, uses default.
+            ai_model_for_hyde (Optional[str]): AI model for HYDE. If not provided, uses HYDE client's default.
 
         Returns:
-            QuestionDocument: The generated ExperimentInputDocument.
+            ExperimentInputDocument: The generated ExperimentInputDocument.
 
         Raises:
             ValueError: If the experiment_type or retrieval_type is invalid.
+            ValueError: If required clients don't support needed capabilities.
             ValueError: If no default LLM client is set and no alternative is provided.
         """
 
+        # Load question document if it's a path
         if isinstance(question_document, Path):
             question_document = QuestionDocument.load_from_json(question_document)
 
+        # Validate experiment type
         if experiment_type not in ["removal", "synthetic"]:
             raise ValueError(
                 f'Expected experiment type to be one of "removal", "synthetic" but got {experiment_type}'
             )
 
-        if experiment_type == "removal":
-            experiment_type_enum = ExperimentType.REMOVAL
-        elif experiment_type == "synthetic":
-            experiment_type_enum = ExperimentType.SYNTHETIC
+        experiment_type_enum = (
+            ExperimentType.REMOVAL
+            if experiment_type == "removal"
+            else ExperimentType.SYNTHETIC
+        )
 
+        # Validate retrieval type
         if retrieval_type not in ["DIRECT", "BASIC_RAG", "LONG_IN_CONTEXT", "HYDE_RAG"]:
             raise ValueError(
                 f"Expected retrieval type to be one of ['DIRECT', 'BASIC_RAG', 'LONG_IN_CONTEXT', 'HYDE_RAG'] but got {retrieval_type}"
@@ -804,54 +791,101 @@ class KnowOrNot:
 
         retrieval_type_enum = RetrievalType(retrieval_type)
 
-        assert isinstance(question_document, QuestionDocument), (
-            f"Expected question_document to be of type QuestionDocument. Got {type(question_document)}"
-        )
+        # Determine clients to use
+        embedding_client_to_use = embedding_client or self.default_sync_client
+        generation_client_to_use = generation_client or self.default_sync_client
 
-        llm_client_to_use = alternative_llm_client or self.default_sync_client
-
-        if not llm_client_to_use:
+        if not embedding_client_to_use:
             raise ValueError(
-                "You must set a default LLM Client or pass one in before performing any operations"
+                "You must set a default LLM Client or pass embedding_client"
             )
 
-        llm_client_enum = llm_client_to_use.enum_name
+        if not generation_client_to_use:
+            raise ValueError(
+                "You must set a default LLM Client or pass generation_client"
+            )
 
-        questions_for_experiment = question_document.questions
+        # Validate client capabilities
+        if not embedding_client_to_use.config.can_use_embeddings:
+            raise ValueError(
+                f"Embedding client {embedding_client_to_use.enum_name} must support embeddings"
+            )
 
-        experiment_manager = self._get_experiment_manager(
-            alternative_llm_client=alternative_llm_client,
-            alternative_hypothetical_answer_prompt=alternative_prompt_for_hyde.content
-            if alternative_prompt_for_hyde is not None
-            else None,
+        if not generation_client_to_use.can_use_instructor:
+            raise ValueError(
+                f"Generation client {generation_client_to_use.enum_name} must support structured output"
+            )
+
+        # Determine models to use
+        ai_model_for_experiment_to_use = (
+            ai_model_for_experiment or generation_client_to_use.config.default_model
+        )
+        embedding_model_to_use = (
+            embedding_model or embedding_client_to_use.config.default_embedding_model
         )
 
-        ai_model_for_hyde = (
-            ai_model_for_hyde or alternative_llm_client_for_hyde.config.default_model
-            if alternative_llm_client_for_hyde
-            else None
+        # Handle HYDE-specific parameters
+        if retrieval_type == "HYDE_RAG":
+            hyde_client_to_use = hyde_client or self.default_sync_client
+            if hyde_client is None:
+                self.logger.info(
+                    "No hyde_client provided for HYDE_RAG, using default client"
+                )
+
+            if not hyde_client_to_use:
+                raise ValueError(
+                    "HYDE_RAG requires a hyde_client or default client to be set"
+                )
+
+            # Validate HYDE client can do structured output
+            if not hyde_client_to_use.can_use_instructor:
+                raise ValueError(
+                    f"HYDE client {hyde_client_to_use.enum_name} must support structured output"
+                )
+
+            # Determine AI model for HYDE
+            ai_model_for_hyde_to_use = (
+                ai_model_for_hyde or hyde_client_to_use.config.default_model
+            )
+        else:
+            # For non-HYDE strategies, use default client and its default model
+            hyde_client_to_use = hyde_client or self.default_sync_client
+            if not hyde_client_to_use:
+                raise ValueError("Please set a default client!")
+            ai_model_for_hyde_to_use = hyde_client_to_use.config.default_model
+
+        # Handle HYDE prompt
+        hyde_prompt_to_use = hyde_prompt or Prompt(
+            identifier="default_hyde_prompt",
+            content=PromptManager.hypothetical_answer_generator,
         )
 
-        al_model_to_use = ai_model_to_use or llm_client_to_use.config.default_model
+        # Create ExperimentManager directly (no caching!)
+        experiment_manager = ExperimentManager(
+            logger=self.logger,
+            hypothetical_answer_prompt=hyde_prompt_to_use.content,
+        )
 
+        # Create experiment parameters
         experiment_params = ExperimentParams(
             system_prompt=system_prompt,
             experiment_type=experiment_type_enum,
             retrieval_type=retrieval_type_enum,
             input_path=input_store_path,
             output_path=output_store_path,
-            questions=questions_for_experiment,
-            llm_client_enum=llm_client_enum,
-            ai_model_for_experiment=al_model_to_use,
+            questions=question_document.questions,
+            llm_client_enum_experiment=generation_client_to_use.enum_name,
+            ai_model_for_experiment=ai_model_for_experiment_to_use,
             knowledge_base_identifier=question_document.knowledge_base_identifier,
-            alternative_llm_client_for_hyde=alternative_llm_client_for_hyde,
-            alternative_prompt_for_hyde=alternative_prompt_for_hyde,
-            ai_model_for_hyde=ai_model_for_hyde,
+            embedding_client=embedding_client_to_use,
+            embedding_model=embedding_model_to_use,
+            hyde_prompt=hyde_prompt_to_use,
+            hyde_client=hyde_client_to_use,
+            ai_model_for_hyde=ai_model_for_hyde_to_use,
         )
 
-        output = experiment_manager.create_experiment(
-            experiment_params=experiment_params
-        )
+        # Create experiment
+        output = experiment_manager.create_experiment(experiment_params)
         output.save_to_json()
 
         return output
@@ -861,12 +895,14 @@ class KnowOrNot:
         question_document: Union[Path, QuestionDocument],
         experiment_type: Literal["removal", "synthetic"] = "removal",
         base_path: Path = Path("experiments"),
-        alternative_llm_client: Optional[SyncLLMClient] = None,
-        ai_model_to_use: Optional[str] = None,
-        alternative_prompt_for_hyde: Optional[Prompt] = None,
-        alternative_llm_client_for_hyde: Optional[SyncLLMClient] = None,
+        embedding_client: Optional[SyncLLMClient] = None,
+        generation_client: Optional[SyncLLMClient] = None,
+        hyde_client: Optional[SyncLLMClient] = None,
+        ai_model_for_experiment: Optional[str] = None,
+        embedding_model: Optional[str] = None,
+        hyde_prompt: Optional[Prompt] = None,
         ai_model_for_hyde: Optional[str] = None,
-    ) -> List[ExperimentInputDocument]:
+    ) -> list[ExperimentInputDocument]:
         """
         Creates multiple experiment input documents using different prompt types and retrieval strategies.
 
@@ -874,10 +910,12 @@ class KnowOrNot:
             question_document: The question document to use for the experiments
             experiment_type: The type of experiment (removal or synthetic)
             base_path: Base directory to store experiment files
-            alternative_llm_client: Optional alternative LLM client to use
-            ai_model_to_use: Optional AI model to use
-            alternative_prompt_for_hyde: Optional alternative prompt for HYDE_RAG
-            alternative_llm_client_for_hyde: Optional alternative LLM client for HYDE_RAG
+            embedding_client: Optional client to use for embeddings
+            generation_client: Optional client to use for LLM generation
+            hyde_client: Optional client to use for HYDE_RAG
+            ai_model_for_experiment: Optional AI model for generation
+            embedding_model: Optional embedding model to use
+            hyde_prompt: Optional prompt for HYDE_RAG
             ai_model_for_hyde: Optional AI model for HYDE_RAG
 
         Returns:
@@ -888,18 +926,16 @@ class KnowOrNot:
 
         knowledge_base_id = question_document.knowledge_base_identifier
 
-        # Determine which model to use
-        client_to_use = alternative_llm_client or self.default_sync_client
-        if not client_to_use:
+        # Determine which clients and models to use
+        generation_client_to_use = generation_client or self.default_sync_client
+        if not generation_client_to_use:
             raise ValueError(
-                "No default client available and no alternative client provided"
+                "No default client available and no generation client provided"
             )
 
-        model_to_use = None
-        if ai_model_to_use:
-            model_to_use = ai_model_to_use
-        else:
-            model_to_use = client_to_use.config.default_model
+        ai_model_for_experiment_to_use = (
+            ai_model_for_experiment or generation_client_to_use.config.default_model
+        )
 
         # Set up prompts and allowed retrieval types for each
         prompt_configs = [
@@ -954,12 +990,12 @@ class KnowOrNot:
                 input_path = (
                     base_path
                     / "inputs"
-                    / f"{knowledge_base_id}_{experiment_type}_{retrieval_type}_{prompt_name}_{model_to_use}_input.json"
+                    / f"{knowledge_base_id}_{experiment_type}_{retrieval_type}_{prompt_name}_{ai_model_for_experiment_to_use}_input.json"
                 )
                 output_path = (
                     base_path
                     / "outputs"
-                    / f"{knowledge_base_id}_{experiment_type}_{retrieval_type}_{prompt_name}_{model_to_use}_output.json"
+                    / f"{knowledge_base_id}_{experiment_type}_{retrieval_type}_{prompt_name}_{ai_model_for_experiment_to_use}_output.json"
                 )
 
                 # Ensure directories exist
@@ -974,10 +1010,12 @@ class KnowOrNot:
                     retrieval_type=retrieval_type,
                     input_store_path=input_path,
                     output_store_path=output_path,
-                    alternative_llm_client=alternative_llm_client,
-                    ai_model_to_use=ai_model_to_use,
-                    alternative_prompt_for_hyde=alternative_prompt_for_hyde,
-                    alternative_llm_client_for_hyde=alternative_llm_client_for_hyde,
+                    embedding_client=embedding_client,
+                    generation_client=generation_client,
+                    hyde_client=hyde_client,
+                    ai_model_for_experiment=ai_model_for_experiment,
+                    embedding_model=embedding_model,
+                    hyde_prompt=hyde_prompt,
                     ai_model_for_hyde=ai_model_for_hyde,
                 )
 
