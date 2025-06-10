@@ -28,6 +28,11 @@ class SyncOpenRouterClient(SyncLLMClient):
 
         self.logger = config.logger
 
+        self.client = OpenAI(
+            api_key=config.api_key,
+            base_url="https://openrouter.ai/api/v1",
+        )
+
         try:
             self.prompt("hello", ai_model=self.config.default_model)
         except Exception as e:
@@ -37,10 +42,6 @@ class SyncOpenRouterClient(SyncLLMClient):
 
         self.logger.info(
             f"Using model: {self.config.default_model} as the default model"
-        )
-        self.client = OpenAI(
-            api_key=config.api_key,
-            base_url="https://openrouter.ai/api/v1",
         )
 
         if self.config.can_use_instructor:
