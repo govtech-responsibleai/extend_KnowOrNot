@@ -38,7 +38,7 @@ class SyncAzureOpenAIClient(SyncLLMClient):
                 "ignore",
                 message="Client should be an instance of openai.OpenAI or openai.AsyncOpenAI.*",
             )
-            self.instructor_client = instructor.from_openai(self.client)
+            self.instructor_client = instructor.from_openai(self.client, mode=instructor.Mode.TOOLS_STRICT)
 
         try:
             self.prompt("hello", ai_model=self.config.default_model)
