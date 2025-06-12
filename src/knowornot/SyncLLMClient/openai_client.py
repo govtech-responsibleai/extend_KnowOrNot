@@ -29,7 +29,7 @@ class SyncOpenAIClient(SyncLLMClient):
         self.client = OpenAI(api_key=config.api_key)
         self.logger = config.logger
         self.instructor_client = instructor.from_openai(
-            self.client, mode=instructor.Mode.TOOLS
+            self.client, mode=instructor.Mode.TOOLS_STRICT
         )
 
         # Check if the tools are compatible with the model
