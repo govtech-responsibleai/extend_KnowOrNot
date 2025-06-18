@@ -51,9 +51,13 @@ class SyncGeminiClient(SyncLLMClient):
         with warnings.catch_warnings():
             self.instructor_client = instructor.from_gemini(
                 client=GenerativeModel(model_name=self.config.default_model),
-                mode=instructor.Mode.GEMINI_TOOLS,
+                mode=instructor.Mode.GEMINI_JSON,
                 use_async=False,
             )
+
+            # We should change this to `from_genai`: https://python.useinstructor.com/integrations/genai/#basic-usage
+            # `from_genai` uses the correct Python SDK that is also compatible with Vertex AI
+            # However, `from_genai` in Instructor needs to be updated to support `Optional` in pydantic schemas
 
         try:
             self.prompt("hello", ai_model=self.config.default_model)
