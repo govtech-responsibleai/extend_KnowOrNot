@@ -46,7 +46,7 @@ class SyncOpenRouterClient(SyncLLMClient):
 
         if self.config.can_use_instructor:
             self.instructor_client = instructor.from_openai(
-                self.client, mode=instructor.Mode.TOOLS
+                self.client, mode=instructor.Mode.OPENROUTER_STRUCTURED_OUTPUTS
             )
         else:
             self.instructor_client = None
