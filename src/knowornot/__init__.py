@@ -359,6 +359,7 @@ class KnowOrNot:
         project: Optional[str] = None,
         organization: Optional[str] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
+        base_url: Optional[str] = None,
     ) -> None:
         """
         Registers an OpenAI API client with the KnowOrNot instance.
@@ -374,6 +375,7 @@ class KnowOrNot:
             project (str, optional): The project to associate with the client. Defaults to ``None``.
             organization (str, optional): The organization to associate with the client. Defaults to ``None``.
             tools (List[Dict[str, Any]], optional): List of tool configurations. Each dict should have a 'type' key with a value of 'search'. Defaults to ``None``.
+            base_url (str, optional): The base URL to use for the client. Defaults to ``None``.
 
         Raises:
             EnvironmentError: If ``api_key``, ``default_model``, or ``default_embedding_model`` are not provided and not found in the environment.
@@ -414,7 +416,7 @@ class KnowOrNot:
             tools=tool_objects,
         )
 
-        openai_sync_client = SyncOpenAIClient(config=config)
+        openai_sync_client = SyncOpenAIClient(config=config, base_url=base_url)
 
         self.register_client(client=openai_sync_client, make_default=True)
 

@@ -22,11 +22,14 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class SyncOpenAIClient(SyncLLMClient):
-    def __init__(self, config: OpenAIConfig):
+    def __init__(self, config: OpenAIConfig, base_url: Optional[str] = None):
         super().__init__(config)
 
         self.config = config
-        self.client = OpenAI(api_key=config.api_key)
+        if base_url:
+            self.client = OpenAI(api_key=config.api_key, base_url=base_url)
+        else:
+            self.client = OpenAI(api_key=config.api_key)
         self.logger = config.logger
         self.instructor_client = instructor.from_openai(
             self.client, mode=instructor.Mode.TOOLS_STRICT
