@@ -89,6 +89,45 @@ Choose one of the following options to add your preferred client:
          return # Exit if client setup fails
 ```
 
+**Option 4: Add Groq Client**
+
+```python
+    # Option 4: Add Groq Client
+    # Requires GROQ_API_KEY and GROQ_DEFAULT_MODEL in environment/dotenv
+    try:
+        kon.add_groq()
+        logger.info("Groq client added and set as default.")
+    except EnvironmentError as e:
+         logger.error(f"Failed to add Groq client: {e}. Please ensure required environment variables are set.")
+         return # Exit if client setup fails
+```
+
+**Option 5: Add Anthropic Client**
+
+```python
+    # Option 5: Add Anthropic Client
+    # Requires ANTHROPIC_API_KEY and ANTHROPIC_DEFAULT_MODEL in environment/dotenv
+    try:
+        kon.add_anthropic()
+        logger.info("Anthropic client added and set as default.")
+    except EnvironmentError as e:
+         logger.error(f"Failed to add Anthropic client: {e}. Please ensure required environment variables are set.")
+         return # Exit if client setup fails
+```
+
+**Option 6: Add Bedrock Client**
+
+```python
+    # Option 6: Add Bedrock Client
+    # Requires AWS_BEARER_TOKEN_BEDROCK and BEDROCK_DEFAULT_MODEL in environment/dotenv
+    try:
+        kon.add_bedrock()
+        logger.info("Bedrock client added and set as default.")
+    except EnvironmentError as e:
+         logger.error(f"Failed to add Bedrock client: {e}. Please ensure required environment variables are set.")
+         return # Exit if client setup fails
+```
+
 For this guide, we'll assume you've added an OpenAI client, but the process is identical for others. The first client added becomes the default, used for operations unless a specific client is explicitly requested.
 
 ### Step 2: Preparing Source Data

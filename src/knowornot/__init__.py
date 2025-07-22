@@ -4,8 +4,10 @@ from typing import Callable, Dict, List, Literal, Optional, Sequence, Union, Any
 import logging
 
 from .SyncLLMClient.openrouter_client import SyncOpenRouterClient
-
 from .SyncLLMClient.openai_client import SyncOpenAIClient
+from .SyncLLMClient.groq_client import SyncGroqClient
+from .SyncLLMClient.anthropic_client import SyncAnthropicClient
+from .SyncLLMClient.bedrock_client import SyncBedrockClient
 
 from .QuestionExtractor.models import FilterMethod
 from .common.models import (
@@ -31,6 +33,9 @@ from .config import (
     AzureOpenAIConfig,
     OpenAIConfig,
     GeminiConfig,
+    GroqConfig,
+    AnthropicConfig,
+    BedrockConfig,
     Tool,
     OpenRouterConfig,
 )
@@ -537,6 +542,101 @@ class KnowOrNot:
         openrouter_sync_client = SyncOpenRouterClient(config=openrouter_config)
 
         self.register_client(client=openrouter_sync_client, make_default=False)
+
+    def add_groq(
+        self,
+        groq_api_key: Optional[str] = None,
+        default_model: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> None:
+        if not groq_api_key:
+            groq_api_key = os.environ.get("GROQ_API_KEY")
+            if not groq_api_key:
+                raise EnvironmentError(
+                    "GROQ_API_KEY is not set and groq_api_key is not provided"
+                )
+        if not default_model:
+            default_model = os.environ.get("GROQ_DEFAULT_MODEL")
+            if not default_model:
+                raise EnvironmentError(
+                    "GROQ_DEFAULT_MODEL is not set and default_model is not provided"
+                )
+
+        logger = logging.getLogger(__name__)
+
+        groq_config = GroqConfig(
+            api_key=groq_api_key,
+            default_model=default_model,
+            logger=logger,
+        )
+
+        groq_sync_client = SyncGroqClient(config=groq_config, base_url=base_url)
+
+        self.register_client(client=groq_sync_client, make_default=True)
+
+    def add_anthropic(
+        self,
+        anthropic_api_key: Optional[str] = None,
+        default_model: Optional[str] = None,
+    ) -> None:
+        if not anthropic_api_key:
+            anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not anthropic_api_key:
+                raise EnvironmentError(
+                    "ANTHROPIC_API_KEY is not set and anthropic_api_key is not provided"
+                )
+        if not default_model:
+            default_model = os.environ.get("ANTHROPIC_DEFAULT_MODEL")
+            if not default_model:
+                raise EnvironmentError(
+                    "ANTHROPIC_DEFAULT_MODEL is not set and default_model is not provided"
+                )
+
+        logger = logging.getLogger(__name__)
+
+        anthropic_config = AnthropicConfig(
+            api_key=anthropic_api_key,
+            default_model=default_model,
+            logger=logger,
+        )
+
+        anthropic_sync_client = SyncAnthropicClient(config=anthropic_config)
+
+        self.register_client(client=anthropic_sync_client, make_default=True)
+
+    def add_bedrock(
+        self,
+        region_name: Optional[str] = None,
+        api_key: Optional[str] = None,
+        default_model: Optional[str] = None,
+    ) -> None:
+        if not region_name:
+            region_name = os.environ.get("BEDROCK_REGION") or "us-west-2"
+        if not api_key:
+            api_key = os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
+            if not api_key:
+                raise EnvironmentError(
+                    "AWS_BEARER_TOKEN_BEDROCK is not set and api_key is not provided"
+                )
+        if not default_model:
+            default_model = os.environ.get("BEDROCK_DEFAULT_MODEL")
+            if not default_model:
+                raise EnvironmentError(
+                    "BEDROCK_DEFAULT_MODEL is not set and default_model is not provided"
+                )
+
+        logger = logging.getLogger(__name__)
+
+        bedrock_config = BedrockConfig(
+            api_key=api_key,
+            default_model=default_model,
+            logger=logger,
+            region_name=region_name,
+        )
+
+        bedrock_sync_client = SyncBedrockClient(config=bedrock_config)
+
+        self.register_client(client=bedrock_sync_client, make_default=True)
 
     def create_questions(
         self,

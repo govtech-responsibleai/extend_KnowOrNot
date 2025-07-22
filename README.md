@@ -52,6 +52,9 @@ Refer to [quickstart.md](docs/quickstart.md) for more information and [quickstar
 - **Gemini API**: use `add_gemini()` method
 - **Azure**: use `add_azure()` method
 - **OpenRouter**: use `add_openrouter()` method
+- **Groq**: use `add_groq()` method
+- **Anthropic**: use `add_anthropic()` method
+- **Bedrock**: use `add_bedrock()` method
 
 ### Processing of LLM responses
 - **Asynchronous**: use `run_experiment_async`, `evaluate_experiment_async` method

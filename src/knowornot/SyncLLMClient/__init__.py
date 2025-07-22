@@ -21,6 +21,9 @@ class SyncLLMClientEnum(Enum):
     GEMINI = "GEMINI"
     OPENAI = "OPENAI"
     OPENROUTER = "OPENROUTER"
+    GROQ = "GROQ"
+    ANTHROPIC = "ANTHROPIC"
+    BEDROCK = "BEDROCK"
 
 
 class SyncLLMClient(ABC):
