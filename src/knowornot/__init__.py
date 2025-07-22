@@ -8,6 +8,7 @@ from .SyncLLMClient.openai_client import SyncOpenAIClient
 from .SyncLLMClient.groq_client import SyncGroqClient
 from .SyncLLMClient.anthropic_client import SyncAnthropicClient
 from .SyncLLMClient.bedrock_client import SyncBedrockClient
+from .SyncLLMClient.huggingface_client import SyncHuggingFaceClient
 
 from .QuestionExtractor.models import FilterMethod
 from .common.models import (
@@ -36,6 +37,7 @@ from .config import (
     GroqConfig,
     AnthropicConfig,
     BedrockConfig,
+    HuggingFaceConfig,
     Tool,
     OpenRouterConfig,
 )
@@ -579,6 +581,19 @@ class KnowOrNot:
         anthropic_api_key: Optional[str] = None,
         default_model: Optional[str] = None,
     ) -> None:
+        """
+        Registers an Anthropic API client with the KnowOrNot instance.
+
+        If ``anthropic_api_key`` is not provided, the value of the ``ANTHROPIC_API_KEY`` environment variable is used.
+        If ``default_model`` is not provided, the value of the ``ANTHROPIC_DEFAULT_MODEL`` environment variable is used.
+
+        Args:
+            anthropic_api_key (str, optional): The API key to use. Must be provided or available in the environment.
+            default_model (str, optional): The model to use by default. Must be provided or available in the environment.
+
+        Raises:
+            EnvironmentError: If ``anthropic_api_key`` or ``default_model`` are not provided and not found in the environment.
+        """
         if not anthropic_api_key:
             anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
             if not anthropic_api_key:
@@ -610,6 +625,26 @@ class KnowOrNot:
         api_key: Optional[str] = None,
         default_model: Optional[str] = None,
     ) -> None:
+        """
+        Registers a Bedrock API client with the KnowOrNot instance.
+
+        If ``region_name`` is not provided,  ``BEDROCK_REGION`` environment variable is used, defaulting to "us-west-2" if not found.
+        If ``api_key`` is not provided, ``AWS_BEARER_TOKEN_BEDROCK`` environment variable is used. 
+        If ``default_model`` is not provided, ``BEDROCK_DEFAULT_MODEL`` environment variable is used.
+
+        Args:
+            region_name (str, optional): The AWS region name to use. Defaults to the
+                value of the ``BEDROCK_REGION`` environment variable or "us-west-2".
+            api_key (str, optional): The API key to use. Must be provided or available
+                in the environment.
+            default_model (str, optional): The model to use by default. Must be
+                provided or available in the environment.
+
+        Raises:
+            EnvironmentError: If ``api_key`` or ``default_model`` are not provided and
+            not found in the environment.
+        """
+
         if not region_name:
             region_name = os.environ.get("BEDROCK_REGION") or "us-west-2"
         if not api_key:
@@ -637,6 +672,63 @@ class KnowOrNot:
         bedrock_sync_client = SyncBedrockClient(config=bedrock_config)
 
         self.register_client(client=bedrock_sync_client, make_default=True)
+    
+    def add_huggingface(
+        self,
+        huggingface_api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        default_model: Optional[str] = None,
+        bill_to: Optional[str] = None,
+    ) -> None:
+        """
+        Registers a Hugging Face API client with the KnowOrNot instance.
+
+        If ``huggingface_api_key`` is not provided, the value of the ``HUGGINGFACE_API_KEY`` environment variable is used.
+        If ``provider`` is not provided, the value of the ``HUGGINGFACE_PROVIDER`` environment variable is used.
+        If ``default_model`` is not provided, the value of the ``HUGGINGFACE_DEFAULT_MODEL`` environment variable is used.
+
+        Args:
+            huggingface_api_key (str, optional): The API key to use. Must be provided or available in the environment.
+            provider (str, optional): The provider to use. Must be provided or available in the environment.
+            default_model (str, optional): The model to use by default. Must be provided or available in the environment.
+
+        Raises:
+            EnvironmentError: If ``huggingface_api_key``, ``provider``, or ``default_model`` are not provided and not found in the environment.
+        """
+        if not huggingface_api_key:
+            huggingface_api_key = os.environ.get("HUGGINGFACE_API_KEY")
+            if not huggingface_api_key:
+                raise EnvironmentError(
+                    "HUGGINGFACE_API_KEY is not set and huggingface_api_key is not provided"
+                )
+        if not provider:
+            provider = os.environ.get("HUGGINGFACE_PROVIDER")
+            if not provider:
+                raise EnvironmentError(
+                    "HUGGINGFACE_PROVIDER is not set and provider is not provided"
+                )
+        if not default_model:
+            default_model = os.environ.get("HUGGINGFACE_DEFAULT_MODEL")
+            if not default_model:
+                raise EnvironmentError(
+                    "HUGGINGFACE_DEFAULT_MODEL is not set and default_model is not provided"
+                )
+        if not bill_to: 
+            bill_to = os.environ.get("HUGGINGFACE_BILL_TO")
+
+        logger = logging.getLogger(__name__)
+
+        huggingface_config = HuggingFaceConfig(
+            api_key=huggingface_api_key,
+            provider=provider,
+            default_model=default_model,
+            logger=logger,
+            bill_to=bill_to,
+        )
+
+        huggingface_sync_client = SyncHuggingFaceClient(config=huggingface_config)
+
+        self.register_client(client=huggingface_sync_client, make_default=True)
 
     def create_questions(
         self,

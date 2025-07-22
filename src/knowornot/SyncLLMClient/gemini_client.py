@@ -128,35 +128,7 @@ class SyncGeminiClient(SyncLLMClient):
                 "Gemini does not support a different model than the default model. Please instantiate a separate Gemini client for different models."
             )
 
-        messages: List[ChatCompletionMessageParam] = []
-
-        if isinstance(prompt, str):
-            user_message: ChatCompletionUserMessageParam = {
-                "role": "user",
-                "content": prompt,
-            }
-            messages.append(user_message)
-        else:
-            for m in prompt:
-                if m.role == "user":
-                    user_message: ChatCompletionUserMessageParam = {
-                        "role": "user",
-                        "content": m.content,
-                    }
-                    messages.append(user_message)
-                elif m.role == "system":
-                    system_message: ChatCompletionSystemMessageParam = {
-                        "role": "system",
-                        "content": m.content,
-                    }
-                    messages.append(system_message)
-                elif m.role == "assistant":
-                    assistant_message: ChatCompletionAssistantMessageParam = {
-                        "role": "assistant",
-                        "content": m.content,
-                    }
-                    messages.append(assistant_message)
-                # Add others as needed
+        messages = self._convert_to_chat_messages(prompt)
 
         # Use instructor to generate structured response
         response = self.instructor_client.chat.completions.create(

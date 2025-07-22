@@ -29,8 +29,16 @@ class SyncAnthropicClient(SyncLLMClient):
         )
 
     def _convert_messages(self, prompt: Union[str, List[Message]]):
+        """
+        Converts the input prompt into a list of messages in a format suitable for the Anthropic API.
+
+        Args:
+            prompt: The input prompt to convert. It can be a string or a list of `Message` objects.
+
+        Returns:
+            A list of messages in the format required by the Anthropic API.
+        """
         messages = []
-        system_prompt: Optional[str] = None
         if isinstance(prompt, str):
             messages.append({"role": "user", "content": prompt})
         else:

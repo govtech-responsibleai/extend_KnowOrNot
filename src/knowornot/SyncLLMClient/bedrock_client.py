@@ -41,6 +41,18 @@ class SyncBedrockClient(SyncLLMClient):
         )
 
     def _convert_messages(self, prompt: Union[str, List[Message]]):
+        """
+        Converts the input prompt, which can be a string or a list of `Message` objects,
+        into a user prompt and an optional system prompt suitable for the Bedrock
+        converse API.
+
+        Args:
+            prompt: The input prompt(s) to send to the chat model. It can be a single string or a list of
+                    `Message` objects, where each message has a role (user, system, or assistant) and content.
+
+        Returns:
+            A tuple of the user prompt as a string and the system prompt as an optional string.
+        """
         user_prompt = ""
         system_prompt = None
         if isinstance(prompt, str):

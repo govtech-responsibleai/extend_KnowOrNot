@@ -1,6 +1,7 @@
 # tests/test_syncllmclient_integration.py
 
 import unittest
+import os
 from dotenv import load_dotenv
 
 from src.knowornot import KnowOrNot
@@ -39,6 +40,11 @@ class TestSyncLLMClientIntegration(unittest.TestCase):
         kon = KnowOrNot()
         kon.add_openrouter()
         self._test_client_string(kon.get_client(SyncLLMClientEnum.OPENROUTER))
+    
+    def test_huggingface_client(self):
+        kon = KnowOrNot()
+        kon.add_huggingface()
+        self._test_client_string(kon.get_client(SyncLLMClientEnum.HUGGINGFACE))
 
     def _test_client_structured(self, client):
         # Test sending a prompt and receiving a structured response
