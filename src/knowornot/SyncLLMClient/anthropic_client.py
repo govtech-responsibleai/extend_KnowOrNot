@@ -29,24 +29,28 @@ class SyncAnthropicClient(SyncLLMClient):
         )
 
     def _convert_messages(self, prompt: Union[str, List[Message]]):
+        """
+        Converts the input prompt into a list of messages in a format suitable for the Anthropic API.
+
+        Args:
+            prompt: The input prompt to convert. It can be a string or a list of `Message` objects.
+
+        Returns:
+            A list of messages in the format required by the Anthropic API.
+        """
         messages = []
-        system_prompt: Optional[str] = None
         if isinstance(prompt, str):
             messages.append({"role": "user", "content": prompt})
         else:
             for m in prompt:
-                if m.role == "system":
-                    system_prompt = m.content
-                else:
-                    messages.append({"role": m.role, "content": m.content})
-        return messages, system_prompt
+                messages.append({"role": m.role, "content": m.content})
+        return messages
 
     def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
-        messages, system_prompt = self._convert_messages(prompt)
+        messages = self._convert_messages(prompt)
         response = self.client.messages.create(
             model=ai_model,
             messages=messages,
-            system=system_prompt,
             max_tokens=1024,
         )
         output = response.content[0].text if response.content else None
@@ -62,11 +66,10 @@ class SyncAnthropicClient(SyncLLMClient):
         response_model: Type[T],
         model_used: str,
     ) -> T:
-        messages, system_prompt = self._convert_messages(prompt)
+        messages = self._convert_messages(prompt)
         response = self.instructor_client.messages.create(
             model=model_used,
             messages=messages,
-            system=system_prompt,
             response_model=response_model,
             max_tokens=1024,
         )

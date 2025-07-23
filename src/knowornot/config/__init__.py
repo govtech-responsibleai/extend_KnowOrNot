@@ -82,6 +82,20 @@ class AzureOpenAIConfig(LLMClientConfig):
 
 
 @dataclass
+class HuggingFaceConfig(LLMClientConfig):
+    can_use_instructor: bool = True
+    default_embedding_model: str = ""
+    provider: str = ""
+    bill_to: Optional[str] = None
+
+    def __post_init__(self):
+        if not self.api_key:
+            raise ValueError("api_key is required for HuggingFaceConfig")
+        if not self.provider:
+            raise ValueError("provider is required for HuggingFaceConfig")
+
+
+@dataclass
 class OpenAIConfig(LLMClientConfig):
     can_use_instructor: bool = True
     can_use_tools: bool = True
