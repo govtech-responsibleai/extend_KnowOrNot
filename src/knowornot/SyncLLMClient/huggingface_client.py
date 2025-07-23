@@ -50,7 +50,7 @@ class SyncHuggingFaceClient(SyncLLMClient):
         strict_messages = []
         for message in messages:
             if message["role"] == "user":
-                strict_messages.append({"role": message["role"], "content": message["content"] + "\nOnly use integer or exactly `no citation` — nothing else"})
+                strict_messages.append({"role": message["role"], "content": message["content"] + "\nOnly use integer or exactly `no citation` for citation — nothing else"})
             else:
                 strict_messages.append(message)
         return strict_messages
@@ -67,7 +67,8 @@ class SyncHuggingFaceClient(SyncLLMClient):
         }
  
         messages = self._convert_messages(prompt)
-        messages = self._add_strict_prompt(messages)
+        if response_model.__name__ == "QAResponse":
+            messages = self._add_strict_prompt(messages)
 
         response = self.client.chat_completion(
             messages=messages,
