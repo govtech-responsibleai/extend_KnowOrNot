@@ -10,16 +10,6 @@ from pydantic import BaseModel
 from ..config import GeminiConfig, ToolType
 from .exceptions import InitialCallFailedException
 from . import Message, SyncLLMClient, SyncLLMClientEnum
-from openai.types.chat import ChatCompletionMessageParam
-from openai.types.chat.chat_completion_assistant_message_param import (
-    ChatCompletionAssistantMessageParam,
-)
-from openai.types.chat.chat_completion_system_message_param import (
-    ChatCompletionSystemMessageParam,
-)
-from openai.types.chat.chat_completion_user_message_param import (
-    ChatCompletionUserMessageParam,
-)
 
 T = TypeVar("T", bound=BaseModel)
 

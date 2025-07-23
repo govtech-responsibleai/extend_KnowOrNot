@@ -44,7 +44,7 @@ class TestSyncLLMClientIntegration(unittest.TestCase):
     def test_huggingface_client(self):
         kon = KnowOrNot()
         kon.add_huggingface()
-        self._test_client_string(kon.get_client(SyncLLMClientEnum.HUGGINGFACE))
+        self._test_client_structured(kon.get_client(SyncLLMClientEnum.HUGGINGFACE))
 
     def _test_client_structured(self, client):
         # Test sending a prompt and receiving a structured response
