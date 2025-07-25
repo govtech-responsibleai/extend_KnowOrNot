@@ -61,7 +61,10 @@ class SyncHuggingFaceClient(SyncLLMClient):
             "type": "json_schema",
             "json_schema": {
                 "name": response_model.__name__,
-                "schema": response_model.model_json_schema(),
+                "schema": {
+                    **response_model.model_json_schema(),
+                    "additionalProperties": False
+                },
                 "strict": True,
             }
         }
@@ -74,11 +77,15 @@ class SyncHuggingFaceClient(SyncLLMClient):
             messages=messages,
             response_format=response_format,
             model=model_used,
+            max_tokens=10_000,
         )
-        structured_data = response_model.parse_raw(response.choices[0].message.content)
+        content = response.choices[0].message.content
+        if "</think>" in content:
+            content = content.split("</think>")[1]
+        structured_data = response_model.model_validate_json(content)
 
         return structured_data
-
+        
     def _prompt(self, prompt: Union[str, List[Message]], ai_model: str) -> str:
 
         messages = self._convert_messages(prompt)
