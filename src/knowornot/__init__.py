@@ -1262,6 +1262,7 @@ class KnowOrNot:
     async def run_experiment_async(
         self,
         experiment_input: ExperimentInputDocument,
+        max_workers: int = 8,
     ) -> ExperimentOutputDocument:
         """
         Executes an experiment asynchronously using the specified experiment input.
@@ -1273,6 +1274,7 @@ class KnowOrNot:
         Args:
             experiment_input (ExperimentInputDocument): The input document containing
             the experiment details and metadata.
+            max_workers (int): The maximum number of workers to use for the experiment. Defaults to 8.
 
         Returns:
             ExperimentOutputDocument: The output document containing the results of the experiment.
@@ -1296,6 +1298,7 @@ class KnowOrNot:
         output = await experiment_manager.run_experiment_async(
             experiment=experiment_input,
             client_registry=self.client_registry,
+            max_workers=max_workers,
         )
         output.save_to_json()
 
