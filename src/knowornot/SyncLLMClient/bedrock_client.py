@@ -1,4 +1,5 @@
 from typing import List, Optional, Type, TypeVar, Union
+import instructor
 import instructor.client_bedrock as instructor_bedrock
 import boto3
 from pydantic import BaseModel
@@ -28,7 +29,7 @@ class SyncBedrockClient(SyncLLMClient):
             region_name=config.region_name,
         )
         self.logger = config.logger
-        self.instructor_client = instructor_bedrock.from_bedrock(self.client)
+        self.instructor_client = instructor_bedrock.from_bedrock(self.client, mode=instructor.Mode.BEDROCK_JSON)
 
         try:
             self.prompt("hello", ai_model=self.config.default_model)
@@ -78,12 +79,22 @@ class SyncBedrockClient(SyncLLMClient):
         model_used: str,
     ) -> T:
         user_prompt, system_prompt = self._convert_messages(prompt)
-        response = self.instructor_client.create(
-            modelId=model_used,
-            messages=[{"role": "user", "content": [{"text": user_prompt}]}],
-            system=[{"text": system_prompt}] if system_prompt else None,
-            response_model=response_model,
-        )
+        if system_prompt:
+            response = self.instructor_client.create(
+                modelId=model_used,
+                messages=[{"role": "user", "content": [{"text": user_prompt}]}],
+                system=[{"text": system_prompt}] if system_prompt else None,
+                response_model=response_model,
+            )
+        else:
+            response = self.instructor_client.create(
+                modelId=model_used,
+                messages=[{"role": "user", "content": [{"text": user_prompt}]}],
+                response_model=response_model,
+            )
+        if "</think>" in response.response:
+            response.response = response.response.split("</think>")[1]
+            return response_model.model_validate_json(response.response)
         return response
 
     def get_embedding(

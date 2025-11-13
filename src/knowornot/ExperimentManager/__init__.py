@@ -240,7 +240,7 @@ class ExperimentManager:
 
         llm_response_list: List[SavedLLMResponse] = []
         for idx, experiment_input in enumerate(experiment.questions):
-            self.logger.info(f"Running question {idx}")
+            # self.logger.info(f"Running question {idx}")
             answer = sync_client.get_structured_response(
                 prompt=experiment_input.prompt_to_llm,
                 ai_model=experiment.metadata.ai_model_used,
@@ -255,7 +255,7 @@ class ExperimentManager:
             )
 
             llm_response_list.append(final_response)
-            self.logger.info(f"Finished question {idx}")
+            # self.logger.info(f"Finished question {idx}")
 
         return ExperimentOutputDocument(
             metadata=experiment.metadata, responses=llm_response_list
@@ -265,7 +265,7 @@ class ExperimentManager:
         self,
         experiment: ExperimentInputDocument,
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
-        max_workers: int = 8,
+        max_workers: int = 1,
     ) -> ExperimentOutputDocument:
         """Run an experiment asynchronously."""
         client_enum = experiment.metadata.client_enum
@@ -288,7 +288,7 @@ class ExperimentManager:
         )
 
         async def process_question(idx: int, experiment_input):
-            self.logger.info(f"Starting question {idx}")
+            # self.logger.info(f"Starting question {idx}")
 
             # Run the synchronous API call in a thread
             answer = await loop.run_in_executor(
@@ -307,7 +307,7 @@ class ExperimentManager:
                 idx=idx,
             )
 
-            self.logger.info(f"Finished question {idx}")
+            # self.logger.info(f"Finished question {idx}")
             return idx, final_response
 
         # Create tasks for all questions
@@ -343,7 +343,7 @@ class ExperimentManager:
         self,
         experiments: List[ExperimentInputDocument],
         client_registry: Dict[SyncLLMClientEnum, SyncLLMClient],
-        max_workers: int = 8,
+        max_workers: int = 1,
     ) -> List[ExperimentOutputDocument]:
         """Run multiple experiments asynchronously."""
         self.logger.info(

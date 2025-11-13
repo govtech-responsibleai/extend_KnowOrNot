@@ -124,6 +124,7 @@ class SyncOpenAIClient(SyncLLMClient):
                 model=model_used,
                 response_model=response_model,
                 messages=messages,
+                parallel_tool_calls=False,
             )
         except Exception as e:
             # Extract the error message directly from the exception
@@ -142,6 +143,7 @@ class SyncOpenAIClient(SyncLLMClient):
                 response_openai = self.client.chat.completions.create(
                     model=model_used,
                     messages=self._convert_to_chat_messages(json_template_messages),
+                    parallel_tool_calls=False,
                 )
 
                 if response_openai.choices[0].message.content:
@@ -158,6 +160,7 @@ class SyncOpenAIClient(SyncLLMClient):
                             model="gpt-4o-mini-2024-07-18",
                             response_model=response_model,
                             messages=self._convert_to_chat_messages([rewrite_messages]),
+                            parallel_tool_calls=False,
                         )
                     except Exception as e:
                         raise RuntimeError(
