@@ -1,15 +1,31 @@
 from typing import TypeVar, Union, List, Dict, Optional, Type
 import instructor
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from huggingface_hub import InferenceClient
 
 from openai import OpenAI
 
 from ..config import HuggingFaceConfig
+from ..common.models import QAResponse
 from .exceptions import InitialCallFailedException
 from . import SyncLLMClient, Message, SyncLLMClientEnum
 
 T = TypeVar("T", bound=BaseModel)
+
+
+class HuggingFaceQAResponse(QAResponse):
+    @field_validator("citation", mode="before")
+    @classmethod
+    def _normalize_citation(cls, value):
+        if isinstance(value, str):
+            normalized_value = value.strip()
+            if normalized_value.lower() == "no citation":
+                return "no citation"
+            try:
+                return int(normalized_value)
+            except ValueError:
+                return value
+        return value
 
 class SyncHuggingFaceClient(SyncLLMClient):
     def __init__(self, config: HuggingFaceConfig):
@@ -102,9 +118,15 @@ class SyncHuggingFaceClient(SyncLLMClient):
 
         messages.append({"role": "user", "content": f"YOU MUST RETURN A JSON OBJECT WITH THE FOLLOWING SCHEMA: {response_model.model_json_schema()}"})
 
+        hf_response_model: Type[BaseModel] = response_model
+        convert_to_requested_model = False
+        if response_model.__name__ == "QAResponse":
+            hf_response_model = HuggingFaceQAResponse
+            convert_to_requested_model = True
+
         response = self.instructor_client.chat.completions.create(
             model=model_used,
-            response_model=response_model,
+            response_model=hf_response_model,
             messages=messages,
         )
 
@@ -112,6 +134,9 @@ class SyncHuggingFaceClient(SyncLLMClient):
         if "<think>" in content:
             content = content.split("<think>")[1]
             return response_model.model_validate_json(content)
+
+        if convert_to_requested_model:
+            return response_model.model_validate(response.model_dump())
 
         return response
 
