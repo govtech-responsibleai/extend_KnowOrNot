@@ -40,7 +40,7 @@ class SyncHuggingFaceClient(SyncLLMClient):
             }
         )
         self.instructor_client = instructor.from_openai(
-            self.client, mode=instructor.Mode.TOOLS
+            self.client, mode=instructor.Mode.TOOLS_STRICT
         )
 
         try:
@@ -130,10 +130,10 @@ class SyncHuggingFaceClient(SyncLLMClient):
             messages=messages,
         )
 
-        content = response.choices[0].message.content
-        if "<think>" in content:
-            content = content.split("<think>")[1]
-            return response_model.model_validate_json(content)
+        # content = response.choices[0].message.content
+        # if "<think>" in content:
+        #     content = content.split("<think>")[1]
+        #     return response_model.model_validate_json(content)
 
         if convert_to_requested_model:
             return response_model.model_validate(response.model_dump())
