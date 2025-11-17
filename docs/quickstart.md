@@ -115,6 +115,8 @@ Choose one of the following options to add your preferred client:
          return # Exit if client setup fails
 ```
 
+If you want to use Anthropic via Vertex AI or AWS Bedrock, set `ANTHROPIC_CLIENT_TYPE` to `ANTHROPIC_VERTEX` or `ANTHROPIC_BEDROCK` and provide the relevant settings (`ANTHROPIC_VERTEX_PROJECT_ID` plus `ANTHROPIC_VERTEX_REGION`, or Bedrock AWS credentials/region via the usual AWS variables like `AWS_PROFILE`, `AWS_ACCESS_KEY_ID`, and `AWS_REGION`).
+
 **Option 6: Add Bedrock Client**
 
 ```python

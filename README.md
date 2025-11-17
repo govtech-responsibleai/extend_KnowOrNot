@@ -56,6 +56,67 @@ Refer to [quickstart.md](docs/quickstart.md) for more information and [quickstar
 - **Anthropic**: use `add_anthropic()` method
 - **Bedrock**: use `add_bedrock()` method
 
+#### Selecting Anthropic client types
+
+Anthropic can be used directly, through Vertex AI, or via AWS Bedrock. Set the
+client type and related settings through environment variables:
+
+```bash
+export ANTHROPIC_CLIENT_TYPE=ANTHROPIC_VERTEX
+export ANTHROPIC_VERTEX_PROJECT_ID="my-gcp-project"
+export ANTHROPIC_VERTEX_REGION="us-central1"
+export ANTHROPIC_DEFAULT_MODEL="claude-3-sonnet@20240620"
+```
+
+Or pass the parameters directly when registering the client:
+
+```python
+kon.add_anthropic(
+    client_type="ANTHROPIC_BEDROCK",
+    region="us-east-1",
+    default_model="anthropic.claude-3-sonnet-20240229-v1:0",
+)
+```
+
+The instructor integration works the same way for `ANTHROPIC`,
+`ANTHROPIC_VERTEX`, and `ANTHROPIC_BEDROCK` client types.
+
+When using Bedrock, you can rely on the default AWS credential chain, provide a
+profile, or supply explicit keys:
+
+```python
+# Default AWS credential providers (env vars, ~/.aws/credentials, etc.)
+kon.add_anthropic(
+    client_type="ANTHROPIC_BEDROCK",
+    default_model="anthropic.claude-3-sonnet-20240229-v1:0",
+    aws_region="us-east-1",  # falls back to AWS_REGION/AWS_DEFAULT_REGION or us-east-1
+)
+
+# Use a named AWS profile
+kon.add_anthropic(
+    client_type="ANTHROPIC_BEDROCK",
+    default_model="anthropic.claude-3-sonnet-20240229-v1:0",
+    aws_profile="my-profile",
+    aws_region="us-west-2",
+)
+
+# Provide explicit AWS credentials
+kon.add_anthropic(
+    client_type="ANTHROPIC_BEDROCK",
+    default_model="anthropic.claude-3-sonnet-20240229-v1:0",
+    aws_access_key="<access key>",
+    aws_secret_key="<secret key>",
+    aws_session_token="<session token>",
+    aws_region="us-west-2",
+)
+```
+
+The Bedrock helpers also honor AWS environment variables, preferring
+`ANTHROPIC_BEDROCK_*` overrides (for example,
+`ANTHROPIC_BEDROCK_AWS_PROFILE`, `ANTHROPIC_BEDROCK_AWS_ACCESS_KEY_ID`,
+`ANTHROPIC_BEDROCK_REGION`) before falling back to standard AWS variables
+like `AWS_PROFILE`, `AWS_ACCESS_KEY_ID`, and `AWS_REGION`.
+
 ### Processing of LLM responses
 - **Asynchronous**: use `run_experiment_async`, `evaluate_experiment_async` method
 - **Synchronous**: use `run_experiment`, `evaluate_experiment` method

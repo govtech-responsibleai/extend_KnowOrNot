@@ -1,6 +1,6 @@
 from typing import List, Optional, Type, TypeVar, Union
 import instructor
-from anthropic import Anthropic
+from anthropic import Anthropic, AnthropicBedrock, AnthropicVertex
 from pydantic import BaseModel
 
 from ..config import AnthropicConfig
@@ -14,7 +14,23 @@ class SyncAnthropicClient(SyncLLMClient):
     def __init__(self, config: AnthropicConfig):
         super().__init__(config)
         self.config = config
-        self.client = Anthropic(api_key=config.api_key)
+        client_type = config.anthropic_client_type.upper()
+        if client_type == "ANTHROPIC_VERTEX":
+            self.client = AnthropicVertex(project_id=config.project_id, region=config.region)
+        elif client_type == "ANTHROPIC_BEDROCK":
+            bedrock_kwargs = {
+                "aws_profile": config.aws_profile,
+                "aws_access_key": config.aws_access_key,
+                "aws_secret_key": config.aws_secret_key,
+                "aws_session_token": config.aws_session_token,
+                "aws_region": config.aws_region or config.region,
+            }
+            clean_bedrock_kwargs = {
+                key: value for key, value in bedrock_kwargs.items() if value is not None
+            }
+            self.client = AnthropicBedrock(**clean_bedrock_kwargs)
+        else:
+            self.client = Anthropic(api_key=config.api_key)
         self.logger = config.logger
         self.instructor_client = instructor.from_anthropic(self.client)
 
@@ -82,4 +98,9 @@ class SyncAnthropicClient(SyncLLMClient):
 
     @property
     def enum_name(self) -> SyncLLMClientEnum:
+        client_type = self.config.anthropic_client_type.upper()
+        if client_type == "ANTHROPIC_VERTEX":
+            return SyncLLMClientEnum.ANTHROPIC_VERTEX
+        if client_type == "ANTHROPIC_BEDROCK":
+            return SyncLLMClientEnum.ANTHROPIC_BEDROCK
         return SyncLLMClientEnum.ANTHROPIC

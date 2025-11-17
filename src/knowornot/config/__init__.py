@@ -57,9 +57,9 @@ class Tool(BaseModel):
 @dataclass
 class LLMClientConfig(ABC):
     logger: logging.Logger
-    api_key: str
-    default_model: str
-    default_embedding_model: str
+    api_key: str = ""
+    default_model: str = ""
+    default_embedding_model: str = ""
     can_use_instructor: bool = False
     can_use_embeddings: bool = True
     can_use_tools: bool = False
@@ -150,10 +150,32 @@ class AnthropicConfig(LLMClientConfig):
     can_use_instructor: bool = True
     default_embedding_model: str = ""
     can_use_embeddings: bool = False
+    anthropic_client_type: str = "ANTHROPIC"
+    region: Optional[str] = None
+    project_id: Optional[str] = None
+    aws_profile: Optional[str] = None
+    aws_access_key: Optional[str] = None
+    aws_secret_key: Optional[str] = None
+    aws_session_token: Optional[str] = None
+    aws_region: Optional[str] = None
 
     def __post_init__(self):
-        if not self.api_key:
-            raise ValueError("api_key is required for AnthropicConfig")
+        client_type = self.anthropic_client_type.upper()
+        if client_type == "ANTHROPIC":
+            if not self.api_key:
+                raise ValueError("api_key is required for AnthropicConfig")
+        elif client_type == "ANTHROPIC_VERTEX":
+            if not self.project_id:
+                raise ValueError("project_id is required for Anthropic Vertex")
+            if not self.region:
+                raise ValueError("region is required for Anthropic Vertex")
+        elif client_type == "ANTHROPIC_BEDROCK":
+            if not self.aws_region and self.region:
+                self.aws_region = self.region
+        else:
+            raise ValueError(
+                "anthropic_client_type must be one of: ANTHROPIC, ANTHROPIC_VERTEX, ANTHROPIC_BEDROCK"
+            )
 
 
 @dataclass
