@@ -153,6 +153,11 @@ class AnthropicConfig(LLMClientConfig):
     anthropic_client_type: str = "ANTHROPIC"
     region: Optional[str] = None
     project_id: Optional[str] = None
+    aws_profile: Optional[str] = None
+    aws_access_key: Optional[str] = None
+    aws_secret_key: Optional[str] = None
+    aws_session_token: Optional[str] = None
+    aws_region: Optional[str] = None
 
     def __post_init__(self):
         client_type = self.anthropic_client_type.upper()
@@ -165,8 +170,8 @@ class AnthropicConfig(LLMClientConfig):
             if not self.region:
                 raise ValueError("region is required for Anthropic Vertex")
         elif client_type == "ANTHROPIC_BEDROCK":
-            if not self.region:
-                raise ValueError("region is required for Anthropic Bedrock")
+            if not self.aws_region and self.region:
+                self.aws_region = self.region
         else:
             raise ValueError(
                 "anthropic_client_type must be one of: ANTHROPIC, ANTHROPIC_VERTEX, ANTHROPIC_BEDROCK"

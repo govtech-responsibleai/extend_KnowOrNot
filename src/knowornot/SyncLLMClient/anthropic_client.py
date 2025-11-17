@@ -18,7 +18,17 @@ class SyncAnthropicClient(SyncLLMClient):
         if client_type == "ANTHROPIC_VERTEX":
             self.client = AnthropicVertex(project_id=config.project_id, region=config.region)
         elif client_type == "ANTHROPIC_BEDROCK":
-            self.client = AnthropicBedrock(region=config.region)
+            bedrock_kwargs = {
+                "aws_profile": config.aws_profile,
+                "aws_access_key": config.aws_access_key,
+                "aws_secret_key": config.aws_secret_key,
+                "aws_session_token": config.aws_session_token,
+                "aws_region": config.aws_region or config.region,
+            }
+            clean_bedrock_kwargs = {
+                key: value for key, value in bedrock_kwargs.items() if value is not None
+            }
+            self.client = AnthropicBedrock(**clean_bedrock_kwargs)
         else:
             self.client = Anthropic(api_key=config.api_key)
         self.logger = config.logger
