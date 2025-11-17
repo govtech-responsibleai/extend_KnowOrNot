@@ -56,6 +56,31 @@ Refer to [quickstart.md](docs/quickstart.md) for more information and [quickstar
 - **Anthropic**: use `add_anthropic()` method
 - **Bedrock**: use `add_bedrock()` method
 
+#### Selecting Anthropic client types
+
+Anthropic can be used directly, through Vertex AI, or via AWS Bedrock. Set the
+client type and related settings through environment variables:
+
+```bash
+export ANTHROPIC_CLIENT_TYPE=ANTHROPIC_VERTEX
+export ANTHROPIC_VERTEX_PROJECT_ID="my-gcp-project"
+export ANTHROPIC_VERTEX_REGION="us-central1"
+export ANTHROPIC_DEFAULT_MODEL="claude-3-sonnet@20240620"
+```
+
+Or pass the parameters directly when registering the client:
+
+```python
+kon.add_anthropic(
+    client_type="ANTHROPIC_BEDROCK",
+    region="us-east-1",
+    default_model="anthropic.claude-3-sonnet-20240229-v1:0",
+)
+```
+
+The instructor integration works the same way for `ANTHROPIC`,
+`ANTHROPIC_VERTEX`, and `ANTHROPIC_BEDROCK` client types.
+
 ### Processing of LLM responses
 - **Asynchronous**: use `run_experiment_async`, `evaluate_experiment_async` method
 - **Synchronous**: use `run_experiment`, `evaluate_experiment` method

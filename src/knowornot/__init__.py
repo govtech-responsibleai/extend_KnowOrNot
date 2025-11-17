@@ -580,6 +580,9 @@ class KnowOrNot:
         self,
         anthropic_api_key: Optional[str] = None,
         default_model: Optional[str] = None,
+        client_type: str = "ANTHROPIC",
+        project_id: Optional[str] = None,
+        region: Optional[str] = None,
     ) -> None:
         """
         Registers an Anthropic API client with the KnowOrNot instance.
@@ -594,12 +597,34 @@ class KnowOrNot:
         Raises:
             EnvironmentError: If ``anthropic_api_key`` or ``default_model`` are not provided and not found in the environment.
         """
-        if not anthropic_api_key:
-            anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not client_type:
+            client_type = os.environ.get("ANTHROPIC_CLIENT_TYPE", "ANTHROPIC")
+        client_type_upper = client_type.upper()
+
+        if client_type_upper == "ANTHROPIC":
             if not anthropic_api_key:
+                anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
+                if not anthropic_api_key:
+                    raise EnvironmentError(
+                        "ANTHROPIC_API_KEY is not set and anthropic_api_key is not provided"
+                    )
+        elif client_type_upper == "ANTHROPIC_VERTEX":
+            if not project_id:
+                project_id = os.environ.get("ANTHROPIC_VERTEX_PROJECT_ID")
+            if not project_id:
                 raise EnvironmentError(
-                    "ANTHROPIC_API_KEY is not set and anthropic_api_key is not provided"
+                    "ANTHROPIC_VERTEX_PROJECT_ID is not set and project_id is not provided"
                 )
+            if not region:
+                region = os.environ.get("ANTHROPIC_VERTEX_REGION") or "global"
+        elif client_type_upper == "ANTHROPIC_BEDROCK":
+            if not region:
+                region = os.environ.get("ANTHROPIC_BEDROCK_REGION") or "us-east-1"
+        else:
+            raise ValueError(
+                "client_type must be one of: ANTHROPIC, ANTHROPIC_VERTEX, ANTHROPIC_BEDROCK"
+            )
+
         if not default_model:
             default_model = os.environ.get("ANTHROPIC_DEFAULT_MODEL")
             if not default_model:
@@ -613,6 +638,9 @@ class KnowOrNot:
             api_key=anthropic_api_key,
             default_model=default_model,
             logger=logger,
+            anthropic_client_type=client_type_upper,
+            project_id=project_id,
+            region=region,
         )
 
         anthropic_sync_client = SyncAnthropicClient(config=anthropic_config)
