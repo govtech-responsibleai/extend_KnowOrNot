@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 import json
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union, Literal
 from ..SyncLLMClient import SyncLLMClientEnum
@@ -96,6 +96,19 @@ class QAPairFinal(QAPair):
 class QAResponse(BaseModel):
     response: str
     citation: Union[int, Literal["no citation"]]
+
+    @field_validator("citation", mode="before")
+    @classmethod
+    def _normalize_citation(cls, value):
+        if isinstance(value, str):
+            normalized_value = value.strip()
+            if normalized_value.lower() == "no citation":
+                return "no citation"
+            try:
+                return int(normalized_value)
+            except ValueError:
+                return value
+        return value
 
 
 class Prompt(BaseModel):
