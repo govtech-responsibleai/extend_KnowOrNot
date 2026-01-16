@@ -40,7 +40,7 @@ class SyncHuggingFaceClient(SyncLLMClient):
             }
         )
         self.instructor_client = instructor.from_openai(
-            self.client, mode=instructor.Mode.TOOLS_STRICT
+            self.client, mode=instructor.Mode.JSON
         )
 
         try:
