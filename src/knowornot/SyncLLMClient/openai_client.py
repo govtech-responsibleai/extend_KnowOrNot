@@ -12,7 +12,12 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class SyncOpenAIClient(SyncLLMClient):
-    def __init__(self, config: OpenAIConfig, base_url: Optional[str] = None):
+    def __init__(
+        self,
+        config: OpenAIConfig,
+        base_url: Optional[str] = None,
+        instructor_mode: instructor.Mode = instructor.Mode.TOOLS_STRICT,
+    ):
         super().__init__(config)
 
         self.config = config
@@ -22,7 +27,7 @@ class SyncOpenAIClient(SyncLLMClient):
             self.client = OpenAI(api_key=config.api_key)
         self.logger = config.logger
         self.instructor_client = instructor.from_openai(
-            self.client, mode=instructor.Mode.TOOLS_STRICT
+            self.client, mode=instructor_mode
         )
 
         # Check if the tools are compatible with the model

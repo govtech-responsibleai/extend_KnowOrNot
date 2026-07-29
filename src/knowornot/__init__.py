@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Callable, Dict, List, Literal, Optional, Sequence, Union, Any
 import logging
 
+import instructor
+
 from .SyncLLMClient.openrouter_client import SyncOpenRouterClient
 from .SyncLLMClient.openai_client import SyncOpenAIClient
 from .SyncLLMClient.groq_client import SyncGroqClient
@@ -367,6 +369,7 @@ class KnowOrNot:
         organization: Optional[str] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
         base_url: Optional[str] = None,
+        instructor_mode: instructor.Mode = instructor.Mode.TOOLS_STRICT,
     ) -> None:
         """
         Registers an OpenAI API client with the KnowOrNot instance.
@@ -383,6 +386,7 @@ class KnowOrNot:
             organization (str, optional): The organization to associate with the client. Defaults to ``None``.
             tools (List[Dict[str, Any]], optional): List of tool configurations. Each dict should have a 'type' key with a value of 'search'. Defaults to ``None``.
             base_url (str, optional): The base URL to use for the client. Defaults to ``None``.
+            instructor_mode (instructor.Mode, optional): The Instructor mode used for structured output. Defaults to ``instructor.Mode.TOOLS_STRICT`` to preserve native OpenAI strict-output behavior. Set to ``instructor.Mode.TOOLS`` for OpenAI-compatible endpoints (e.g. Bedrock Claude via PlatformAI) that reject the ``strict`` tool property.
 
         Raises:
             EnvironmentError: If ``api_key``, ``default_model``, or ``default_embedding_model`` are not provided and not found in the environment.
@@ -423,7 +427,9 @@ class KnowOrNot:
             tools=tool_objects,
         )
 
-        openai_sync_client = SyncOpenAIClient(config=config, base_url=base_url)
+        openai_sync_client = SyncOpenAIClient(
+            config=config, base_url=base_url, instructor_mode=instructor_mode
+        )
 
         self.register_client(client=openai_sync_client, make_default=True)
 
